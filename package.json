@@ -3,6 +3,10 @@
   "version": "0.0.0",
   "scripts": {
     "ng": "ng",
+    "config:generate": "node scripts/generate-runtime-config.js",
+    "prestart": "npm run config:generate",
+    "prebuild": "npm run config:generate",
+    "prewatch": "npm run config:generate",
     "start": "ng serve",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

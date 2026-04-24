@@ -13,6 +13,11 @@ const routes: Routes = [
       import('./features/auth/auth.module').then((m) => m.AuthModule)
   },
   {
+    path: 'app',
+    loadChildren: () =>
+      import('./features/app/app-feature.module').then((m) => m.AppFeatureModule)
+  },
+  {
     path: '**',
     redirectTo: 'auth'
   }

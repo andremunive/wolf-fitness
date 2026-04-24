@@ -1,0 +1,58 @@
+<ng-container *ngIf="profile$ | async as profile">
+  <div class="home-shell">
+    <header class="home-header">
+      <div class="home-header__brand">
+        <img
+          src="assets/logo/logo_sin_nombre.png"
+          alt="Wolf Fitness"
+          class="home-header__logo"
+        />
+        <div class="home-header__text">
+          <p class="text-xs uppercase tracking-wide text-ink-soft">Wolf Fitness</p>
+          <h1 class="text-lg font-semibold text-ink leading-tight">
+            Hola, {{ profile.full_name }}
+          </h1>
+        </div>
+      </div>
+
+      <button
+        type="button"
+        class="home-header__signout inline-flex items-center gap-1.5 rounded-full border border-surface-border bg-white min-h-touch px-4 text-sm font-medium text-ink-muted transition hover:text-primary-700 hover:border-primary-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60"
+        (click)="signOut()"
+        [disabled]="signingOut"
+        aria-label="Cerrar sesión"
+      >
+        <svg class="h-4 w-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H9m4 7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h6a2 2 0 012 2v1"/>
+        </svg>
+        <span>{{ signingOut ? 'Saliendo...' : 'Cerrar sesión' }}</span>
+      </button>
+    </header>
+
+    <main class="home-main">
+      <div class="home-card">
+        <span class="home-role-chip">
+          <span class="home-role-chip__dot"></span>
+          {{ roleLabel(profile.role) }}
+        </span>
+
+        <h2 class="mt-4 text-2xl font-semibold text-ink tracking-tight">
+          Tu panel está en camino
+        </h2>
+        <p class="mt-2 text-sm text-ink-muted">
+          Próximamente: tu panel de {{ roleLabel(profile.role).toLowerCase() }}. Aquí vivirán las funciones que usas día a día en el gimnasio.
+        </p>
+
+        <div class="home-placeholder">
+          <div class="home-placeholder__line"></div>
+          <div class="home-placeholder__line home-placeholder__line--short"></div>
+          <div class="home-placeholder__grid">
+            <div class="home-placeholder__tile"></div>
+            <div class="home-placeholder__tile"></div>
+            <div class="home-placeholder__tile"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</ng-container>
