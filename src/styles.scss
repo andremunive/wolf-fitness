@@ -1,1 +1,32 @@
-/* You can add global styles to this file, and also import other style files */
+/* Wolf Fitness — estilos globales */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Tokens de marca como CSS custom properties para usarlos fuera de Tailwind si hace falta */
+:root {
+  --wf-primary: #228d9f;
+  --wf-primary-contrast: #ffffff;
+  --wf-surface: #ffffff;
+  --wf-surface-muted: #f7f8fa;
+  --wf-ink: #111827;
+  --wf-ink-muted: #4b5563;
+}
+
+html,
+body {
+  height: 100%;
+  background-color: var(--wf-surface-muted);
+  color: var(--wf-ink);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Evita zoom en iOS al enfocar inputs */
+input,
+select,
+textarea {
+  font-size: 16px;
+}
