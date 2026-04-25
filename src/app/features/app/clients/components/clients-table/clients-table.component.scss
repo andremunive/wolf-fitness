@@ -1,0 +1,125 @@
+:host {
+  display: block;
+}
+
+.table-wrapper {
+  width: 100%;
+  overflow-x: auto;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+}
+
+.clients-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  thead {
+    background: #f7f8fa;
+    border-bottom: 1px solid #e5e7eb;
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+  }
+
+  &__row {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.1s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: #f9fafb;
+    }
+  }
+
+  &__cell {
+    padding: 12px 16px;
+    color: #374151;
+    vertical-align: middle;
+    white-space: nowrap;
+
+    &--name {
+      min-width: 200px;
+    }
+  }
+
+  &__client {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #228d9f 0%, #1b7281 100%);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &__client-info {
+    min-width: 0;
+  }
+
+  &__client-name {
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  &__client-email {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    margin-top: 1px;
+  }
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--active {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &--inactive {
+    background: #f3f4f6;
+    color: #4b5563;
+  }
+
+  &--suspended {
+    background: #fff7ed;
+    color: #c2410c;
+  }
+}

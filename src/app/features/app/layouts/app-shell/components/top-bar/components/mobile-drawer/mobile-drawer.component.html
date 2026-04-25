@@ -1,0 +1,71 @@
+<!-- Backdrop -->
+<div
+  class="drawer-backdrop"
+  (click)="closeDrawer.emit()"
+  aria-hidden="true"
+></div>
+
+<!-- Panel -->
+<nav class="drawer-panel" aria-label="Navegación móvil">
+  <ul class="drawer-panel__list" role="list">
+    <li
+      *ngFor="let section of sections; trackBy: trackById"
+      class="drawer-panel__section"
+    >
+      <!-- Accordion trigger -->
+      <button
+        type="button"
+        class="drawer-section__trigger"
+        [class.drawer-section__trigger--open]="expandedSectionId === section.id"
+        (click)="toggleSection(section.id)"
+        [attr.aria-expanded]="expandedSectionId === section.id"
+      >
+        <span>{{ section.label }}</span>
+        <svg
+          class="drawer-section__caret"
+          [class.drawer-section__caret--open]="expandedSectionId === section.id"
+          viewBox="0 0 20 20"
+          fill="currentColor"
+          aria-hidden="true"
+        >
+          <path
+            fill-rule="evenodd"
+            d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+            clip-rule="evenodd"
+          />
+        </svg>
+      </button>
+
+      <!-- Accordion content -->
+      <ul
+        *ngIf="expandedSectionId === section.id"
+        class="drawer-section__items"
+        role="list"
+      >
+        <li *ngFor="let item of section.items; trackBy: trackByRoute">
+          <button
+            type="button"
+            class="drawer-nav-item"
+            (click)="navigateTo(item.routerLink)"
+          >
+            <!-- Icon -->
+            <span class="drawer-nav-item__icon" aria-hidden="true">
+              <ng-container *ngIf="item.iconKey === 'users'">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+              </ng-container>
+            </span>
+
+            <!-- Text -->
+            <span class="drawer-nav-item__text">
+              <span class="drawer-nav-item__label">{{ item.label }}</span>
+              <span class="drawer-nav-item__desc">{{ item.description }}</span>
+            </span>
+          </button>
+        </li>
+      </ul>
+    </li>
+  </ul>
+</nav>

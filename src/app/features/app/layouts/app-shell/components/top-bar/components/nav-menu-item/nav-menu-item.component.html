@@ -1,0 +1,130 @@
+<div class="nav-item-wrapper" (mouseenter)="onTriggerMouseEnter()" (mouseleave)="onTriggerMouseLeave()">
+  <!-- Trigger button — pill shape with leading icon, label and caret -->
+  <button
+    type="button"
+    class="nav-trigger"
+    [class.nav-trigger--open]="isOpen"
+    [attr.aria-expanded]="isOpen"
+    [attr.aria-haspopup]="true"
+  >
+    <!-- Leading icon (uses section.triggerIcon) -->
+    <span class="nav-trigger__icon" aria-hidden="true">
+      <ng-container *ngIf="section.triggerIcon === 'users'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+        </svg>
+      </ng-container>
+      <ng-container *ngIf="section.triggerIcon === 'dumbbell'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M6.5 6.5h11M6.5 17.5h11M4 9h2v6H4V9zm14 0h2v6h-2V9zM2 11h2v2H2v-2zm18 0h2v2h-2v-2z" />
+        </svg>
+      </ng-container>
+      <ng-container *ngIf="section.triggerIcon === 'chart'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+        </svg>
+      </ng-container>
+      <ng-container *ngIf="section.triggerIcon === 'dollar'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </ng-container>
+      <ng-container *ngIf="section.triggerIcon === 'box'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+        </svg>
+      </ng-container>
+    </span>
+
+    <span class="nav-trigger__label">{{ section.label }}</span>
+
+    <svg
+      class="nav-trigger__caret"
+      [class.nav-trigger__caret--open]="isOpen"
+      viewBox="0 0 20 20"
+      fill="currentColor"
+      aria-hidden="true"
+    >
+      <path
+        fill-rule="evenodd"
+        d="M5.23 7.21a.75.75 0 011.06.02L10 11.168l3.71-3.938a.75.75 0 111.08 1.04l-4.25 4.5a.75.75 0 01-1.08 0l-4.25-4.5a.75.75 0 01.02-1.06z"
+        clip-rule="evenodd"
+      />
+    </svg>
+  </button>
+
+  <!-- Dropdown panel -->
+  <div
+    *ngIf="isOpen"
+    class="nav-dropdown"
+    role="menu"
+    (mouseenter)="onDropdownMouseEnter()"
+    (mouseleave)="onDropdownMouseLeave()"
+  >
+    <!-- Header: title + description, no separator line -->
+    <div class="nav-dropdown__header">
+      <p class="nav-dropdown__title">{{ section.label }}</p>
+      <p class="nav-dropdown__desc">{{ section.description }}</p>
+    </div>
+
+    <!-- Items list -->
+    <ul class="nav-dropdown__list" role="none">
+      <li
+        *ngFor="let item of section.items; trackBy: trackByRoute"
+        role="none"
+      >
+        <button
+          type="button"
+          class="nav-dropdown__item"
+          role="menuitem"
+          (click)="navigateTo(item.routerLink)"
+        >
+          <!-- Square icon badge with neutral background -->
+          <span class="nav-dropdown__icon-wrap" aria-hidden="true">
+            <ng-container *ngIf="item.iconKey === 'users'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="item.iconKey === 'dumbbell'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M6.5 6.5h11M6.5 17.5h11M4 9h2v6H4V9zm14 0h2v6h-2V9zM2 11h2v2H2v-2zm18 0h2v2h-2v-2z" />
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="item.iconKey === 'chart'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="item.iconKey === 'dollar'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="item.iconKey === 'box'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+              </svg>
+            </ng-container>
+          </span>
+
+          <!-- Item text: name + description stacked -->
+          <span class="nav-dropdown__item-text">
+            <span class="nav-dropdown__item-label">{{ item.label }}</span>
+            <span class="nav-dropdown__item-desc">{{ item.description }}</span>
+          </span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>

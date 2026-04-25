@@ -1,6 +1,6 @@
 import { inject } from '@angular/core';
 import { CanActivateFn, Router, UrlTree } from '@angular/router';
-import { map, take } from 'rxjs';
+import { map, switchMap, take } from 'rxjs';
 
 import { AuthService } from '../services/auth.service';
 
@@ -13,8 +13,8 @@ export const firstLoginGuard: CanActivateFn = () => {
   const auth = inject(AuthService);
   const router = inject(Router);
 
-  return auth.profile$.pipe(
-    take(1),
+  return auth.ready$.pipe(
+    switchMap(() => auth.profile$.pipe(take(1))),
     map((profile): boolean | UrlTree => {
       if (!profile) {
         return router.createUrlTree(['/auth/login']);

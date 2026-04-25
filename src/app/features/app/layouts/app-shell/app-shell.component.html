@@ -1,0 +1,8 @@
+<div class="app-shell">
+  <app-top-bar [profile]="profile$ | async"></app-top-bar>
+
+  <!-- Active page content -->
+  <main class="app-shell__content">
+    <router-outlet></router-outlet>
+  </main>
+</div>

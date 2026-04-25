@@ -1,0 +1,78 @@
+<div class="user-menu-wrapper">
+  <!-- Avatar trigger button -->
+  <button
+    type="button"
+    class="avatar-btn"
+    (click)="toggleMenu()"
+    [attr.aria-expanded]="isOpen"
+    [attr.aria-haspopup]="true"
+    aria-label="Menú de usuario"
+  >
+    <span class="avatar-btn__initial" aria-hidden="true">{{ avatarInitial }}</span>
+  </button>
+
+  <!-- Dropdown -->
+  <div
+    *ngIf="isOpen"
+    class="user-dropdown"
+    role="menu"
+  >
+    <!-- Profile header: large avatar + name + email -->
+    <div class="user-dropdown__profile">
+      <span class="user-dropdown__avatar" aria-hidden="true">{{ avatarInitial }}</span>
+      <div class="user-dropdown__info" *ngIf="profile">
+        <p class="user-dropdown__name">{{ profile.full_name }}</p>
+        <p class="user-dropdown__email">{{ profile.email }}</p>
+      </div>
+    </div>
+
+    <div class="user-dropdown__divider" role="separator"></div>
+
+    <!-- Account settings -->
+    <ul class="user-dropdown__list" role="none">
+      <li role="none">
+        <button
+          type="button"
+          class="user-dropdown__item"
+          role="menuitem"
+          (click)="openAccountSettings()"
+        >
+          <!-- Icon badge -->
+          <span class="user-dropdown__item-icon-wrap" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </span>
+          <span class="user-dropdown__item-text">Ajustes de cuenta</span>
+        </button>
+      </li>
+    </ul>
+
+    <div class="user-dropdown__divider" role="separator"></div>
+
+    <!-- Sign out -->
+    <ul class="user-dropdown__list" role="none">
+      <li role="none">
+        <button
+          type="button"
+          class="user-dropdown__item user-dropdown__item--danger"
+          role="menuitem"
+          (click)="signOut()"
+          [disabled]="signingOut"
+          aria-label="Cerrar sesión"
+        >
+          <!-- Icon badge (danger-tinted) -->
+          <span class="user-dropdown__item-icon-wrap user-dropdown__item-icon-wrap--danger" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M17 16l4-4m0 0l-4-4m4 4H9m4 7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h6a2 2 0 012 2v1" />
+            </svg>
+          </span>
+          <span class="user-dropdown__item-text">{{ signingOut ? 'Saliendo...' : 'Cerrar sesión' }}</span>
+        </button>
+      </li>
+    </ul>
+  </div>
+</div>

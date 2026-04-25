@@ -1,0 +1,29 @@
+<div class="search-bar">
+  <span class="search-bar__icon" aria-hidden="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+      <circle cx="11" cy="11" r="8"/>
+      <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35"/>
+    </svg>
+  </span>
+
+  <input
+    [formControl]="searchControl"
+    type="search"
+    class="search-bar__input"
+    placeholder="Buscar cliente..."
+    autocomplete="off"
+    aria-label="Buscar cliente por nombre, email o teléfono"
+  />
+
+  <button
+    *ngIf="hasValue"
+    type="button"
+    class="search-bar__clear"
+    (click)="clear()"
+    aria-label="Limpiar búsqueda"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+</div>

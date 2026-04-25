@@ -1,0 +1,17 @@
+:host {
+  display: block;
+  height: 100%;
+}
+
+.app-shell {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+
+  &__content {
+    flex: 1;
+    // Top-bar is sticky so no extra top padding needed.
+    // No bottom padding either — the fixed bottom nav is gone.
+  }
+}

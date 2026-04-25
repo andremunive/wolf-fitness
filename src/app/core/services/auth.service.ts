@@ -6,10 +6,13 @@ import {
   Subject,
   defer,
   distinctUntilChanged,
+  filter,
   from,
   map,
   of,
+  skip,
   switchMap,
+  take,
   takeUntil,
   tap
 } from 'rxjs';
@@ -31,12 +34,26 @@ export class AuthService implements OnDestroy {
   private readonly destroy$ = new Subject<void>();
   private readonly sessionSubject = new BehaviorSubject<Session | null>(null);
   private readonly profileSubject = new BehaviorSubject<Profile | null>(null);
+  private readonly readySubject = new BehaviorSubject<boolean>(false);
 
   readonly session$: Observable<Session | null> = this.sessionSubject
     .asObservable()
     .pipe(distinctUntilChanged((a, b) => a?.user.id === b?.user.id));
 
   readonly profile$: Observable<Profile | null> = this.profileSubject.asObservable();
+
+  /**
+   * One-shot que emite `true` cuando el bootstrap de la sesión terminó:
+   *  - sin sesión: en cuanto `getSession()` resuelve null.
+   *  - con sesión: cuando además se publicó el `profile` correspondiente.
+   *
+   * Los guards deben encadenarse a `ready$` antes de leer `profile$`, si no
+   * leerán el `null` inicial del BehaviorSubject (race en el primer render).
+   */
+  readonly ready$: Observable<true> = this.readySubject.pipe(
+    filter((ready): ready is true => ready),
+    take(1)
+  );
 
   constructor(private readonly supabase: SupabaseService) {
     this.bootstrapSession();
@@ -95,13 +112,19 @@ export class AuthService implements OnDestroy {
   }
 
   private bootstrapSession(): void {
-    // Estado inicial desde el storage local del SDK.
+    // Estado inicial desde el storage local del SDK. Si no hay sesión, marcamos
+    // ready inmediatamente; si hay, lo marca `wireProfileToSession` tras el fetch.
     from(this.supabase.auth.getSession())
       .pipe(
         map(({ data }) => data.session ?? null),
         takeUntil(this.destroy$)
       )
-      .subscribe((session) => this.sessionSubject.next(session));
+      .subscribe((session) => {
+        this.sessionSubject.next(session);
+        if (!session) {
+          this.markReady();
+        }
+      });
 
     // Suscripción al stream de cambios. El SDK expone un `subscription.unsubscribe()`
     // que disparamos en destroy.
@@ -113,14 +136,27 @@ export class AuthService implements OnDestroy {
   }
 
   private wireProfileToSession(): void {
+    // `skip(1)` evita la emisión inicial del BehaviorSubject (null al construirse):
+    // el bootstrap es quien dispara el primer `next` real sobre `sessionSubject`,
+    // y a partir de ahí esta cadena reacciona a login/logout.
     this.session$
       .pipe(
+        skip(1),
         switchMap((session) =>
           session ? this.fetchProfile(session.user.id) : of(null)
         ),
         takeUntil(this.destroy$)
       )
-      .subscribe((profile) => this.profileSubject.next(profile));
+      .subscribe((profile) => {
+        this.profileSubject.next(profile);
+        this.markReady();
+      });
+  }
+
+  private markReady(): void {
+    if (!this.readySubject.value) {
+      this.readySubject.next(true);
+    }
   }
 
   private fetchProfile(userId: string): Observable<Profile | null> {

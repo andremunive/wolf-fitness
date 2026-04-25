@@ -1,0 +1,37 @@
+<div class="table-wrapper" role="region" aria-label="Tabla de clientes">
+  <table class="clients-table">
+    <thead>
+      <tr>
+        <th scope="col">Cliente</th>
+        <th scope="col">Plan</th>
+        <th scope="col">Estado</th>
+        <th scope="col">Entrenador</th>
+        <th scope="col">Ingreso</th>
+        <th scope="col">Últ. pago</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let client of clients; trackBy: trackByClientId"
+        class="clients-table__row"
+      >
+        <td class="clients-table__cell clients-table__cell--name">
+          <div class="clients-table__client">
+            <span class="clients-table__avatar" aria-hidden="true">{{ getInitials(client.fullName) }}</span>
+            <div class="clients-table__client-info">
+              <p class="clients-table__client-name">{{ client.fullName }}</p>
+              <p class="clients-table__client-email">{{ client.email }}</p>
+            </div>
+          </div>
+        </td>
+        <td class="clients-table__cell">{{ client.planLabel }}</td>
+        <td class="clients-table__cell">
+          <span class="status" [ngClass]="getStatusClass(client.status)">{{ statusLabel(client.status) }}</span>
+        </td>
+        <td class="clients-table__cell">{{ client.trainerName }}</td>
+        <td class="clients-table__cell">{{ formatDate(client.startDate) }}</td>
+        <td class="clients-table__cell">{{ formatDate(client.lastPaymentDate) }}</td>
+      </tr>
+    </tbody>
+  </table>
+</div>

@@ -1,0 +1,85 @@
+:host {
+  display: block;
+  width: 100%;
+}
+
+.search-bar {
+  position: relative;
+  display: flex;
+  align-items: center;
+
+  &__icon {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #6b7280;
+    pointer-events: none;
+    display: flex;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+
+  &__input {
+    width: 100%;
+    height: 44px;
+    padding: 0 40px 0 40px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    background: #ffffff;
+    font-size: 16px; // Evita zoom en iOS
+    color: #111827;
+    outline: none;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+
+    &:focus {
+      border-color: #228d9f;
+      box-shadow: 0 0 0 3px rgba(34, 141, 159, 0.15);
+    }
+
+    // Oculta el botón de búsqueda nativo del navegador
+    &::-webkit-search-cancel-button {
+      display: none;
+    }
+  }
+
+  &__clear {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 1px;
+    }
+  }
+}

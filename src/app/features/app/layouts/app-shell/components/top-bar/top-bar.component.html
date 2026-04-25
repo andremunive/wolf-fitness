@@ -1,0 +1,80 @@
+<header class="topbar" role="banner">
+  <div class="topbar__inner">
+
+    <!-- LEFT: Brand logo -->
+    <a routerLink="/app/home" class="topbar__brand" aria-label="Wolf Fitness — ir a inicio">
+      <!-- Desktop: wordmark only (name.png) -->
+      <img
+        src="assets/logo/name.png"
+        alt="Wolf Fitness"
+        class="topbar__logo-full"
+        loading="eager"
+      />
+      <!-- Mobile: compact kettlebell icon -->
+      <img
+        src="assets/logo/logo_sin_nombre.png"
+        alt="Wolf Fitness"
+        class="topbar__logo-compact"
+        loading="eager"
+      />
+    </a>
+
+    <!-- CENTER: Desktop nav sections — hidden on mobile, centered on desktop -->
+    <nav
+      *ngIf="visibleSections.length > 0"
+      class="topbar__nav hidden md:flex"
+      aria-label="Navegación principal"
+    >
+      <app-nav-menu-item
+        *ngFor="let section of visibleSections; trackBy: trackById"
+        [section]="section"
+      ></app-nav-menu-item>
+    </nav>
+
+    <!-- RIGHT: Actions -->
+    <div class="topbar__actions">
+      <!-- Notification bell (static placeholder — system not built yet) -->
+      <button
+        type="button"
+        class="topbar__action-btn"
+        aria-label="Notificaciones"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+        </svg>
+        <!-- Static red dot -->
+        <span class="topbar__notif-dot" aria-hidden="true"></span>
+      </button>
+
+      <!-- User avatar dropdown -->
+      <app-user-menu [profile]="profile"></app-user-menu>
+
+      <!-- Hamburger — only visible on mobile (<md). Hidden on desktop via display:none. -->
+      <button
+        *ngIf="visibleSections.length > 0"
+        type="button"
+        class="topbar__action-btn topbar__hamburger"
+        (click)="toggleDrawer()"
+        [attr.aria-expanded]="isDrawerOpen"
+        aria-label="Abrir menú de navegación"
+      >
+        <!-- Hamburger icon -->
+        <svg *ngIf="!isDrawerOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+        </svg>
+        <!-- Close icon -->
+        <svg *ngIf="isDrawerOpen" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  </div>
+</header>
+
+<!-- Mobile drawer — rendered outside header to allow full-width backdrop -->
+<app-mobile-drawer
+  *ngIf="isDrawerOpen"
+  [sections]="visibleSections"
+  (closeDrawer)="closeDrawer()"
+></app-mobile-drawer>

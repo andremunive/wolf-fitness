@@ -1,5 +1,6 @@
 import { APP_INITIALIZER, ErrorHandler, NgModule } from '@angular/core';
 import { BrowserModule } from '@angular/platform-browser';
+import { BrowserAnimationsModule } from '@angular/platform-browser/animations';
 
 import { AppRoutingModule } from './app-routing.module';
 import { AppComponent } from './app.component';
@@ -12,7 +13,7 @@ import { GlobalErrorHandler } from './core/errors/global-error-handler';
 
 @NgModule({
   declarations: [AppComponent],
-  imports: [BrowserModule, CoreModule, AppRoutingModule],
+  imports: [BrowserModule, BrowserAnimationsModule, CoreModule, AppRoutingModule],
   providers: [
     {
       provide: APP_INITIALIZER,

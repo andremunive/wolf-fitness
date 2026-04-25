@@ -1,0 +1,55 @@
+<div class="pagination">
+  <div class="pagination__info">
+    <span *ngIf="state.total > 0">
+      {{ startItem }}–{{ endItem }} de {{ state.total }}
+    </span>
+    <span *ngIf="state.total === 0">Sin resultados</span>
+
+    <label class="pagination__page-size">
+      <span class="pagination__page-size-label">por página</span>
+      <select
+        class="pagination__select"
+        [value]="state.pageSize"
+        (change)="onPageSizeChange($event)"
+        aria-label="Clientes por página"
+      >
+        <option
+          *ngFor="let size of pageSizeOptions; trackBy: trackBySize"
+          [value]="size"
+        >{{ size }}</option>
+      </select>
+    </label>
+  </div>
+
+  <div class="pagination__controls">
+    <span class="pagination__page-indicator">
+      Página {{ state.page }} de {{ totalPages }}
+    </span>
+
+    <button
+      type="button"
+      class="pagination__btn"
+      [disabled]="isFirstPage"
+      (click)="goToPreviousPage()"
+      aria-label="Página anterior"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+      </svg>
+      <span class="hidden sm:inline">Anterior</span>
+    </button>
+
+    <button
+      type="button"
+      class="pagination__btn"
+      [disabled]="isLastPage"
+      (click)="goToNextPage()"
+      aria-label="Página siguiente"
+    >
+      <span class="hidden sm:inline">Siguiente</span>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+      </svg>
+    </button>
+  </div>
+</div>

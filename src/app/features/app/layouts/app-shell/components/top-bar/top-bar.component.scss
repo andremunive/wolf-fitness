@@ -1,0 +1,156 @@
+:host {
+  display: block;
+}
+
+.topbar {
+  position: sticky;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 40;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  box-shadow: 0 1px 3px rgba(17, 24, 39, 0.06);
+  height: 57px;
+
+  &__inner {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    padding: 0 1rem;
+    max-width: 1440px;
+    margin: 0 auto;
+  }
+
+  // Brand link resets
+  &__brand {
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+    text-decoration: none;
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 4px;
+      border-radius: 4px;
+    }
+  }
+
+  // Wordmark-only logo (name.png) — shown on ≥md
+  &__logo-full {
+    display: none;
+    height: 22px;
+    width: auto;
+    object-fit: contain;
+
+    @media (min-width: 768px) {
+      display: block;
+    }
+  }
+
+  // Compact icon-only logo — shown on <md
+  &__logo-compact {
+    display: block;
+    height: 34px;
+    width: auto;
+    object-fit: contain;
+
+    @media (min-width: 768px) {
+      display: none;
+    }
+  }
+
+  // Center nav — occupies the middle space between brand and actions
+  &__nav {
+    // flex-1 + justify-center centers nav items between brand and actions
+    flex: 1;
+    display: none; // mobile default: hidden
+    align-items: center;
+    justify-content: center;
+    gap: 0.25rem;
+
+    @media (min-width: 768px) {
+      display: flex;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+    flex-shrink: 0;
+    // Push actions to the right on desktop; on mobile they naturally end up there
+    // because the brand has no flex:1 and nav is hidden
+    margin-left: auto;
+
+    @media (min-width: 768px) {
+      // On desktop, brand stays left (no flex:1), nav has flex:1 (center),
+      // actions have margin-left:auto to claim the right edge.
+      margin-left: 0;
+    }
+  }
+
+  // Generic icon-only button in the actions area
+  &__action-btn {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border: none;
+    border-radius: 0.5rem;
+    background: transparent;
+    cursor: pointer;
+    color: #4b5563;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    svg {
+      width: 20px;
+      height: 20px;
+    }
+
+    &:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 2px;
+    }
+  }
+
+  // Hamburger is only for mobile; explicitly hidden on ≥md.
+  // Using SCSS media query instead of relying solely on Tailwind's md:hidden
+  // to guarantee the component's display:flex doesn't win the cascade.
+  &__hamburger {
+    @media (min-width: 768px) {
+      display: none !important;
+    }
+  }
+
+  &__notif-dot {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    width: 7px;
+    height: 7px;
+    border-radius: 9999px;
+    background: #ef4444;
+    border: 1.5px solid #ffffff;
+  }
+}
+
+// Wider screens: a bit more breathing room
+@media (min-width: 768px) {
+  .topbar {
+    &__inner {
+      padding: 0 1.5rem;
+    }
+
+    &__actions {
+      gap: 0.375rem;
+    }
+  }
+}
