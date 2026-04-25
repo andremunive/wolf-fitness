@@ -23,6 +23,12 @@ const routes: Routes = [
         loadChildren: () =>
           import('./clients/clients.module').then((m) => m.ClientsModule),
         canActivate: [roleGuard(['admin', 'trainer'])]
+      },
+      {
+        path: 'entrenadores',
+        loadChildren: () =>
+          import('./trainers/trainers.module').then((m) => m.TrainersModule),
+        canActivate: [roleGuard(['admin'])]
       }
     ]
   }

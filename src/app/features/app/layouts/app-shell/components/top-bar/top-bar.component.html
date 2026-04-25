@@ -28,6 +28,7 @@
       <app-nav-menu-item
         *ngFor="let section of visibleSections; trackBy: trackById"
         [section]="section"
+        [currentRole]="currentRole"
       ></app-nav-menu-item>
     </nav>
 
@@ -76,5 +77,6 @@
 <app-mobile-drawer
   *ngIf="isDrawerOpen"
   [sections]="visibleSections"
+  [currentRole]="currentRole"
   (closeDrawer)="closeDrawer()"
 ></app-mobile-drawer>

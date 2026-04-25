@@ -2,6 +2,7 @@
   <table class="clients-table">
     <thead>
       <tr>
+        <th scope="col" class="clients-table__actions-th"><span class="visually-hidden">Acciones</span></th>
         <th scope="col">Cliente</th>
         <th scope="col">Plan</th>
         <th scope="col">Estado</th>
@@ -15,6 +16,9 @@
         *ngFor="let client of clients; trackBy: trackByClientId"
         class="clients-table__row"
       >
+        <td class="clients-table__cell clients-table__cell--actions">
+          <app-client-actions-menu [client]="client" dropdownAlign="left"></app-client-actions-menu>
+        </td>
         <td class="clients-table__cell clients-table__cell--name">
           <div class="clients-table__client">
             <span class="clients-table__avatar" aria-hidden="true">{{ getInitials(client.fullName) }}</span>

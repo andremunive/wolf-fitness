@@ -1,0 +1,65 @@
+<div class="actions-menu">
+  <button
+    type="button"
+    class="actions-menu__trigger"
+    [class.actions-menu__trigger--open]="isOpen"
+    (click)="toggle($event)"
+    [attr.aria-expanded]="isOpen"
+    aria-haspopup="menu"
+    [attr.aria-label]="'Acciones para ' + trainer.fullName"
+  >
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.6"/>
+      <circle cx="12" cy="12" r="1.6"/>
+      <circle cx="12" cy="19" r="1.6"/>
+    </svg>
+  </button>
+
+  <div
+    *ngIf="isOpen"
+    class="actions-menu__dropdown"
+    [class.actions-menu__dropdown--align-left]="dropdownAlign === 'left'"
+    role="menu"
+  >
+    <!-- Editar -->
+    <button
+      type="button"
+      class="actions-menu__item"
+      role="menuitem"
+      (click)="onEdit()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Editar</span>
+    </button>
+
+    <div class="actions-menu__separator" role="separator"></div>
+
+    <!-- Desactivar / Reactivar -->
+    <button
+      type="button"
+      class="actions-menu__item"
+      [class.actions-menu__item--danger]="trainer.isActive"
+      role="menuitem"
+      (click)="onToggleActive()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <!-- Ícono desactivar (usuario tachado) cuando está activo -->
+        <svg *ngIf="trainer.isActive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M22 10.5h-6m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+        </svg>
+        <!-- Ícono reactivar (usuario con check) cuando está inactivo -->
+        <svg *ngIf="!trainer.isActive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M19 7.5v3m0 0v3m0-3h3m-3 0h-3m-2.25-4.125a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zM4 19.235v-.11a6.375 6.375 0 0112.75 0v.109A12.318 12.318 0 0110.374 21c-2.331 0-4.512-.645-6.374-1.766z"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">{{ trainer.isActive ? 'Desactivar' : 'Reactivar' }}</span>
+    </button>
+  </div>
+</div>

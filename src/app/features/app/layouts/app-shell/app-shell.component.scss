@@ -4,14 +4,29 @@
 }
 
 .app-shell {
+  // Mobile: scroll natural de página. Desktop: shell ocupa exactamente el viewport
+  // para que las páginas internas puedan tener scroll local en sus tablas.
   min-height: 100vh;
   min-height: 100dvh;
   display: flex;
   flex-direction: column;
 
+  @media (min-width: 768px) {
+    height: 100vh;
+    height: 100dvh;
+    min-height: 0;
+    overflow: hidden;
+  }
+
   &__content {
     flex: 1;
-    // Top-bar is sticky so no extra top padding needed.
-    // No bottom padding either — the fixed bottom nav is gone.
+
+    @media (min-width: 768px) {
+      // Habilita que la página hija pueda usar height: 100% y distribuir su layout.
+      min-height: 0;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
   }
 }

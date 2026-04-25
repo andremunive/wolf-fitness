@@ -30,13 +30,18 @@ export class TopBarComponent implements OnDestroy {
 
   isDrawerOpen = false;
 
-  /** Sections filtered for the current role — used by both desktop nav and mobile drawer. */
+  /** Secciones filtradas por el rol actual del usuario. */
   get visibleSections(): NavMenuSection[] {
     const role = this.profile?.role ?? null;
     if (!role) {
       return [];
     }
     return NAV_SECTIONS.filter((s) => s.allowedRoles.includes(role as UserRole));
+  }
+
+  /** Rol actual del usuario autenticado. */
+  get currentRole(): UserRole | null {
+    return (this.profile?.role as UserRole) ?? null;
   }
 
   constructor(private readonly cdr: ChangeDetectorRef) {}

@@ -1,0 +1,55 @@
+<div class="table-wrapper" role="region" aria-label="Tabla de entrenadores">
+  <table class="trainers-table">
+    <thead>
+      <tr>
+        <th scope="col" class="trainers-table__actions-th"><span class="visually-hidden">Acciones</span></th>
+        <th scope="col">Entrenador</th>
+        <th scope="col">Documento</th>
+        <th scope="col">Teléfono</th>
+        <th scope="col">Banco</th>
+        <th scope="col">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let trainer of trainers; trackBy: trackByTrainerId"
+        class="trainers-table__row"
+      >
+        <td class="trainers-table__cell trainers-table__cell--actions">
+          <app-trainer-actions-menu
+            [trainer]="trainer"
+            dropdownAlign="left"
+            (editRequested)="editRequested.emit($event)"
+            (toggleActiveRequested)="toggleActiveRequested.emit($event)"
+          ></app-trainer-actions-menu>
+        </td>
+
+        <td class="trainers-table__cell trainers-table__cell--name">
+          <div class="trainers-table__trainer">
+            <span class="trainers-table__avatar" aria-hidden="true">{{ getInitials(trainer.fullName) }}</span>
+            <div class="trainers-table__trainer-info">
+              <p class="trainers-table__trainer-name">{{ trainer.fullName }}</p>
+              <p class="trainers-table__trainer-email">{{ trainer.email }}</p>
+            </div>
+          </div>
+        </td>
+
+        <td class="trainers-table__cell">{{ getDocumentLabel(trainer) }}</td>
+
+        <td class="trainers-table__cell">{{ trainer.phone }}</td>
+
+        <td class="trainers-table__cell">{{ getBankLabel(trainer) }}</td>
+
+        <td class="trainers-table__cell">
+          <span
+            class="trainers-table__status-chip"
+            [class.trainers-table__status-chip--active]="trainer.isActive"
+            [class.trainers-table__status-chip--inactive]="!trainer.isActive"
+          >
+            {{ trainer.isActive ? 'Activo' : 'Inactivo' }}
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

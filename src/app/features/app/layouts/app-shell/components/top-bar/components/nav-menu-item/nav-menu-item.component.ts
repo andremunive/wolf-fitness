@@ -7,7 +7,8 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { NavMenuSection } from '../../../../app-shell.config';
+import { UserRole } from 'src/app/core/types/supabase';
+import { NavMenuItem, NavMenuSection } from '../../../../app-shell.config';
 
 /**
  * Renders a single top-bar navigation trigger (e.g. "Personal ▾") plus
@@ -24,6 +25,8 @@ import { NavMenuSection } from '../../../../app-shell.config';
 })
 export class NavMenuItemComponent implements OnDestroy {
   @Input() section!: NavMenuSection;
+  /** Rol del usuario actualmente autenticado; se usa para filtrar items con allowedRoles. */
+  @Input() currentRole: UserRole | null = null;
 
   isOpen = false;
 
@@ -33,6 +36,17 @@ export class NavMenuItemComponent implements OnDestroy {
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {}
+
+  /** Items de la sección filtrados por el rol actual. */
+  get visibleItems(): NavMenuItem[] {
+    if (!this.currentRole) {
+      return [];
+    }
+    const role = this.currentRole;
+    return this.section.items.filter(
+      (item) => !item.allowedRoles || item.allowedRoles.includes(role)
+    );
+  }
 
   onTriggerMouseEnter(): void {
     this.cancelCloseTimer();

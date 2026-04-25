@@ -9,6 +9,7 @@ import { ClientsFiltersComponent } from './components/clients-filters/clients-fi
 import { ClientCardComponent } from './components/client-card/client-card.component';
 import { ClientsTableComponent } from './components/clients-table/clients-table.component';
 import { ClientsPaginationComponent } from './components/clients-pagination/clients-pagination.component';
+import { ClientActionsMenuComponent } from './components/client-actions-menu/client-actions-menu.component';
 
 @NgModule({
   declarations: [
@@ -17,7 +18,8 @@ import { ClientsPaginationComponent } from './components/clients-pagination/clie
     ClientsFiltersComponent,
     ClientCardComponent,
     ClientsTableComponent,
-    ClientsPaginationComponent
+    ClientsPaginationComponent,
+    ClientActionsMenuComponent
   ],
   imports: [
     SharedModule,

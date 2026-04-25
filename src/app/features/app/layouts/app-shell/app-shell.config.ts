@@ -1,12 +1,14 @@
 import { UserRole } from 'src/app/core/types/supabase';
 
-export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box';
+export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase';
 
 export interface NavMenuItem {
   label: string;
   description: string;
   iconKey: NavIconKey;
   routerLink: string;
+  /** Roles que pueden ver este item. Omitir = visible para todos los roles que pasan el filtro de la sección. */
+  allowedRoles?: UserRole[];
 }
 
 export interface NavMenuSection {
@@ -33,6 +35,14 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         description: 'Tus clientes organizados por estado, activos, invitados y leads.',
         iconKey: 'users',
         routerLink: '/app/clientes'
+        // Sin allowedRoles: visible para admin y trainer (todos los que pasan el filtro de la sección).
+      },
+      {
+        label: 'Entrenadores',
+        description: 'Gestiona el equipo de entrenadores y sus clientes asignados.',
+        iconKey: 'briefcase',
+        routerLink: '/app/entrenadores',
+        allowedRoles: ['admin']
       }
     ]
   }

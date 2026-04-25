@@ -1,0 +1,58 @@
+<div class="filters-wrapper">
+  <button
+    type="button"
+    class="filters-toggle"
+    [class.filters-toggle--active]="isOpen"
+    (click)="togglePanel()"
+    [attr.aria-expanded]="isOpen"
+    aria-controls="trainers-filters-panel"
+    aria-label="Abrir filtros de entrenadores"
+  >
+    <svg class="filters-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2a1 1 0 01-.293.707L13 13.414V19a1 1 0 01-.553.894l-4 2A1 1 0 017 21v-7.586L3.293 6.707A1 1 0 013 6V4z"/>
+    </svg>
+    <span>Filtros</span>
+    <span
+      *ngIf="activeFilterCount > 0"
+      class="filters-toggle__badge"
+      [attr.aria-label]="activeFilterCount + ' filtros activos'"
+    >{{ activeFilterCount }}</span>
+  </button>
+
+  <div
+    *ngIf="isOpen"
+    id="trainers-filters-panel"
+    class="filters-panel"
+    role="region"
+    aria-label="Panel de filtros"
+  >
+    <!-- Estado -->
+    <div class="filter-group">
+      <span class="filter-group__label">Por estado</span>
+      <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+        <button
+          *ngFor="let opt of statusOptions; trackBy: trackByValue"
+          type="button"
+          class="filter-chip"
+          [class.filter-chip--active]="isStatusSelected(opt.value)"
+          (click)="selectStatus(opt.value)"
+          [attr.aria-pressed]="isStatusSelected(opt.value)"
+        >{{ opt.label }}</button>
+      </div>
+    </div>
+
+    <!-- Limpiar filtros -->
+    <div class="filter-group filter-group--actions" *ngIf="hasActiveFilters">
+      <button
+        type="button"
+        class="filters-clear"
+        (click)="clearFilters()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+        Limpiar filtros
+      </button>
+    </div>
+  </div>
+</div>

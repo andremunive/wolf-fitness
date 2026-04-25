@@ -7,7 +7,8 @@ import {
 } from '@angular/core';
 import { Router } from '@angular/router';
 
-import { NavMenuSection } from '../../../../app-shell.config';
+import { UserRole } from 'src/app/core/types/supabase';
+import { NavMenuItem, NavMenuSection } from '../../../../app-shell.config';
 
 /**
  * Full-width slide-down panel shown on mobile when the hamburger is tapped.
@@ -21,6 +22,7 @@ import { NavMenuSection } from '../../../../app-shell.config';
 })
 export class MobileDrawerComponent {
   @Input() sections: NavMenuSection[] = [];
+  @Input() currentRole: UserRole | null = null;
   @Output() closeDrawer = new EventEmitter<void>();
 
   /** Tracks which section id is currently expanded. Only one at a time. */
@@ -35,6 +37,16 @@ export class MobileDrawerComponent {
   navigateTo(routerLink: string): void {
     void this.router.navigateByUrl(routerLink);
     this.closeDrawer.emit();
+  }
+
+  getVisibleItems(section: NavMenuSection): NavMenuItem[] {
+    if (!this.currentRole) {
+      return [];
+    }
+    const role = this.currentRole;
+    return section.items.filter(
+      (item) => !item.allowedRoles || item.allowedRoles.includes(role)
+    );
   }
 
   trackById(_index: number, section: NavMenuSection): string {

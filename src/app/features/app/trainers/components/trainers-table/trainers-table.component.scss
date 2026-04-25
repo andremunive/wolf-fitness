@@ -1,0 +1,160 @@
+:host {
+  display: block;
+
+  @media (min-width: 768px) {
+    height: 100%;
+  }
+}
+
+.table-wrapper {
+  width: 100%;
+  // No clip the floating actions dropdown.
+  overflow-x: visible;
+  border-radius: 16px;
+  border: 1px solid #e5e7eb;
+  background: #ffffff;
+
+  @media (min-width: 768px) {
+    height: 100%;
+    overflow-y: auto;
+  }
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.trainers-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+
+  thead {
+    background: #f7f8fa;
+    border-bottom: 1px solid #e5e7eb;
+    // Sticky para que el header se quede fijo cuando la tabla scrollee internamente.
+    position: sticky;
+    top: 0;
+    z-index: 5;
+
+    th {
+      padding: 12px 16px;
+      text-align: left;
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #6b7280;
+      white-space: nowrap;
+    }
+  }
+
+  &__row {
+    border-bottom: 1px solid #f3f4f6;
+    transition: background-color 0.1s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background: #f9fafb;
+    }
+  }
+
+  &__cell {
+    padding: 12px 16px;
+    color: #374151;
+    vertical-align: middle;
+    white-space: nowrap;
+
+    &--name {
+      min-width: 200px;
+    }
+
+    &--actions {
+      width: 1%;
+      padding-left: 12px;
+      padding-right: 4px;
+      text-align: left;
+    }
+  }
+
+  &__actions-th {
+    width: 1%;
+    padding-left: 12px !important;
+    padding-right: 4px !important;
+  }
+
+  &__trainer {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  &__avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #228d9f 0%, #1b7281 100%);
+    color: #ffffff;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  &__trainer-info {
+    min-width: 0;
+  }
+
+  &__trainer-name {
+    font-weight: 600;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  &__trainer-email {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    margin-top: 1px;
+  }
+
+  &__status-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+
+    &--active {
+      background: #dcfce7;
+      color: #16a34a;
+    }
+
+    &--inactive {
+      background: #f3f4f6;
+      color: #6b7280;
+    }
+  }
+}

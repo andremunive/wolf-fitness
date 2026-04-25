@@ -1,0 +1,170 @@
+<div class="trainers-page">
+
+  <!-- ===== HEADER ===== -->
+  <header class="trainers-page__header">
+    <div class="trainers-page__header-content">
+      <div class="trainers-page__title-row">
+        <h1 class="trainers-page__title">
+          Entrenadores
+          <ng-container *ngIf="viewState$ | async as state">
+            <span
+              *ngIf="!state.loading"
+              class="trainers-page__count"
+            >({{ state.total }})</span>
+          </ng-container>
+        </h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== BARRA DE BÚSQUEDA + FILTROS (sticky) ===== -->
+  <div class="trainers-page__toolbar">
+    <div class="trainers-page__search-row">
+      <app-trainers-search-bar
+        class="trainers-page__search"
+        (searchChange)="onSearchChange($event)"
+      ></app-trainers-search-bar>
+
+      <app-trainers-filters
+        [currentFilters]="currentFilters"
+        (filtersChange)="onFiltersChange($event)"
+      ></app-trainers-filters>
+    </div>
+  </div>
+
+  <!-- ===== CONTENIDO PRINCIPAL ===== -->
+  <main class="trainers-page__main">
+    <ng-container *ngIf="viewState$ | async as state">
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="state.loading">
+        <div class="trainers-page__skeleton-list" aria-hidden="true">
+          <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-card">
+            <div class="skeleton-card__header">
+              <div class="skeleton skeleton--avatar"></div>
+              <div class="skeleton-card__lines">
+                <div class="skeleton skeleton--line-lg"></div>
+                <div class="skeleton skeleton--line-sm"></div>
+              </div>
+            </div>
+            <div class="skeleton-card__meta">
+              <div class="skeleton skeleton--line-md"></div>
+              <div class="skeleton skeleton--line-md"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="trainers-page__skeleton-table" aria-hidden="true">
+          <div class="skeleton-table">
+            <div class="skeleton-table__header skeleton skeleton--full"></div>
+            <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-table__row">
+              <div class="skeleton skeleton--full"></div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Error state -->
+      <div *ngIf="state.error && !state.loading" class="trainers-page__empty">
+        <div class="trainers-page__empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <p class="trainers-page__empty-title">Error al cargar entrenadores</p>
+        <p class="trainers-page__empty-msg">Intenta de nuevo más tarde.</p>
+      </div>
+
+      <!-- Empty state -->
+      <div
+        *ngIf="!state.loading && !state.error && state.trainers.length === 0"
+        class="trainers-page__empty"
+      >
+        <div class="trainers-page__empty-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z"/>
+          </svg>
+        </div>
+        <p class="trainers-page__empty-title">
+          <ng-container *ngIf="searchControl.value; else noSearchTitle">
+            No hay coincidencias para "{{ searchControl.value }}"
+          </ng-container>
+          <ng-template #noSearchTitle>No encontramos entrenadores</ng-template>
+        </p>
+        <p class="trainers-page__empty-msg">
+          <ng-container *ngIf="searchControl.value; else noSearchMsg">
+            Prueba con otro término de búsqueda.
+          </ng-container>
+          <ng-template #noSearchMsg>No hay entrenadores registrados todavía.</ng-template>
+        </p>
+      </div>
+
+      <!-- Lista (mobile) / Tabla (desktop) -->
+      <ng-container *ngIf="!state.loading && !state.error && state.trainers.length > 0">
+
+        <!-- Cards mobile (<md) -->
+        <div class="trainers-page__card-list">
+          <app-trainer-card
+            *ngFor="let trainer of state.trainers; trackBy: trackByTrainerId"
+            [trainer]="trainer"
+            (editRequested)="onEditRequested($event)"
+            (toggleActiveRequested)="onToggleActiveRequested($event)"
+          ></app-trainer-card>
+        </div>
+
+        <!-- Tabla desktop (≥md) -->
+        <div class="trainers-page__table-wrapper">
+          <app-trainers-table
+            [trainers]="state.trainers"
+            (editRequested)="onEditRequested($event)"
+            (toggleActiveRequested)="onToggleActiveRequested($event)"
+          ></app-trainers-table>
+        </div>
+
+        <!-- Paginación -->
+        <app-trainers-pagination
+          [state]="state.paginationState"
+          (pageChange)="onPageChange($event)"
+          (pageSizeChange)="onPageSizeChange($event)"
+        ></app-trainers-pagination>
+
+      </ng-container>
+
+    </ng-container>
+  </main>
+
+  <!-- ===== FAB nuevo entrenador ===== -->
+  <button
+    type="button"
+    class="trainers-page__fab"
+    (click)="openWizard()"
+    aria-label="Nuevo entrenador"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+  </button>
+
+</div>
+
+<!-- ===== WIZARD NUEVO ENTRENADOR ===== -->
+<app-new-trainer-wizard
+  *ngIf="isWizardOpen"
+  (closed)="closeWizard()"
+  (trainerCreated)="onTrainerCreated($event.result)"
+></app-new-trainer-wizard>
+
+<!-- ===== MODAL ÉXITO / PASSWORD TEMPORAL ===== -->
+<app-trainer-created-modal
+  *ngIf="wizardResult"
+  [result]="wizardResult"
+  (dismissed)="dismissSuccessModal()"
+></app-trainer-created-modal>
+
+<!-- ===== MODAL EDITAR ENTRENADOR ===== -->
+<app-edit-trainer-modal
+  *ngIf="editingTrainer"
+  [trainer]="editingTrainer"
+  (closed)="closeEditModal()"
+  (trainerUpdated)="onTrainerUpdated()"
+></app-edit-trainer-modal>

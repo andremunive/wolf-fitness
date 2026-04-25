@@ -1,0 +1,300 @@
+<div class="edit-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-modal-title" (click)="close()">
+  <div class="edit-sheet" (click)="$event.stopPropagation()">
+
+    <!-- ── Header ── -->
+    <div class="edit-header">
+      <div class="edit-header__avatar" aria-hidden="true">{{ avatarInitials }}</div>
+      <div class="edit-header__info">
+        <h2 id="edit-modal-title" class="edit-header__name">{{ trainer.fullName }}</h2>
+        <p class="edit-header__email" title="El cambio de email no está soportado en esta versión">
+          {{ trainer.email }}
+        </p>
+      </div>
+      <button
+        type="button"
+        class="edit-header__close"
+        (click)="close()"
+        aria-label="Cerrar"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Tabs de navegación ── -->
+    <div class="edit-tabs" role="tablist" aria-label="Secciones del perfil">
+      <button
+        *ngFor="let tab of tabs; trackBy: trackByTabId"
+        type="button"
+        role="tab"
+        class="edit-tab"
+        [class.edit-tab--active]="currentTab === tab.id"
+        [attr.aria-selected]="currentTab === tab.id"
+        (click)="switchTab(tab.id)"
+      >{{ tab.label }}</button>
+    </div>
+
+    <!-- ── Cuerpo de formulario (scrollable) ── -->
+    <div class="edit-body">
+
+      <!-- ════ Identidad ════ -->
+      <form *ngIf="currentTab === 'identity'" [formGroup]="identityForm" class="edit-form" novalidate>
+        <div class="form-field">
+          <label class="form-field__label" for="edit-full-name">
+            Nombre completo <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-full-name"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('full_name')?.invalid && identityForm.get('full_name')?.touched"
+            formControlName="full_name"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('full_name')?.errors?.['required'] && identityForm.get('full_name')?.touched">
+            Obligatorio.
+          </p>
+          <p class="form-field__error" *ngIf="identityForm.get('full_name')?.errors?.['minlength'] && identityForm.get('full_name')?.touched">
+            Mínimo 3 caracteres.
+          </p>
+        </div>
+
+        <!-- Email: readonly -->
+        <div class="form-field">
+          <label class="form-field__label" for="edit-email">
+            Correo electrónico
+            <span
+              class="form-field__readonly-badge"
+              title="El cambio de email no está soportado en esta versión"
+              aria-label="Campo de solo lectura"
+            >Solo lectura</span>
+          </label>
+          <input
+            id="edit-email"
+            type="email"
+            class="form-field__input form-field__input--readonly"
+            [value]="trainer.email"
+            readonly
+            aria-readonly="true"
+          />
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-phone">
+            Teléfono <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-phone"
+            type="tel"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('phone')?.invalid && identityForm.get('phone')?.touched"
+            formControlName="phone"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('phone')?.errors?.['pattern'] && identityForm.get('phone')?.touched">
+            Número de teléfono inválido.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-birth-date">
+            Fecha de nacimiento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-birth-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('birth_date')?.invalid && identityForm.get('birth_date')?.touched"
+            formControlName="birth_date"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('birth_date')?.errors?.['birthDateFuture'] && identityForm.get('birth_date')?.touched">
+            La fecha no puede ser hoy ni en el futuro.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-gender">
+            Género <span class="form-field__optional">(opcional)</span>
+          </label>
+          <select id="edit-gender" class="form-field__select" formControlName="gender">
+            <option value="">Prefiero no decir</option>
+            <option value="male">Masculino</option>
+            <option value="female">Femenino</option>
+            <option value="other">Otro</option>
+            <option value="prefer_not_to_say">Prefiero no especificar</option>
+          </select>
+        </div>
+      </form>
+
+      <!-- ════ Residencia ════ -->
+      <form *ngIf="currentTab === 'address'" [formGroup]="addressForm" class="edit-form" novalidate>
+        <div class="form-field">
+          <label class="form-field__label" for="edit-address">
+            Dirección <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-address"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="addressForm.get('address')?.invalid && addressForm.get('address')?.touched"
+            formControlName="address"
+          />
+          <p class="form-field__error" *ngIf="addressForm.get('address')?.errors?.['minlength'] && addressForm.get('address')?.touched">
+            Mínimo 5 caracteres.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-neighborhood">
+            Barrio <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-neighborhood"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="addressForm.get('neighborhood')?.invalid && addressForm.get('neighborhood')?.touched"
+            formControlName="neighborhood"
+          />
+          <p class="form-field__error" *ngIf="addressForm.get('neighborhood')?.errors?.['required'] && addressForm.get('neighborhood')?.touched">
+            El barrio es obligatorio.
+          </p>
+        </div>
+      </form>
+
+      <!-- ════ Documento ════ -->
+      <form *ngIf="currentTab === 'document'" [formGroup]="documentForm" class="edit-form" novalidate>
+        <div class="form-field">
+          <label class="form-field__label" for="edit-doc-type">
+            Tipo de documento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="edit-doc-type"
+            class="form-field__select"
+            [class.form-field__select--error]="documentForm.get('document_type')?.invalid && documentForm.get('document_type')?.touched"
+            formControlName="document_type"
+          >
+            <option value="" disabled>Selecciona</option>
+            <option *ngFor="let opt of documentTypeOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+          <p class="form-field__error" *ngIf="documentForm.get('document_type')?.errors?.['required'] && documentForm.get('document_type')?.touched">
+            Selecciona el tipo de documento.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-doc-number">
+            Número de documento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-doc-number"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="documentForm.get('document_number')?.invalid && documentForm.get('document_number')?.touched"
+            formControlName="document_number"
+            inputmode="numeric"
+          />
+          <p class="form-field__error" *ngIf="documentForm.get('document_number')?.errors?.['minlength'] && documentForm.get('document_number')?.touched">
+            Mínimo 4 caracteres.
+          </p>
+        </div>
+      </form>
+
+      <!-- ════ Banco ════ -->
+      <form *ngIf="currentTab === 'bank'" [formGroup]="bankForm" class="edit-form" novalidate>
+        <div class="form-field">
+          <label class="form-field__label" for="edit-bank">
+            Banco <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select id="edit-bank" class="form-field__select" formControlName="bank">
+            <option value="" disabled>Selecciona</option>
+            <option *ngFor="let opt of bankOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+          <p class="form-field__error" *ngIf="bankForm.get('bank')?.errors?.['required'] && bankForm.get('bank')?.touched">
+            Selecciona el banco.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <span class="form-field__label">
+            Tipo de cuenta <span class="form-field__required" aria-hidden="true">*</span>
+          </span>
+          <div class="radio-group" role="radiogroup" aria-label="Tipo de cuenta">
+            <label
+              *ngFor="let opt of accountTypeOptions; trackBy: trackByValue"
+              class="radio-option"
+              [class.radio-option--disabled]="isNequiSelected && opt.value === 'corriente'"
+            >
+              <input
+                type="radio"
+                class="radio-option__input"
+                formControlName="account_type"
+                [value]="opt.value"
+                [disabled]="isNequiSelected && opt.value === 'corriente'"
+              />
+              <span class="radio-option__dot" aria-hidden="true"></span>
+              <span class="radio-option__label">{{ opt.label }}</span>
+            </label>
+          </div>
+          <p class="form-field__hint" *ngIf="isNequiSelected">Nequi solo admite cuentas de ahorros.</p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-account-number">
+            Número de cuenta
+            <ng-container *ngIf="isNequiSelected"> (10 dígitos)</ng-container>
+            <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-account-number"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="(bankForm.get('account_number')?.invalid && bankForm.get('account_number')?.touched) || nequiAccountError"
+            formControlName="account_number"
+            inputmode="numeric"
+          />
+          <p class="form-field__error" *ngIf="bankForm.get('account_number')?.errors?.['pattern'] && bankForm.get('account_number')?.touched">
+            Solo dígitos (7 a 20).
+          </p>
+          <p class="form-field__error" *ngIf="nequiAccountError">
+            Nequi requiere exactamente 10 dígitos.
+          </p>
+        </div>
+      </form>
+
+      <!-- Feedback: error / success -->
+      <div class="edit-feedback edit-feedback--error" *ngIf="saveError" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        <span>{{ saveError }}</span>
+      </div>
+
+      <div class="edit-feedback edit-feedback--success" *ngIf="saveSuccess" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Cambios guardados.</span>
+      </div>
+
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="edit-footer">
+      <button type="button" class="edit-footer__cancel" (click)="close()" [disabled]="isSaving">Cancelar</button>
+      <button
+        type="button"
+        class="edit-footer__save"
+        (click)="save()"
+        [disabled]="!hasChanges || isSaving"
+      >
+        <span *ngIf="!isSaving">Guardar cambios</span>
+        <span *ngIf="isSaving" class="spinner-wrap" aria-label="Guardando...">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Guardando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

@@ -13,19 +13,6 @@
             >({{ state.total }})</span>
           </ng-container>
         </h1>
-
-        <!-- Botón nuevo cliente: visible en header solo en ≥sm -->
-        <button
-          type="button"
-          class="clients-page__new-btn hidden sm:inline-flex"
-          (click)="openNewClientModal()"
-          aria-label="Crear nuevo cliente"
-        >
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
-          </svg>
-          Nuevo cliente
-        </button>
       </div>
     </div>
   </header>
@@ -54,7 +41,8 @@
 
       <!-- Loading skeleton -->
       <ng-container *ngIf="state.loading">
-        <div class="clients-page__skeleton-list md:hidden" aria-hidden="true">
+        <!-- Skeleton mobile: visible solo en <md -->
+        <div class="clients-page__skeleton-list" aria-hidden="true">
           <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-card">
             <div class="skeleton-card__header">
               <div class="skeleton skeleton--avatar"></div>
@@ -71,7 +59,8 @@
           </div>
         </div>
 
-        <div class="hidden md:block" aria-hidden="true">
+        <!-- Skeleton desktop: visible solo en ≥md -->
+        <div class="clients-page__skeleton-table" aria-hidden="true">
           <div class="skeleton-table">
             <div class="skeleton-table__header skeleton skeleton--full"></div>
             <div *ngFor="let i of [1,2,3,4,5]" class="skeleton-table__row">
@@ -115,16 +104,16 @@
       <!-- Lista de clientes (mobile) / Tabla (desktop) -->
       <ng-container *ngIf="!state.loading && !state.error && state.clients.length > 0">
 
-        <!-- Cards mobile -->
-        <div class="clients-page__card-list md:hidden">
+        <!-- Cards: solo en <md (controlado por SCSS) -->
+        <div class="clients-page__card-list">
           <app-client-card
             *ngFor="let client of state.clients; trackBy: trackByClientId"
             [client]="client"
           ></app-client-card>
         </div>
 
-        <!-- Tabla desktop -->
-        <div class="hidden md:block">
+        <!-- Tabla: solo en ≥md (controlado por SCSS) -->
+        <div class="clients-page__table-wrapper">
           <app-clients-table [clients]="state.clients"></app-clients-table>
         </div>
 
@@ -140,12 +129,12 @@
     </ng-container>
   </main>
 
-  <!-- ===== FAB nuevo cliente (solo mobile, fuera del header) ===== -->
+  <!-- ===== FAB nuevo cliente (todos los breakpoints) ===== -->
   <button
     type="button"
-    class="clients-page__fab sm:hidden"
+    class="clients-page__fab"
     (click)="openNewClientModal()"
-    aria-label="Crear nuevo cliente"
+    aria-label="Nuevo cliente"
   >
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
       <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>

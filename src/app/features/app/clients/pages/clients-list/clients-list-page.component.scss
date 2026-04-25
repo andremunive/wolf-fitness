@@ -1,5 +1,10 @@
 :host {
   display: block;
+
+  @media (min-width: 768px) {
+    // Permite que la página llene la altura del shell content (que es flex:1).
+    height: 100%;
+  }
 }
 
 // ─── Page shell ────────────────────────────────────────────────────────────────
@@ -11,25 +16,26 @@
   flex-direction: column;
   position: relative;
 
-  // Reserva espacio para el FAB en mobile
-  padding-bottom: 80px;
+  // Mobile: reserva espacio para el FAB (scroll de página normal).
+  padding-bottom: calc(56px + 16px + env(safe-area-inset-bottom, 0px) + 16px);
 
-  @media (min-width: 640px) {
+  // Desktop: la página ocupa el viewport completo, el scroll vive dentro de la tabla.
+  @media (min-width: 768px) {
+    height: 100%;
+    min-height: 0;
     padding-bottom: 0;
+    overflow: hidden;
   }
 }
 
-// ─── Header ────────────────────────────────────────────────────────────────────
+// ─── Header + Toolbar (un solo bloque visual continuo) ────────────────────────
 
 .clients-page__header {
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(229, 231, 235, 0.8);
-  padding: 16px 16px 12px;
+  background: #ffffff;
+  padding: 20px 16px 0;
 
   @media (min-width: 640px) {
-    padding: 20px 24px 16px;
+    padding: 24px 24px 0;
   }
 }
 
@@ -63,51 +69,12 @@
   margin-left: 4px;
 }
 
-.clients-page__new-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  height: 44px;
-  padding: 0 20px;
-  border: none;
-  border-radius: 12px;
-  background: #228d9f;
-  color: #ffffff;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  white-space: nowrap;
-  transition: background-color 0.15s ease, box-shadow 0.15s ease;
-  flex-shrink: 0;
-
-  svg {
-    width: 16px;
-    height: 16px;
-  }
-
-  &:hover {
-    background: #1b7281;
-    box-shadow: 0 4px 12px rgba(34, 141, 159, 0.3);
-  }
-
-  &:focus-visible {
-    outline: 2px solid #228d9f;
-    outline-offset: 2px;
-  }
-}
-
-// ─── Toolbar (búsqueda + filtros) ──────────────────────────────────────────────
-
 .clients-page__toolbar {
   background: #ffffff;
-  border-bottom: 1px solid #e5e7eb;
-  padding: 12px 16px;
-  position: sticky;
-  top: 0;
-  z-index: 20;
+  padding: 16px 16px 16px;
 
   @media (min-width: 640px) {
-    padding: 12px 24px;
+    padding: 18px 24px 18px;
   }
 }
 
@@ -129,22 +96,72 @@
 .clients-page__main {
   flex: 1;
   padding: 16px;
-  max-width: 1200px;
+  // El main usa border-box y tiene padding interno → para que su contenido (la tabla)
+  // alinee con el header/toolbar (que centran un inner de 1200px), el max-width del
+  // main debe sumar 1200 + el padding horizontal total.
+  max-width: 1232px; // 1200 + 16*2 (mobile)
   width: 100%;
   margin: 0 auto;
 
   @media (min-width: 640px) {
     padding: 20px 24px;
+    max-width: 1248px; // 1200 + 24*2 (desktop)
+  }
+
+  // Desktop: main como flex column para que la tabla tome el espacio restante
+  // y la paginación quede fija abajo. La tabla manejará su scroll interno.
+  @media (min-width: 768px) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
   }
 }
 
-// ─── Card list (mobile) ────────────────────────────────────────────────────────
+// ─── Card list (mobile <768px) / Table wrapper (desktop ≥768px) ──────────────
 
+// Cards: visible solo en mobile, oculto en desktop
 .clients-page__card-list {
   display: flex;
   flex-direction: column;
   gap: 10px;
   margin-bottom: 4px;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+// Tabla: oculta en mobile, visible en desktop. En desktop ocupa el espacio
+// restante del main para que el scroll viva adentro de la tabla.
+.clients-page__table-wrapper {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: block;
+    flex: 1;
+    min-height: 0;
+  }
+}
+
+// Skeleton mobile: visible solo en <768px
+.clients-page__skeleton-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  @media (min-width: 768px) {
+    display: none;
+  }
+}
+
+// Skeleton desktop: visible solo en ≥768px
+.clients-page__skeleton-table {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: block;
+  }
 }
 
 // ─── Empty / Error states ──────────────────────────────────────────────────────
@@ -211,11 +228,11 @@
   }
 }
 
-// ─── FAB (mobile) ──────────────────────────────────────────────────────────────
+// ─── FAB (todos los breakpoints) ──────────────────────────────────────────────
 
 .clients-page__fab {
   position: fixed;
-  // Sobre la bottom nav (56px) + safe area + 12px margen
+  // Mobile: encima de la bottom nav (56px) + safe area + margen
   bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
   right: 16px;
   z-index: 30;
@@ -235,6 +252,12 @@
   svg {
     width: 24px;
     height: 24px;
+  }
+
+  // Desktop: margen cómodo desde el borde inferior del viewport
+  @media (min-width: 768px) {
+    bottom: 32px;
+    right: 32px;
   }
 
   &:hover {
