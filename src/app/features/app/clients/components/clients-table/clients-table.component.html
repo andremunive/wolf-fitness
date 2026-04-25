@@ -8,16 +8,22 @@
         <th scope="col">Estado</th>
         <th scope="col">Entrenador</th>
         <th scope="col">Ingreso</th>
-        <th scope="col">Últ. pago</th>
+        <th scope="col">Origen</th>
       </tr>
     </thead>
     <tbody>
       <tr
         *ngFor="let client of clients; trackBy: trackByClientId"
         class="clients-table__row"
+        [class.clients-table__row--inactive]="client.status === 'inactive'"
       >
         <td class="clients-table__cell clients-table__cell--actions">
-          <app-client-actions-menu [client]="client" dropdownAlign="left"></app-client-actions-menu>
+          <app-client-actions-menu
+            [client]="client"
+            dropdownAlign="left"
+            (editRequested)="editRequested.emit($event)"
+            (deactivateRequested)="deactivateRequested.emit($event)"
+          ></app-client-actions-menu>
         </td>
         <td class="clients-table__cell clients-table__cell--name">
           <div class="clients-table__client">
@@ -28,13 +34,17 @@
             </div>
           </div>
         </td>
-        <td class="clients-table__cell">{{ client.planLabel }}</td>
+        <td class="clients-table__cell">{{ formatPlanLabel(client) }}</td>
         <td class="clients-table__cell">
-          <span class="status" [ngClass]="getStatusClass(client.status)">{{ statusLabel(client.status) }}</span>
+          <span class="status" [ngClass]="getStatusClass(client.status)">{{ getStatusLabel(client.status) }}</span>
         </td>
-        <td class="clients-table__cell">{{ client.trainerName }}</td>
-        <td class="clients-table__cell">{{ formatDate(client.startDate) }}</td>
-        <td class="clients-table__cell">{{ formatDate(client.lastPaymentDate) }}</td>
+        <td class="clients-table__cell">{{ client.trainerName ?? '—' }}</td>
+        <td class="clients-table__cell">{{ formatDate(client.joinedAt) }}</td>
+        <td class="clients-table__cell">
+          <span class="origin-badge origin-badge--{{ client.origin }}">
+            {{ client.origin === 'referido' ? 'Referido' : client.origin === 'publicidad' ? 'Publicidad' : 'Directo' }}
+          </span>
+        </td>
       </tr>
     </tbody>
   </table>

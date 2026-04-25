@@ -84,7 +84,7 @@ export class EditTrainerModalComponent implements OnChanges, OnDestroy {
 
   readonly identityForm: FormGroup = this.fb.group({
     full_name: ['', [Validators.required, Validators.minLength(3)]],
-    phone: ['', [Validators.required, Validators.pattern(/^\+?[1-9]\d{7,14}$/)]],
+    phone: ['', [Validators.required, Validators.pattern(/^\d{7,15}$/)]],
     birth_date: ['', [Validators.required, this.birthDateValidator]],
     gender: ['']
   });

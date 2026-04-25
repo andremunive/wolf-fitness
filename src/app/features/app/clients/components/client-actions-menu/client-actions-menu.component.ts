@@ -3,8 +3,10 @@ import {
   ChangeDetectorRef,
   Component,
   ElementRef,
+  EventEmitter,
   HostListener,
-  Input
+  Input,
+  Output
 } from '@angular/core';
 
 import { Client } from '../../models/client.model';
@@ -19,10 +21,13 @@ export class ClientActionsMenuComponent {
   @Input() client!: Client;
   /**
    * Alineación del dropdown respecto al trigger.
-   *  - `'right'` (default): dropdown pegado al borde derecho del trigger, se abre hacia la izquierda.
-   *  - `'left'`: dropdown pegado al borde izquierdo del trigger, se abre hacia la derecha.
+   *  - `'right'` (default): dropdown pegado al borde derecho del trigger.
+   *  - `'left'`: dropdown abierto hacia la derecha.
    */
   @Input() dropdownAlign: 'left' | 'right' = 'right';
+
+  @Output() editRequested = new EventEmitter<Client>();
+  @Output() deactivateRequested = new EventEmitter<Client>();
 
   isOpen = false;
 
@@ -37,13 +42,18 @@ export class ClientActionsMenuComponent {
     this.cdr.markForCheck();
   }
 
-  onPay(): void {
-    console.log('[ClientActionsMenu] Pago →', this.client.id);
+  onEdit(): void {
+    this.editRequested.emit(this.client);
     this.close();
   }
 
-  onEdit(): void {
-    console.log('[ClientActionsMenu] Editar →', this.client.id);
+  onDeactivate(): void {
+    const confirmed = window.confirm(
+      `¿Desactivar a ${this.client.fullName}? Esta acción cerrará su asignación de entrenador.`
+    );
+    if (confirmed) {
+      this.deactivateRequested.emit(this.client);
+    }
     this.close();
   }
 

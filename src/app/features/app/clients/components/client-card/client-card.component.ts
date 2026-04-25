@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  Output
+} from '@angular/core';
 
 import { Client } from '../../models/client.model';
 
@@ -10,6 +16,8 @@ import { Client } from '../../models/client.model';
 })
 export class ClientCardComponent {
   @Input() client!: Client;
+  @Output() editRequested = new EventEmitter<Client>();
+  @Output() deactivateRequested = new EventEmitter<Client>();
 
   get initials(): string {
     return this.client.fullName
@@ -23,7 +31,6 @@ export class ClientCardComponent {
     switch (this.client.status) {
       case 'active': return 'Activo';
       case 'inactive': return 'Inactivo';
-      case 'suspended': return 'Suspendido';
     }
   }
 
@@ -31,26 +38,27 @@ export class ClientCardComponent {
     switch (this.client.status) {
       case 'active': return 'status--active';
       case 'inactive': return 'status--inactive';
-      case 'suspended': return 'status--suspended';
     }
   }
 
-  get formattedLastPayment(): string {
-    if (!this.client.lastPaymentDate) {
-      return 'Sin pagos';
-    }
-    return this.client.lastPaymentDate.toLocaleDateString('es-CO', {
+  get formattedJoinedAt(): string {
+    if (!this.client.joinedAt) return '—';
+    return new Date(this.client.joinedAt).toLocaleDateString('es-CO', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     });
   }
 
-  get formattedStartDate(): string {
-    return this.client.startDate.toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+  get planLabel(): string {
+    if (this.client.planAmountCop !== null) {
+      const formatted = new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0
+      }).format(this.client.planAmountCop);
+      return `${this.client.planName} · ${formatted}`;
+    }
+    return this.client.planName;
   }
 }

@@ -535,3 +535,23 @@
     transform: scale(1);
   }
 }
+
+// Indicador de carga sutil mientras se recupera el detalle del cliente para editar.
+.clients-page__edit-loading {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 32px;
+  height: 32px;
+  border: 3px solid rgba(34, 141, 159, 0.2);
+  border-top-color: #228d9f;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+  z-index: 200;
+  pointer-events: none;
+}
+
+@keyframes spin {
+  to { transform: translateX(-50%) rotate(360deg); }
+}

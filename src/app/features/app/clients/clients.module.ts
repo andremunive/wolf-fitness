@@ -10,6 +10,10 @@ import { ClientCardComponent } from './components/client-card/client-card.compon
 import { ClientsTableComponent } from './components/clients-table/clients-table.component';
 import { ClientsPaginationComponent } from './components/clients-pagination/clients-pagination.component';
 import { ClientActionsMenuComponent } from './components/client-actions-menu/client-actions-menu.component';
+import { ClientSearchInputComponent } from './components/client-search-input/client-search-input.component';
+import { NewClientWizardComponent } from './components/new-client-wizard/new-client-wizard.component';
+import { ClientCreatedModalComponent } from './components/client-created-modal/client-created-modal.component';
+import { EditClientModalComponent } from './components/edit-client-modal/edit-client-modal.component';
 
 @NgModule({
   declarations: [
@@ -19,7 +23,11 @@ import { ClientActionsMenuComponent } from './components/client-actions-menu/cli
     ClientCardComponent,
     ClientsTableComponent,
     ClientsPaginationComponent,
-    ClientActionsMenuComponent
+    ClientActionsMenuComponent,
+    ClientSearchInputComponent,
+    NewClientWizardComponent,
+    ClientCreatedModalComponent,
+    EditClientModalComponent
   ],
   imports: [
     SharedModule,

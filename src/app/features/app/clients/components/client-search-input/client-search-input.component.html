@@ -1,0 +1,109 @@
+<div class="client-search" [class.client-search--selected]="!!selectedItem">
+
+  <div class="client-search__input-wrap">
+    <!-- Ícono de búsqueda -->
+    <svg
+      *ngIf="!selectedItem"
+      class="client-search__icon client-search__icon--search"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round"
+        d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 104.5 4.5a7.5 7.5 0 0012.15 12.15z"/>
+    </svg>
+
+    <!-- Ícono checkmark cuando hay selección -->
+    <svg
+      *ngIf="selectedItem"
+      class="client-search__icon client-search__icon--check"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      stroke-width="2.5"
+      aria-hidden="true"
+    >
+      <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+    </svg>
+
+    <input
+      #inputRef
+      type="text"
+      class="client-search__input"
+      [formControl]="searchControl"
+      [placeholder]="placeholder"
+      autocomplete="off"
+      role="combobox"
+      [attr.aria-expanded]="isOpen"
+      aria-autocomplete="list"
+      aria-controls="client-search-dropdown"
+    />
+
+    <!-- Botón limpiar -->
+    <button
+      *ngIf="searchControl.value"
+      type="button"
+      class="client-search__clear"
+      (click)="clear()"
+      aria-label="Limpiar selección"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- Dropdown de resultados -->
+  <div
+    *ngIf="isOpen"
+    id="client-search-dropdown"
+    class="client-search__dropdown"
+    role="listbox"
+    aria-label="Resultados de búsqueda de clientes"
+  >
+    <!-- Cargando -->
+    <div *ngIf="isLoading" class="client-search__state" aria-live="polite">
+      <svg class="client-search__spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+        <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+      </svg>
+      <span>Buscando...</span>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="hasError && !isLoading" class="client-search__state client-search__state--error" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+      </svg>
+      <span>Error al buscar. Intenta de nuevo.</span>
+    </div>
+
+    <!-- Sin resultados -->
+    <div
+      *ngIf="!isLoading && !hasError && results.length === 0"
+      class="client-search__state"
+      aria-live="polite"
+    >
+      Sin resultados para "{{ searchControl.value }}"
+    </div>
+
+    <!-- Resultados -->
+    <ng-container *ngIf="!isLoading && !hasError && results.length > 0">
+      <button
+        *ngFor="let item of results; trackBy: trackById"
+        type="button"
+        class="client-search__option"
+        role="option"
+        [attr.aria-selected]="selectedItem?.id === item.id"
+        (click)="select(item)"
+      >
+        <span class="client-search__option-avatar" aria-hidden="true">
+          {{ item.fullName.charAt(0).toUpperCase() }}
+        </span>
+        <span class="client-search__option-name">{{ item.fullName }}</span>
+      </button>
+    </ng-container>
+  </div>
+
+</div>

@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, Input } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  Component,
+  EventEmitter,
+  Input,
+  Output
+} from '@angular/core';
 
 import { Client } from '../../models/client.model';
 
@@ -10,22 +16,20 @@ import { Client } from '../../models/client.model';
 })
 export class ClientsTableComponent {
   @Input() clients: Client[] = [];
+  @Output() editRequested = new EventEmitter<Client>();
+  @Output() deactivateRequested = new EventEmitter<Client>();
 
-  get statusLabel(): (status: Client['status']) => string {
-    return (status) => {
-      switch (status) {
-        case 'active': return 'Activo';
-        case 'inactive': return 'Inactivo';
-        case 'suspended': return 'Suspendido';
-      }
-    };
+  getStatusLabel(status: Client['status']): string {
+    switch (status) {
+      case 'active': return 'Activo';
+      case 'inactive': return 'Inactivo';
+    }
   }
 
   getStatusClass(status: Client['status']): string {
     switch (status) {
       case 'active': return 'status--active';
       case 'inactive': return 'status--inactive';
-      case 'suspended': return 'status--suspended';
     }
   }
 
@@ -37,13 +41,25 @@ export class ClientsTableComponent {
       .join('');
   }
 
-  formatDate(date: Date | null): string {
-    if (!date) return '—';
-    return date.toLocaleDateString('es-CO', {
+  formatDate(dateStr: string | null): string {
+    if (!dateStr) return '—';
+    return new Date(dateStr).toLocaleDateString('es-CO', {
       day: '2-digit',
       month: 'short',
       year: 'numeric'
     });
+  }
+
+  formatPlanLabel(client: Client): string {
+    if (client.planAmountCop !== null) {
+      const formatted = new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0
+      }).format(client.planAmountCop);
+      return `${client.planName} · ${formatted}`;
+    }
+    return client.planName;
   }
 
   trackByClientId(_index: number, client: Client): string {

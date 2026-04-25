@@ -1,33 +1,60 @@
-export type ClientPlan = '6_days' | '3_days';
-export type ClientStatus = 'active' | 'inactive' | 'suspended';
+// Enums del dominio — alineados con los tipos Supabase.
+export type ClientStatus = 'active' | 'inactive';
+export type ClientOrigin = 'referido' | 'publicidad' | 'llego_solo';
 
+// ─── Modelos de dominio ────────────────────────────────────────────────────────
+
+export interface Plan {
+  id: string;
+  name: string;
+  code: string;
+  /** Precio vigente en COP. Null si no hay price activo. */
+  amountCop: number | null;
+}
+
+export interface TrainerOption {
+  id: string;
+  fullName: string;
+}
+
+/**
+ * Cliente que aparece en el listado. Resuelve los JOIN de plan, trainer y referidor.
+ */
 export interface Client {
   id: string;
   fullName: string;
   email: string;
   phone: string;
-  plan: ClientPlan;
-  planLabel: string;
+  isActive: boolean;
   status: ClientStatus;
-  trainerId: string;
-  trainerName: string;
-  startDate: Date;
-  lastPaymentDate: Date | null;
-  nextPaymentDate: Date;
-  /** Mensualidad en COP */
-  monthlyFee: number;
+  origin: ClientOrigin;
+  joinedAt: string;
+  createdAt: string;
+  planId: string;
+  planName: string;
+  planAmountCop: number | null;
+  trainerName: string | null;
+  referredByName: string | null;
 }
 
-export interface TrainerOption {
-  id: string;
-  name: string;
+/**
+ * Versión extendida del cliente para precarga en el formulario de edición.
+ */
+export interface ClientDetailFull extends Client {
+  birthDate: string;
+  neighborhood: string;
+  gender: string | null;
+  referredById: string | null;
+  trainerId: string | null;
 }
+
+// ─── Parámetros de consulta ────────────────────────────────────────────────────
+
+export type ClientActiveFilter = 'all' | 'active' | 'inactive';
 
 export interface ClientsQueryParams {
   search?: string;
-  trainerId?: string;
-  status?: ClientStatus | 'all';
-  plan?: ClientPlan | 'all';
+  activeFilter: ClientActiveFilter;
   page: number;
   pageSize: number;
 }
@@ -35,4 +62,58 @@ export interface ClientsQueryParams {
 export interface ClientsPage {
   items: Client[];
   total: number;
+}
+
+// ─── Payloads para Edge Functions ─────────────────────────────────────────────
+
+export interface CreateClientPayload {
+  full_name: string;
+  email: string;
+  phone: string;
+  birth_date: string;
+  gender?: string;
+  neighborhood: string;
+  origin: ClientOrigin;
+  referred_by?: string;
+  plan_id: string;
+  joined_at?: string;
+  trainer_id?: string;
+}
+
+export interface CreateClientResult {
+  id: string;
+  email: string;
+  full_name: string;
+  plan_id: string;
+  status: 'active';
+  origin: ClientOrigin;
+  trainer_assigned: boolean;
+  trainer_id: string | null;
+  temporary_password: string;
+}
+
+export interface DeactivateClientResult {
+  success: true;
+  client_id: string;
+  status: 'inactive';
+  is_active: false;
+  assignment_closed: boolean;
+}
+
+export interface UpdateClientPayload {
+  client_id: string;
+  /** Campos del perfil que cambiaron. Solo incluir los modificados. */
+  profile?: {
+    full_name?: string;
+    phone?: string;
+    birth_date?: string;
+    neighborhood?: string;
+    gender?: string | null;
+  };
+  /** Si cambió el plan, usar RPC — no el campo directo. UUID del nuevo plan. */
+  new_plan_id?: string;
+  /** Si cambió el trainer, usar RPC. UUID del nuevo trainer o null para quitar. */
+  new_trainer_id?: string | null;
+  origin?: ClientOrigin;
+  referred_by?: string | null;
 }

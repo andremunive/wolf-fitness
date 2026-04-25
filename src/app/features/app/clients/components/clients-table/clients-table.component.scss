@@ -163,3 +163,36 @@
     color: #c2410c;
   }
 }
+
+// ─── Fila inactiva ─────────────────────────────────────────────────────────────
+
+.clients-table__row--inactive {
+  opacity: 0.6;
+}
+
+// ─── Origin badge ──────────────────────────────────────────────────────────────
+
+.origin-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--referido {
+    background: #ede9fe;
+    color: #5b21b6;
+  }
+
+  &--publicidad {
+    background: #fef9c3;
+    color: #854d0e;
+  }
+
+  &--llego_solo {
+    background: #e0f2fe;
+    color: #075985;
+  }
+}

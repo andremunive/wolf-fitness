@@ -5,7 +5,7 @@
     [class.filters-toggle--active]="isOpen"
     (click)="togglePanel()"
     [attr.aria-expanded]="isOpen"
-    aria-controls="filters-panel"
+    aria-controls="clients-filters-panel"
     aria-label="Abrir filtros de clientes"
   >
     <svg class="filters-toggle__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -21,56 +21,24 @@
 
   <div
     *ngIf="isOpen"
-    id="filters-panel"
+    id="clients-filters-panel"
     class="filters-panel"
     [@panelExpand]
     [@filtersCascade]
     role="region"
     aria-label="Panel de filtros"
   >
-    <!-- Entrenador -->
-    <div class="filter-group">
-      <label class="filter-group__label" for="filter-trainer">Por entrenador</label>
-      <select
-        id="filter-trainer"
-        class="filter-group__select"
-        [value]="localFilters.trainerId"
-        (change)="onTrainerChange($event)"
-      >
-        <option value="all">Todos los entrenadores</option>
-        <option
-          *ngFor="let trainer of trainers; trackBy: trackByTrainerId"
-          [value]="trainer.id"
-        >{{ trainer.name }}</option>
-      </select>
-    </div>
-
-    <!-- Status -->
+    <!-- Estado -->
     <div class="filter-group">
       <span class="filter-group__label">Por estado</span>
       <div class="filter-chips" role="group" aria-label="Filtrar por estado">
         <button
-          *ngFor="let opt of statusOptions; trackBy: trackByValue"
+          *ngFor="let opt of activeFilterOptions; trackBy: trackByValue"
           type="button"
           class="filter-chip"
-          [class.filter-chip--active]="isStatusActive(opt.value)"
-          (click)="selectStatus(opt.value)"
-          [attr.aria-pressed]="isStatusActive(opt.value)"
-        >{{ opt.label }}</button>
-      </div>
-    </div>
-
-    <!-- Plan -->
-    <div class="filter-group">
-      <span class="filter-group__label">Por plan</span>
-      <div class="filter-chips" role="group" aria-label="Filtrar por plan">
-        <button
-          *ngFor="let opt of planOptions; trackBy: trackByValue"
-          type="button"
-          class="filter-chip"
-          [class.filter-chip--active]="isPlanActive(opt.value)"
-          (click)="selectPlan(opt.value)"
-          [attr.aria-pressed]="isPlanActive(opt.value)"
+          [class.filter-chip--active]="isActiveFilterSelected(opt.value)"
+          (click)="selectActiveFilter(opt.value)"
+          [attr.aria-pressed]="isActiveFilterSelected(opt.value)"
         >{{ opt.label }}</button>
       </div>
     </div>

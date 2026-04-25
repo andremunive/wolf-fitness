@@ -6,7 +6,7 @@
         <th scope="col">Entrenador</th>
         <th scope="col">Documento</th>
         <th scope="col">Teléfono</th>
-        <th scope="col">Banco</th>
+        <th scope="col">Cuenta</th>
         <th scope="col">Estado</th>
       </tr>
     </thead>
@@ -34,11 +34,21 @@
           </div>
         </td>
 
-        <td class="trainers-table__cell">{{ getDocumentLabel(trainer) }}</td>
+        <td class="trainers-table__cell">
+          <div class="trainers-table__stack">
+            <p class="trainers-table__stack-title">{{ getDocumentNumber(trainer) }}</p>
+            <p class="trainers-table__stack-subtitle" *ngIf="getDocumentType(trainer) as docType">{{ docType }}</p>
+          </div>
+        </td>
 
         <td class="trainers-table__cell">{{ trainer.phone }}</td>
 
-        <td class="trainers-table__cell">{{ getBankLabel(trainer) }}</td>
+        <td class="trainers-table__cell">
+          <div class="trainers-table__stack">
+            <p class="trainers-table__stack-title">{{ getAccountNumber(trainer) }}</p>
+            <p class="trainers-table__stack-subtitle" *ngIf="getBankName(trainer) as bankName">{{ bankName }}</p>
+          </div>
+        </td>
 
         <td class="trainers-table__cell">
           <span

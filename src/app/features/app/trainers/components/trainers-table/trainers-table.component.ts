@@ -27,13 +27,20 @@ export class TrainersTableComponent {
       .join('');
   }
 
-  getDocumentLabel(trainer: Trainer): string {
-    if (!trainer.details) return '—';
-    return `${trainer.details.documentType.toUpperCase()} ${trainer.details.documentNumber}`;
+  getDocumentNumber(trainer: Trainer): string {
+    return trainer.details?.documentNumber ?? '—';
   }
 
-  getBankLabel(trainer: Trainer): string {
-    if (!trainer.bankAccount) return '—';
+  getDocumentType(trainer: Trainer): string {
+    return trainer.details ? trainer.details.documentType.toUpperCase() : '';
+  }
+
+  getAccountNumber(trainer: Trainer): string {
+    return trainer.bankAccount?.accountNumber ?? '—';
+  }
+
+  getBankName(trainer: Trainer): string {
+    if (!trainer.bankAccount) return '';
     const names: Record<string, string> = { bancolombia: 'Bancolombia', nequi: 'Nequi' };
     return names[trainer.bankAccount.bank] ?? trainer.bankAccount.bank;
   }

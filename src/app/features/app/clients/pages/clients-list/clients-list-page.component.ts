@@ -1,4 +1,10 @@
-import { ChangeDetectionStrategy, Component, OnDestroy, OnInit } from '@angular/core';
+import {
+  ChangeDetectionStrategy,
+  ChangeDetectorRef,
+  Component,
+  OnDestroy,
+  OnInit
+} from '@angular/core';
 import { FormControl } from '@angular/forms';
 import {
   BehaviorSubject,
@@ -18,10 +24,11 @@ import {
   takeUntil
 } from 'rxjs/operators';
 
-import { Client, ClientsPage, TrainerOption } from '../../models/client.model';
-import { ClientsMockService } from '../../services/clients-mock.service';
+import { Client, ClientDetailFull, ClientsPage } from '../../models/client.model';
+import { ClientsService } from '../../services/clients.service';
 import { ClientFiltersValue } from '../../components/clients-filters/clients-filters.component';
 import { PaginationState } from '../../components/clients-pagination/clients-pagination.component';
+import { CreateClientResult } from '../../models/client.model';
 
 interface PageState {
   page: number;
@@ -56,9 +63,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   readonly searchControl = new FormControl<string>('');
 
   private readonly filtersSubject = new BehaviorSubject<ClientFiltersValue>({
-    trainerId: 'all',
-    status: 'all',
-    plan: 'all'
+    activeFilter: 'active'
   });
 
   private readonly pageSubject = new BehaviorSubject<PageState>({
@@ -66,19 +71,21 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     pageSize: 10
   });
 
+  // Dispara refresh después de crear/editar/desactivar.
+  private readonly refreshTrigger$ = new BehaviorSubject<void>(undefined);
+
   readonly filters$ = this.filtersSubject.asObservable();
 
-  isNewClientModalOpen = false;
+  // ─── Modales ────────────────────────────────────────────────────────────────
 
-  readonly trainers$: Observable<TrainerOption[]> = this.clientsService
-    .getTrainers()
-    .pipe(shareReplay(1));
+  isWizardOpen = false;
+  wizardResult: CreateClientResult | null = null;
 
-  /**
-   * Stream principal de la vista. Combina search + filtros + paginación,
-   * dispara la query al servicio mock y emite un estado cargando mientras
-   * espera la respuesta.
-   */
+  editingClient: ClientDetailFull | null = null;
+  isLoadingEditClient = false;
+
+  // ─── Stream principal de la vista ──────────────────────────────────────────
+
   readonly viewState$: Observable<ViewState> = combineLatest([
     this.searchControl.valueChanges.pipe(
       startWith(''),
@@ -87,7 +94,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       distinctUntilChanged()
     ),
     this.filtersSubject,
-    this.pageSubject
+    this.pageSubject,
+    this.refreshTrigger$
   ]).pipe(
     switchMap(([search, filters, pageState]) => {
       const loadingState: ViewState = {
@@ -98,9 +106,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       const result$: Observable<ViewState> = this.clientsService
         .getClients({
           search,
-          trainerId: filters.trainerId,
-          status: filters.status,
-          plan: filters.plan,
+          activeFilter: filters.activeFilter,
           page: pageState.page,
           pageSize: pageState.pageSize
         })
@@ -125,7 +131,11 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
                 total: 0,
                 loading: false,
                 error: true,
-                paginationState: { page: pageState.page, pageSize: pageState.pageSize, total: 0 }
+                paginationState: {
+                  page: pageState.page,
+                  pageSize: pageState.pageSize,
+                  total: 0
+                }
               })
           )
         );
@@ -135,10 +145,13 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     shareReplay(1)
   );
 
-  constructor(private readonly clientsService: ClientsMockService) {}
+  constructor(
+    private readonly clientsService: ClientsService,
+    private readonly cdr: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
-    // Resetea a página 1 cuando cambian los criterios de búsqueda o filtros.
+    // Resetea a página 1 cuando cambian criterios de búsqueda o filtros.
     combineLatest([
       this.searchControl.valueChanges.pipe(debounceTime(300), distinctUntilChanged()),
       this.filtersSubject
@@ -152,13 +165,25 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ─── Búsqueda y filtros ─────────────────────────────────────────────────────
+
+  onSearchChange(search: string): void {
+    this.searchControl.setValue(search);
+  }
+
   onFiltersChange(filters: ClientFiltersValue): void {
     this.filtersSubject.next(filters);
   }
 
   onFiltersClear(): void {
-    this.filtersSubject.next({ trainerId: 'all', status: 'all', plan: 'all' });
+    this.filtersSubject.next({ activeFilter: 'active' });
   }
+
+  get currentFilters(): ClientFiltersValue {
+    return this.filtersSubject.value;
+  }
+
+  // ─── Paginación ─────────────────────────────────────────────────────────────
 
   onPageChange(page: number): void {
     this.pageSubject.next({ ...this.pageSubject.value, page });
@@ -168,22 +193,80 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     this.pageSubject.next({ page: 1, pageSize });
   }
 
-  openNewClientModal(): void {
-    this.isNewClientModalOpen = true;
+  // ─── Wizard nuevo cliente ───────────────────────────────────────────────────
+
+  openWizard(): void {
+    this.isWizardOpen = true;
+    this.cdr.markForCheck();
   }
 
-  closeNewClientModal(): void {
-    this.isNewClientModalOpen = false;
+  closeWizard(): void {
+    this.isWizardOpen = false;
+    this.cdr.markForCheck();
   }
 
-  get currentFilters(): ClientFiltersValue {
-    return this.filtersSubject.value;
+  onClientCreated(result: CreateClientResult): void {
+    this.isWizardOpen = false;
+    this.wizardResult = result;
+    this.refreshTrigger$.next();
+    this.cdr.markForCheck();
   }
 
-  get hasActiveFilters(): boolean {
-    const f = this.filtersSubject.value;
-    return f.trainerId !== 'all' || f.status !== 'all' || f.plan !== 'all';
+  dismissSuccessModal(): void {
+    this.wizardResult = null;
+    this.cdr.markForCheck();
   }
+
+  // ─── Editar cliente ─────────────────────────────────────────────────────────
+
+  onEditRequested(client: Client): void {
+    this.isLoadingEditClient = true;
+    this.cdr.markForCheck();
+
+    this.clientsService
+      .getClientById(client.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (full) => {
+          this.editingClient = full;
+          this.isLoadingEditClient = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingEditClient = false;
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  closeEditModal(): void {
+    this.editingClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onClientUpdated(): void {
+    this.refreshTrigger$.next();
+  }
+
+  // ─── Desactivar cliente ─────────────────────────────────────────────────────
+
+  onDeactivateRequested(client: Client): void {
+    this.clientsService
+      .deactivateClient(client.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: () => {
+          this.refreshTrigger$.next();
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('[ClientsListPage] Error al desactivar cliente:', err);
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  // ─── Utilidades ─────────────────────────────────────────────────────────────
 
   trackByClientId(_index: number, client: Client): string {
     return client.id;

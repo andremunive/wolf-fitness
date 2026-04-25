@@ -1,0 +1,329 @@
+<div class="wizard-backdrop" (click)="close()" role="dialog" aria-modal="true" [attr.aria-label]="'Paso ' + currentStep + ' de ' + totalSteps + ': ' + currentStepTitle">
+  <div class="wizard-sheet" (click)="$event.stopPropagation()">
+
+    <!-- ── Sticky header ── -->
+    <div class="wizard-header">
+      <div class="wizard-header__step-indicator" aria-hidden="true">
+        Paso {{ currentStep }} de {{ totalSteps }}
+      </div>
+      <h2 class="wizard-header__title">{{ currentStepTitle }}</h2>
+      <button
+        type="button"
+        class="wizard-header__close"
+        (click)="close()"
+        aria-label="Cerrar formulario"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Barra de progreso ── -->
+    <div
+      class="wizard-progress"
+      role="progressbar"
+      [attr.aria-valuenow]="currentStep"
+      [attr.aria-valuemin]="1"
+      [attr.aria-valuemax]="totalSteps"
+      aria-label="Progreso del formulario"
+    >
+      <div
+        class="wizard-progress__bar"
+        [style.width.%]="(currentStep / totalSteps) * 100"
+      ></div>
+    </div>
+
+    <!-- ── Cuerpo del wizard ── -->
+    <div class="wizard-body">
+
+      <!-- ════════ STEP 1: Datos personales ════════ -->
+      <form *ngIf="currentStep === 1" [formGroup]="step1" class="wizard-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-full-name">
+            Nombre completo <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="wiz-full-name"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('full_name')?.invalid && step1.get('full_name')?.touched"
+            formControlName="full_name"
+            placeholder="Ej. María Camila Torres"
+            autocomplete="name"
+          />
+          <p class="form-field__error" *ngIf="step1.get('full_name')?.errors?.['required'] && step1.get('full_name')?.touched">
+            El nombre es obligatorio.
+          </p>
+          <p class="form-field__error" *ngIf="step1.get('full_name')?.errors?.['minlength'] && step1.get('full_name')?.touched">
+            El nombre debe tener al menos 3 caracteres.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-email">
+            Correo electrónico <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="wiz-email"
+            type="email"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('email')?.invalid && step1.get('email')?.touched"
+            formControlName="email"
+            placeholder="cliente@ejemplo.com"
+            autocomplete="email"
+          />
+          <p class="form-field__error" *ngIf="step1.get('email')?.errors?.['required'] && step1.get('email')?.touched">
+            El correo es obligatorio.
+          </p>
+          <p class="form-field__error" *ngIf="step1.get('email')?.errors?.['email'] && step1.get('email')?.touched">
+            Ingresa un correo válido.
+          </p>
+          <p class="form-field__error" *ngIf="step1.get('email')?.errors?.['emailTaken']">
+            Este correo ya está registrado. Usa otro.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-phone">
+            Teléfono / WhatsApp <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="wiz-phone"
+            type="tel"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('phone')?.invalid && step1.get('phone')?.touched"
+            formControlName="phone"
+            placeholder="3001234567"
+            inputmode="numeric"
+            autocomplete="tel-national"
+          />
+          <p class="form-field__hint">Solo dígitos, sin indicativo. Ej: 3001234567</p>
+          <p class="form-field__error" *ngIf="step1.get('phone')?.errors?.['required'] && step1.get('phone')?.touched">
+            El teléfono es obligatorio.
+          </p>
+          <p class="form-field__error" *ngIf="step1.get('phone')?.errors?.['pattern'] && step1.get('phone')?.touched">
+            Solo dígitos, entre 7 y 15 caracteres.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-birth-date">
+            Fecha de nacimiento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="wiz-birth-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('birth_date')?.invalid && step1.get('birth_date')?.touched"
+            formControlName="birth_date"
+          />
+          <p class="form-field__error" *ngIf="step1.get('birth_date')?.errors?.['required'] && step1.get('birth_date')?.touched">
+            La fecha de nacimiento es obligatoria.
+          </p>
+          <p class="form-field__error" *ngIf="step1.get('birth_date')?.errors?.['birthDateFuture'] && step1.get('birth_date')?.touched">
+            La fecha no puede ser hoy ni en el futuro.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-gender">
+            Género <span class="form-field__optional">(opcional)</span>
+          </label>
+          <select id="wiz-gender" class="form-field__select" formControlName="gender">
+            <option value="">Prefiero no decir</option>
+            <option
+              *ngFor="let opt of genderOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-neighborhood">
+            Barrio <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="wiz-neighborhood"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('neighborhood')?.invalid && step1.get('neighborhood')?.touched"
+            formControlName="neighborhood"
+            placeholder="Ej. Laureles"
+          />
+          <p class="form-field__error" *ngIf="step1.get('neighborhood')?.errors?.['required'] && step1.get('neighborhood')?.touched">
+            El barrio es obligatorio.
+          </p>
+        </div>
+
+      </form>
+
+      <!-- ════════ STEP 2: Origen y referido ════════ -->
+      <form *ngIf="currentStep === 2" [formGroup]="step2" class="wizard-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-origin">
+            ¿Cómo llegó al gimnasio? <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="wiz-origin"
+            class="form-field__select"
+            [class.form-field__select--error]="step2.get('origin')?.invalid && step2.get('origin')?.touched"
+            formControlName="origin"
+          >
+            <option value="" disabled>Selecciona una opción</option>
+            <option
+              *ngFor="let opt of originOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+          <p class="form-field__error" *ngIf="step2.get('origin')?.errors?.['required'] && step2.get('origin')?.touched">
+            Selecciona cómo llegó el cliente.
+          </p>
+        </div>
+
+        <!-- Campo referidor — solo visible cuando origin === 'referido' -->
+        <div class="form-field" *ngIf="isReferidoSelected">
+          <label class="form-field__label">
+            Cliente que lo refirió <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <app-client-search-input
+            placeholder="Buscar cliente por nombre..."
+            (selected)="onReferidoSelected($event)"
+          ></app-client-search-input>
+          <p class="form-field__error" *ngIf="!referredById && step2.touched">
+            Selecciona el cliente que refirió a este nuevo cliente.
+          </p>
+          <p class="form-field__hint">
+            Escribe al menos 2 caracteres para buscar.
+          </p>
+        </div>
+
+      </form>
+
+      <!-- ════════ STEP 3: Plan y entrenador ════════ -->
+      <form *ngIf="currentStep === 3" [formGroup]="step3" class="wizard-form" novalidate>
+
+        <!-- Plan selector -->
+        <div class="form-field">
+          <label class="form-field__label" for="wiz-plan">
+            Plan <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <ng-container *ngIf="plans$ | async as plans; else loadingPlans">
+            <select
+              id="wiz-plan"
+              class="form-field__select"
+              [class.form-field__select--error]="step3.get('plan_id')?.invalid && step3.get('plan_id')?.touched"
+              formControlName="plan_id"
+            >
+              <option value="" disabled>Selecciona un plan</option>
+              <option
+                *ngFor="let plan of plans; trackBy: trackByPlanId"
+                [value]="plan.id"
+              >{{ plan.name }}<ng-container *ngIf="plan.amountCop"> — {{ formatCop(plan.amountCop) }}/mes</ng-container></option>
+            </select>
+          </ng-container>
+          <ng-template #loadingPlans>
+            <div class="form-field__loading" aria-live="polite">Cargando planes...</div>
+          </ng-template>
+          <p class="form-field__error" *ngIf="step3.get('plan_id')?.errors?.['required'] && step3.get('plan_id')?.touched">
+            Selecciona un plan.
+          </p>
+        </div>
+
+        <!-- Trainer selector — solo visible para admins -->
+        <div class="form-field" *ngIf="isAdmin">
+          <label class="form-field__label" for="wiz-trainer">
+            Asignar entrenador <span class="form-field__optional">(opcional)</span>
+          </label>
+          <ng-container *ngIf="trainers$ | async as trainers; else loadingTrainers">
+            <select
+              id="wiz-trainer"
+              class="form-field__select"
+              formControlName="trainer_id"
+            >
+              <option value="">Sin asignar</option>
+              <option
+                *ngFor="let trainer of trainers; trackBy: trackByTrainerId"
+                [value]="trainer.id"
+              >{{ trainer.fullName }}</option>
+            </select>
+          </ng-container>
+          <ng-template #loadingTrainers>
+            <div class="form-field__loading" aria-live="polite">Cargando entrenadores...</div>
+          </ng-template>
+          <p class="form-field__hint">
+            Si no asignas un entrenador ahora, se puede asignar después.
+          </p>
+        </div>
+
+        <!-- Nota informativa cuando es trainer (no admin) -->
+        <div class="form-note" *ngIf="!isAdmin">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>El cliente quedará asignado automáticamente a ti.</span>
+        </div>
+
+        <!-- Error de submit -->
+        <div class="wizard-error" *ngIf="submitError" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <span>{{ submitError }}</span>
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- ── Footer de navegación ── -->
+    <div class="wizard-footer">
+      <button
+        *ngIf="currentStep > 1"
+        type="button"
+        class="wizard-footer__back"
+        (click)="goToPreviousStep()"
+        [disabled]="isSubmitting"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Atrás
+      </button>
+
+      <div class="wizard-footer__spacer" *ngIf="currentStep === 1"></div>
+
+      <button
+        *ngIf="currentStep < totalSteps"
+        type="button"
+        class="wizard-footer__next"
+        (click)="goToNextStep()"
+        [disabled]="!isCurrentStepValid"
+      >
+        Siguiente
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+
+      <button
+        *ngIf="currentStep === totalSteps"
+        type="button"
+        class="wizard-footer__submit"
+        (click)="submit()"
+        [disabled]="!isCurrentStepValid || isSubmitting"
+      >
+        <span *ngIf="!isSubmitting">Registrar cliente</span>
+        <span *ngIf="isSubmitting" class="wizard-footer__spinner" aria-label="Registrando...">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Registrando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

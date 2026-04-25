@@ -1,0 +1,265 @@
+<div class="edit-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-client-title" (click)="close()">
+  <div class="edit-sheet" (click)="$event.stopPropagation()">
+
+    <!-- ── Header ── -->
+    <div class="edit-header">
+      <div class="edit-header__avatar" aria-hidden="true">{{ avatarInitials }}</div>
+      <div class="edit-header__info">
+        <h2 id="edit-client-title" class="edit-header__name">{{ client.fullName }}</h2>
+        <p class="edit-header__email">{{ client.email }}</p>
+      </div>
+      <button
+        type="button"
+        class="edit-header__close"
+        (click)="close()"
+        aria-label="Cerrar"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Tabs de navegación ── -->
+    <div class="edit-tabs" role="tablist" aria-label="Secciones del perfil del cliente">
+      <button
+        *ngFor="let tab of tabs; trackBy: trackByTabId"
+        type="button"
+        role="tab"
+        class="edit-tab"
+        [class.edit-tab--active]="currentTab === tab.id"
+        [attr.aria-selected]="currentTab === tab.id"
+        (click)="switchTab(tab.id)"
+      >{{ tab.label }}</button>
+    </div>
+
+    <!-- ── Cuerpo (scrollable) ── -->
+    <div class="edit-body">
+
+      <!-- ════ Identidad ════ -->
+      <form *ngIf="currentTab === 'identity'" [formGroup]="identityForm" class="edit-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-full-name">
+            Nombre completo <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-full-name"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('full_name')?.invalid && identityForm.get('full_name')?.touched"
+            formControlName="full_name"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('full_name')?.errors?.['required'] && identityForm.get('full_name')?.touched">
+            Obligatorio.
+          </p>
+          <p class="form-field__error" *ngIf="identityForm.get('full_name')?.errors?.['minlength'] && identityForm.get('full_name')?.touched">
+            Mínimo 3 caracteres.
+          </p>
+        </div>
+
+        <!-- Email: readonly en edición -->
+        <div class="form-field">
+          <label class="form-field__label" for="edit-email">
+            Correo electrónico
+            <span class="form-field__readonly-badge" aria-label="Campo de solo lectura">Solo lectura</span>
+          </label>
+          <input
+            id="edit-email"
+            type="email"
+            class="form-field__input form-field__input--readonly"
+            [value]="client.email"
+            readonly
+            aria-readonly="true"
+          />
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-phone">
+            Teléfono <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-phone"
+            type="tel"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('phone')?.invalid && identityForm.get('phone')?.touched"
+            formControlName="phone"
+            placeholder="3001234567"
+            inputmode="numeric"
+            autocomplete="tel-national"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('phone')?.errors?.['pattern'] && identityForm.get('phone')?.touched">
+            Solo dígitos, entre 7 y 15 caracteres.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-birth-date">
+            Fecha de nacimiento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-birth-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('birth_date')?.invalid && identityForm.get('birth_date')?.touched"
+            formControlName="birth_date"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('birth_date')?.errors?.['birthDateFuture'] && identityForm.get('birth_date')?.touched">
+            La fecha no puede ser hoy ni en el futuro.
+          </p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-gender">
+            Género <span class="form-field__optional">(opcional)</span>
+          </label>
+          <select id="edit-gender" class="form-field__select" formControlName="gender">
+            <option
+              *ngFor="let opt of genderOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-neighborhood">
+            Barrio <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="edit-neighborhood"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="identityForm.get('neighborhood')?.invalid && identityForm.get('neighborhood')?.touched"
+            formControlName="neighborhood"
+          />
+          <p class="form-field__error" *ngIf="identityForm.get('neighborhood')?.errors?.['required'] && identityForm.get('neighborhood')?.touched">
+            El barrio es obligatorio.
+          </p>
+        </div>
+
+      </form>
+
+      <!-- ════ Origen ════ -->
+      <form *ngIf="currentTab === 'origin'" [formGroup]="originForm" class="edit-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-origin">
+            ¿Cómo llegó al gimnasio? <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select id="edit-origin" class="form-field__select" formControlName="origin">
+            <option value="" disabled>Selecciona</option>
+            <option
+              *ngFor="let opt of originOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-field" *ngIf="isReferidoSelected">
+          <label class="form-field__label">
+            Cliente que lo refirió <span class="form-field__optional">(opcional)</span>
+          </label>
+          <app-client-search-input
+            placeholder="Buscar cliente por nombre..."
+            [excludeId]="client.id"
+            [initialLabel]="initialReferredByLabel"
+            (selected)="onReferidoSelected($event)"
+          ></app-client-search-input>
+          <p class="form-field__hint">
+            Busca y selecciona el cliente que refirió a {{ client.fullName }}.
+          </p>
+        </div>
+
+      </form>
+
+      <!-- ════ Plan ════ -->
+      <form *ngIf="currentTab === 'plan'" [formGroup]="planForm" class="edit-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="edit-plan">
+            Plan <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <ng-container *ngIf="plans$ | async as plans; else loadingPlans">
+            <select
+              id="edit-plan"
+              class="form-field__select"
+              formControlName="plan_id"
+            >
+              <option value="" disabled>Selecciona un plan</option>
+              <option
+                *ngFor="let plan of plans; trackBy: trackByPlanId"
+                [value]="plan.id"
+              >{{ plan.name }}<ng-container *ngIf="plan.amountCop"> — {{ formatCop(plan.amountCop) }}/mes</ng-container></option>
+            </select>
+          </ng-container>
+          <ng-template #loadingPlans>
+            <div class="form-field__loading">Cargando planes...</div>
+          </ng-template>
+          <p class="form-field__hint">
+            El cambio de plan se aplica vía historial (RPC). El plan actual seguirá activo hasta el cierre del periodo.
+          </p>
+        </div>
+
+        <div class="form-field" *ngIf="isAdmin">
+          <label class="form-field__label" for="edit-trainer">
+            Entrenador asignado <span class="form-field__optional">(opcional)</span>
+          </label>
+          <ng-container *ngIf="trainers$ | async as trainers; else loadingTrainers">
+            <select id="edit-trainer" class="form-field__select" formControlName="trainer_id">
+              <option value="">Sin asignar</option>
+              <option
+                *ngFor="let trainer of trainers; trackBy: trackByTrainerId"
+                [value]="trainer.id"
+              >{{ trainer.fullName }}</option>
+            </select>
+          </ng-container>
+          <ng-template #loadingTrainers>
+            <div class="form-field__loading">Cargando entrenadores...</div>
+          </ng-template>
+        </div>
+
+      </form>
+
+      <!-- Feedback -->
+      <div class="edit-feedback edit-feedback--error" *ngIf="saveError" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        <span>{{ saveError }}</span>
+      </div>
+
+      <div class="edit-feedback edit-feedback--success" *ngIf="saveSuccess" role="status">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span>Cambios guardados correctamente.</span>
+      </div>
+
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="edit-footer">
+      <button
+        type="button"
+        class="edit-footer__cancel"
+        (click)="close()"
+        [disabled]="isSaving"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="edit-footer__save"
+        (click)="save()"
+        [disabled]="!hasChanges || isSaving"
+      >
+        <span *ngIf="!isSaving">Guardar cambios</span>
+        <span *ngIf="isSaving" class="spinner-wrap" aria-label="Guardando...">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Guardando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>
