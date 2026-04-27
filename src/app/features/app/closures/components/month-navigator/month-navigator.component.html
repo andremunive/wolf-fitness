@@ -1,0 +1,32 @@
+<div class="month-nav" role="group" aria-label="Navegación de mes">
+
+  <button
+    type="button"
+    class="month-nav__btn"
+    (click)="goToPrevious()"
+    aria-label="Mes anterior"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+         aria-hidden="true" class="month-nav__icon">
+      <polyline points="15 18 9 12 15 6"></polyline>
+    </svg>
+  </button>
+
+  <span class="month-nav__label">{{ label }}</span>
+
+  <button
+    type="button"
+    class="month-nav__btn"
+    [class.month-nav__btn--disabled]="nextBlocked"
+    [attr.title]="nextBlocked ? 'Cierra ambas quincenas del mes actual antes de avanzar' : null"
+    [attr.aria-disabled]="nextBlocked ? 'true' : null"
+    (click)="goToNext()"
+    aria-label="Mes siguiente"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+         aria-hidden="true" class="month-nav__icon">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </button>
+
+</div>

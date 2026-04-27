@@ -14,6 +14,9 @@ import { ClientSearchInputComponent } from './components/client-search-input/cli
 import { NewClientWizardComponent } from './components/new-client-wizard/new-client-wizard.component';
 import { ClientCreatedModalComponent } from './components/client-created-modal/client-created-modal.component';
 import { EditClientModalComponent } from './components/edit-client-modal/edit-client-modal.component';
+import { RegisterPaymentModalComponent } from './components/register-payment-modal/register-payment-modal.component';
+import { RegisterInstallmentModalComponent } from './components/register-installment-modal/register-installment-modal.component';
+import { PaymentSuccessModalComponent } from './components/payment-success-modal/payment-success-modal.component';
 
 @NgModule({
   declarations: [
@@ -27,7 +30,10 @@ import { EditClientModalComponent } from './components/edit-client-modal/edit-cl
     ClientSearchInputComponent,
     NewClientWizardComponent,
     ClientCreatedModalComponent,
-    EditClientModalComponent
+    EditClientModalComponent,
+    RegisterPaymentModalComponent,
+    RegisterInstallmentModalComponent,
+    PaymentSuccessModalComponent
   ],
   imports: [
     SharedModule,

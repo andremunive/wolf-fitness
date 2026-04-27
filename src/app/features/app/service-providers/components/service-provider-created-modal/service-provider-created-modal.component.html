@@ -1,0 +1,35 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Proveedor creado exitosamente" (click)="dismiss()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap>
+
+    <div class="modal-sheet__header">
+      <h2 class="modal-sheet__title">Proveedor registrado</h2>
+      <button type="button" class="modal-sheet__close" (click)="dismiss()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-sheet__body">
+      <div class="success-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </div>
+      <p class="modal-sheet__provider-name">{{ provider.name }}</p>
+      <p class="modal-sheet__desc">
+        El proveedor fue registrado exitosamente como <strong>{{ provider.serviceTypeName }}</strong>.
+      </p>
+      <p class="modal-sheet__desc" *ngIf="!provider.primaryBankAccount">
+        Recuerda agregar su cuenta bancaria cuando tengas los datos.
+      </p>
+    </div>
+
+    <div class="modal-sheet__footer">
+      <button type="button" class="modal-sheet__confirm-btn" (click)="dismiss()">
+        Entendido
+      </button>
+    </div>
+
+  </div>
+</div>

@@ -1,6 +1,18 @@
 // Enums del dominio — alineados con los tipos Supabase.
-export type ClientStatus = 'active' | 'inactive';
+// El enum real en BD tiene 4 valores; suspended/overdue no se usan operativamente todavía.
+export type ClientStatus = 'active' | 'inactive' | 'suspended' | 'overdue';
 export type ClientOrigin = 'referido' | 'publicidad' | 'llego_solo';
+
+/**
+ * Estado del último pago del cliente.
+ * Tipo text (no enum) porque incluye el centinela 'no_payments' para clientes sin pagos.
+ */
+export type ClientPaymentStatusDisplay =
+  | 'pending'
+  | 'partial'
+  | 'paid'
+  | 'voided'
+  | 'no_payments';
 
 // ─── Modelos de dominio ────────────────────────────────────────────────────────
 
@@ -18,7 +30,8 @@ export interface TrainerOption {
 }
 
 /**
- * Cliente que aparece en el listado. Resuelve los JOIN de plan, trainer y referidor.
+ * Cliente tal como lo devuelve la vista v_clients_with_payment_status.
+ * Extiende el modelo previo con los campos de estado de pagos.
  */
 export interface Client {
   id: string;
@@ -35,6 +48,35 @@ export interface Client {
   planAmountCop: number | null;
   trainerName: string | null;
   referredByName: string | null;
+
+  // ── Campos de pagos (Hito 4.5) ──────────────────────────────────────────────
+
+  /** Estado del último pago no anulado, o 'no_payments' si no hay pagos. */
+  lastPaymentStatus: ClientPaymentStatusDisplay;
+
+  /**
+   * Saldo pendiente del último pago activo, en COP.
+   * NULL si no hay pagos. Solo mostrar en UI cuando > 0.
+   */
+  lastPaymentBalanceCop: number | null;
+
+  /**
+   * Fecha de vencimiento del período del último pago activo (ISO date string).
+   * NULL si no hay pagos.
+   */
+  lastPaymentPeriodEnd: string | null;
+
+  /**
+   * Fecha del último evento de cobro real (pago inicial con dinero o abono).
+   * NULL si no se ha recibido dinero todavía.
+   */
+  lastEventDate: string | null;
+
+  /**
+   * Monto del último evento individual de cobro, en COP.
+   * NULL si no se ha recibido dinero todavía.
+   */
+  lastEventAmountCop: number | null;
 }
 
 /**

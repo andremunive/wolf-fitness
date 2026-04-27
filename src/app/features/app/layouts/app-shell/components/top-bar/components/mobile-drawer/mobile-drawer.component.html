@@ -46,6 +46,7 @@
           <button
             type="button"
             class="drawer-nav-item"
+            [class.drawer-nav-item--active]="isActive(item.routerLink)"
             (click)="navigateTo(item.routerLink)"
           >
             <!-- Icon -->

@@ -1,0 +1,251 @@
+:host {
+  display: block;
+}
+
+.closure-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  transition: box-shadow 0.15s;
+
+  &:hover {
+    box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+  }
+}
+
+// ─── Header ──────────────────────────────────────────────────────────────────
+
+.closure-card__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.closure-card__header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.closure-card__trainer-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.closure-card__quincena {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  margin: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+// ─── Status badges ────────────────────────────────────────────────────────────
+
+.badge {
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+
+  &--open {
+    background: #eff6ff;
+    color: #3b82f6;
+  }
+
+  &--closed {
+    background: #fef3c7;
+    color: #b45309;
+  }
+
+  &--paid {
+    background: #dcfce7;
+    color: #166534;
+  }
+}
+
+// ─── Counts ───────────────────────────────────────────────────────────────────
+
+.closure-card__counts {
+  display: flex;
+  gap: 12px;
+  padding: 10px 0;
+  border-top: 1px solid #f3f4f6;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.closure-card__count-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.closure-card__count-label {
+  font-size: 10px;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 500;
+}
+
+.closure-card__count-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #111827;
+}
+
+// ─── Amounts ─────────────────────────────────────────────────────────────────
+
+.closure-card__amounts {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.closure-card__amount-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.closure-card__amount-label {
+  font-size: 13px;
+  color: #6b7280;
+}
+
+.closure-card__amount-value {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+
+  &--negative {
+    color: #dc2626;
+  }
+}
+
+// ─── Total ────────────────────────────────────────────────────────────────────
+
+.closure-card__total {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: #f0f9fb;
+  border-radius: 8px;
+  border: 1px solid #c7eaee;
+}
+
+.closure-card__total-label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.closure-card__total-value {
+  font-size: 20px;
+  font-weight: 800;
+  color: #228d9f;
+}
+
+// ─── Paid info ────────────────────────────────────────────────────────────────
+
+.closure-card__paid-info {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: #166534;
+  background: #f0fdf4;
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.closure-card__paid-icon {
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+// ─── Actions ─────────────────────────────────────────────────────────────────
+
+.closure-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+// ─── Shared button styles ─────────────────────────────────────────────────────
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+  }
+
+  &--sm {
+    padding: 7px 12px;
+    font-size: 12px;
+    min-height: 34px;
+  }
+
+  &--primary {
+    background: #228d9f;
+    color: #fff;
+    &:hover { background: #1a7a8d; }
+  }
+
+  &--secondary {
+    background: #f3f4f6;
+    color: #374151;
+    &:hover { background: #e5e7eb; }
+  }
+
+  &--ghost {
+    background: transparent;
+    color: #228d9f;
+    border: 1px solid #c7eaee;
+    &:hover { background: #f0f9fb; }
+  }
+
+  &--warning {
+    background: #fef3c7;
+    color: #92400e;
+    &:hover { background: #fde68a; }
+  }
+
+  &--success {
+    background: #dcfce7;
+    color: #166534;
+    &:hover { background: #bbf7d0; }
+  }
+}
+
+.btn__icon {
+  width: 14px;
+  height: 14px;
+}

@@ -1,0 +1,267 @@
+<div class="wizard-backdrop" (click)="onBackdropClick()" role="dialog" aria-modal="true" [attr.aria-label]="'Paso ' + currentStep + ' de ' + totalSteps + ': ' + currentStepTitle">
+  <div class="wizard-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="onBackdropClick()">
+
+    <!-- ── Sticky header ── -->
+    <div class="wizard-header">
+      <div class="wizard-header__step-indicator" aria-hidden="true">
+        Paso {{ currentStep }} de {{ totalSteps }}
+      </div>
+      <h2 class="wizard-header__title">{{ currentStepTitle }}</h2>
+      <button type="button" class="wizard-header__close" (click)="close()" aria-label="Cerrar formulario">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Progreso ── -->
+    <div class="wizard-progress" role="progressbar" [attr.aria-valuenow]="currentStep" aria-valuemin="1" [attr.aria-valuemax]="totalSteps" aria-label="Progreso">
+      <div class="wizard-progress__bar" [style.width.%]="(currentStep / totalSteps) * 100"></div>
+    </div>
+
+    <!-- ── Cuerpo ── -->
+    <div class="wizard-body">
+
+      <!-- ════ STEP 1: Identidad ════ -->
+      <form *ngIf="currentStep === 1" [formGroup]="step1" class="wizard-form" novalidate>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-name">
+            Nombre / Razón social <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="sp-name"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('name')?.invalid && step1.get('name')?.touched"
+            formControlName="name"
+            placeholder="Ej. Luis Hernández o Distribuidora ABC"
+            autocomplete="off"
+          />
+          <p class="form-field__error" *ngIf="step1.get('name')?.errors?.['required'] && step1.get('name')?.touched">El nombre es obligatorio.</p>
+          <p class="form-field__error" *ngIf="step1.get('name')?.errors?.['minlength'] && step1.get('name')?.touched">Mínimo 2 caracteres.</p>
+        </div>
+
+        <div class="form-field">
+          <span class="form-field__label">Tipo de entidad <span class="form-field__required" aria-hidden="true">*</span></span>
+          <div class="radio-group" role="radiogroup" aria-label="Tipo de entidad">
+            <label *ngFor="let opt of entityTypeOptions; trackBy: trackByValue" class="radio-option">
+              <input type="radio" class="radio-option__input" formControlName="entity_type" [value]="opt.value"/>
+              <span class="radio-option__dot" aria-hidden="true"></span>
+              <span class="radio-option__label">{{ opt.label }}</span>
+            </label>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-doc-type">
+            Tipo de documento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="sp-doc-type"
+            class="form-field__select"
+            [class.form-field__select--error]="step1.get('document_type')?.invalid && step1.get('document_type')?.touched"
+            formControlName="document_type"
+          >
+            <option
+              *ngFor="let opt of documentTypeOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-doc-number">
+            Número de documento <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="sp-doc-number"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="step1.get('document_number')?.invalid && step1.get('document_number')?.touched"
+            formControlName="document_number"
+            placeholder="Ej. 900123456-7"
+            inputmode="text"
+          />
+          <p class="form-field__error" *ngIf="step1.get('document_number')?.errors?.['required'] && step1.get('document_number')?.touched">El número de documento es obligatorio.</p>
+          <p class="form-field__error" *ngIf="step1.get('document_number')?.errors?.['minlength'] && step1.get('document_number')?.touched">Mínimo 4 caracteres.</p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-service-type">
+            Tipo de servicio <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="sp-service-type"
+            class="form-field__select"
+            [class.form-field__select--error]="step1.get('service_type_id')?.invalid && step1.get('service_type_id')?.touched"
+            formControlName="service_type_id"
+          >
+            <option value="" disabled>Selecciona un tipo de servicio</option>
+            <option
+              *ngFor="let t of serviceTypes; trackBy: trackByTypeId"
+              [value]="t.id"
+            >{{ t.name }}</option>
+          </select>
+          <p class="form-field__error" *ngIf="step1.get('service_type_id')?.errors?.['required'] && step1.get('service_type_id')?.touched">Selecciona un tipo de servicio.</p>
+        </div>
+
+      </form>
+
+      <!-- ════ STEP 2: Contacto ════ -->
+      <form *ngIf="currentStep === 2" [formGroup]="step2" class="wizard-form" novalidate>
+
+        <p class="wizard-body__hint">Todos los campos de este paso son opcionales.</p>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-phone">Teléfono <span class="form-field__optional">(opcional)</span></label>
+          <input
+            id="sp-phone"
+            type="tel"
+            class="form-field__input"
+            [class.form-field__input--error]="step2.get('phone')?.invalid && step2.get('phone')?.touched"
+            formControlName="phone"
+            placeholder="3001234567"
+            inputmode="numeric"
+          />
+          <p class="form-field__error" *ngIf="step2.get('phone')?.errors?.['pattern'] && step2.get('phone')?.touched">Solo dígitos, entre 7 y 15 caracteres.</p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-email">Correo electrónico <span class="form-field__optional">(opcional)</span></label>
+          <input
+            id="sp-email"
+            type="email"
+            class="form-field__input"
+            [class.form-field__input--error]="step2.get('email')?.invalid && step2.get('email')?.touched"
+            formControlName="email"
+            placeholder="proveedor@ejemplo.com"
+            autocomplete="email"
+          />
+          <p class="form-field__error" *ngIf="step2.get('email')?.errors?.['invalidEmail'] && step2.get('email')?.touched">Ingresa un correo válido.</p>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-description">Notas / Descripción <span class="form-field__optional">(opcional)</span></label>
+          <textarea
+            id="sp-description"
+            class="form-field__textarea"
+            formControlName="description"
+            rows="3"
+            placeholder="Información adicional sobre el proveedor..."
+          ></textarea>
+        </div>
+
+      </form>
+
+      <!-- ════ STEP 3: Cuenta bancaria ════ -->
+      <form *ngIf="currentStep === 3" [formGroup]="step3" class="wizard-form" novalidate>
+
+        <p class="wizard-body__hint">Este paso es opcional. Puedes agregar la cuenta bancaria más tarde.</p>
+
+        <div class="form-field">
+          <label class="form-field__label" for="sp-bank">Banco <span class="form-field__optional">(opcional)</span></label>
+          <select id="sp-bank" class="form-field__select" formControlName="bank">
+            <option value="">Sin cuenta bancaria</option>
+            <option *ngFor="let opt of bankOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <ng-container *ngIf="step3.get('bank')?.value">
+          <div class="form-field">
+            <span class="form-field__label">Tipo de cuenta</span>
+            <div class="radio-group" role="radiogroup" aria-label="Tipo de cuenta">
+              <label *ngFor="let opt of accountTypeOptions; trackBy: trackByValue" class="radio-option">
+                <input type="radio" class="radio-option__input" formControlName="account_type" [value]="opt.value"/>
+                <span class="radio-option__dot" aria-hidden="true"></span>
+                <span class="radio-option__label">{{ opt.label }}</span>
+              </label>
+            </div>
+          </div>
+
+          <div class="form-field">
+            <label class="form-field__label" for="sp-account-number">Número de cuenta</label>
+            <input
+              id="sp-account-number"
+              type="text"
+              class="form-field__input"
+              formControlName="account_number"
+              placeholder="Número de cuenta bancaria"
+              inputmode="numeric"
+            />
+          </div>
+
+          <div class="form-field">
+            <label class="form-field__label" for="sp-account-holder">Titular de la cuenta <span class="form-field__optional">(si difiere del nombre del proveedor)</span></label>
+            <input
+              id="sp-account-holder"
+              type="text"
+              class="form-field__input"
+              formControlName="account_holder_name"
+              placeholder="Nombre del titular"
+              autocomplete="off"
+            />
+          </div>
+        </ng-container>
+
+        <!-- Error de submit -->
+        <div class="wizard-error" *ngIf="submitError" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <span>{{ submitError }}</span>
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="wizard-footer">
+      <button
+        *ngIf="currentStep > 1"
+        type="button"
+        class="wizard-footer__back"
+        (click)="goToPreviousStep()"
+        [disabled]="isSubmitting"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+        Atrás
+      </button>
+
+      <div class="wizard-footer__spacer" *ngIf="currentStep === 1"></div>
+
+      <button
+        *ngIf="currentStep < totalSteps"
+        type="button"
+        class="wizard-footer__next"
+        (click)="goToNextStep()"
+        [disabled]="!isCurrentStepValid"
+      >
+        Siguiente
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+        </svg>
+      </button>
+
+      <button
+        *ngIf="currentStep === totalSteps"
+        type="button"
+        class="wizard-footer__submit"
+        (click)="submit()"
+        [disabled]="isSubmitting"
+      >
+        <span *ngIf="!isSubmitting">Guardar proveedor</span>
+        <span *ngIf="isSubmitting" class="wizard-footer__spinner" aria-label="Guardando...">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Guardando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

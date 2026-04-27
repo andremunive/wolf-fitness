@@ -80,13 +80,46 @@
    Glow + rayos diagonales + imagen 3D centrada
    ========================================================================= */
 
+// Password visibility toggle button — sits inside the relative wrapper
+.password-toggle {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border: none;
+  background: transparent;
+  color: #6b7280;
+  cursor: pointer;
+  border-radius: 0 12px 12px 0;
+
+  svg {
+    width: 20px;
+    height: 20px;
+  }
+
+  &:hover {
+    color: #228d9f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: -2px;
+    border-radius: 8px;
+  }
+}
+
 .login-art-panel {
   position: relative;
   order: 1;
   overflow: hidden;
   isolation: isolate;
   flex: 0 0 auto;
-  min-height: 260px;
+  min-height: 200px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -163,10 +196,10 @@
    Breakpoints
    ========================================================================= */
 
-/* Tablet: crece el hero, logo un poco más grande */
+/* Tablet: crece el hero (ya no aplica en < 1024 porque el split es horizontal) */
 @media (min-width: 640px) {
   .login-art-panel {
-    min-height: 320px;
+    min-height: 260px;
   }
 
   .art-image {

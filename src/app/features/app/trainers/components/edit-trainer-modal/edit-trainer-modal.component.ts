@@ -205,8 +205,22 @@ export class EditTrainerModalComponent implements OnChanges, OnDestroy {
       });
   }
 
-  close(): void {
+  /**
+   * Closes the modal. If the user has unsaved changes, asks for confirmation
+   * first so data is not lost accidentally (backdrop click, Escape, or Cancel).
+   */
+  closeWithConfirmation(): void {
+    if (this.hasChanges) {
+      const confirmed = window.confirm(
+        '¿Descartar los cambios sin guardar?'
+      );
+      if (!confirmed) return;
+    }
     this.closed.emit();
+  }
+
+  close(): void {
+    this.closeWithConfirmation();
   }
 
   trackByTabId(_index: number, tab: { id: string; label: string }): string {

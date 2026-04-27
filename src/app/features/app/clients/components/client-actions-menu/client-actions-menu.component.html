@@ -18,9 +18,26 @@
   <div
     *ngIf="isOpen"
     class="actions-menu__dropdown"
-    [class.actions-menu__dropdown--align-left]="dropdownAlign === 'left'"
+    [ngStyle]="dropdownStyle"
     role="menu"
   >
+    <!-- Registrar pago — solo admin y solo para clientes activos -->
+    <button
+      *ngIf="isAdmin && client.status === 'active'"
+      type="button"
+      class="actions-menu__item actions-menu__item--primary"
+      role="menuitem"
+      (click)="onRegisterPayment()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 6v6m0 0v6m0-6h6m-6 0H6"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Registrar pago</span>
+    </button>
+
     <button
       type="button"
       class="actions-menu__item"

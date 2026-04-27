@@ -1,5 +1,5 @@
 // Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras el Hito 3 (clients module).
+// Refleja el estado de la base tras el hito closures_module (Hito 5).
 // NO editar a mano. Regenerar cuando el esquema cambie.
 
 export type Json =
@@ -82,6 +82,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "cbm_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "cbm_measured_by_fkey"
             columns: ["measured_by"]
             isOneToOne: false
@@ -134,6 +141,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cph_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
             referencedColumns: ["id"]
           },
           {
@@ -192,6 +206,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cta_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
             referencedColumns: ["id"]
           },
           {
@@ -272,6 +293,333 @@ export type Database = {
           {
             foreignKeyName: "clients_referred_by_fkey"
             columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      closure_adjustments: {
+        Row: {
+          amount_cop: number
+          closure_id: string
+          created_at: string
+          created_by: string
+          id: string
+          reason: string
+        }
+        Insert: {
+          amount_cop: number
+          closure_id: string
+          created_at?: string
+          created_by: string
+          id?: string
+          reason: string
+        }
+        Update: {
+          amount_cop?: number
+          closure_id?: string
+          created_at?: string
+          created_by?: string
+          id?: string
+          reason?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "closure_adjustments_closure_id_fkey"
+            columns: ["closure_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_closures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "closure_adjustments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      closure_client_entries: {
+        Row: {
+          client_id: string
+          client_name: string
+          closure_id: string
+          created_at: string
+          cumulative_equivalente: number
+          equivalente: number
+          id: string
+          payment_id: string
+          payment_order: number
+          plan_frequency_snapshot: Database["public"]["Enums"]["plan_frequency"]
+          reception_date: string
+        }
+        Insert: {
+          client_id: string
+          client_name: string
+          closure_id: string
+          created_at?: string
+          cumulative_equivalente: number
+          equivalente: number
+          id?: string
+          payment_id: string
+          payment_order: number
+          plan_frequency_snapshot: Database["public"]["Enums"]["plan_frequency"]
+          reception_date: string
+        }
+        Update: {
+          client_id?: string
+          client_name?: string
+          closure_id?: string
+          created_at?: string
+          cumulative_equivalente?: number
+          equivalente?: number
+          id?: string
+          payment_id?: string
+          payment_order?: number
+          plan_frequency_snapshot?: Database["public"]["Enums"]["plan_frequency"]
+          reception_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "closure_client_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "closure_client_entries_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "closure_client_entries_closure_id_fkey"
+            columns: ["closure_id"]
+            isOneToOne: false
+            referencedRelation: "trainer_closures"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "closure_client_entries_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      discounts: {
+        Row: {
+          code: string
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          percentage: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          percentage: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          percentage?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "discounts_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_installments: {
+        Row: {
+          amount_cop: number
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          payment_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reception_date: string
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_cop: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          reception_date: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          payment_id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          reception_date?: string
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_installments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_installments_payment_id_fkey"
+            columns: ["payment_id"]
+            isOneToOne: false
+            referencedRelation: "payments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payment_installments_voided_by_fkey"
+            columns: ["voided_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount_received_cop: number
+          balance_cop: number
+          client_id: string
+          created_at: string
+          created_by: string | null
+          discount_amount_cop: number
+          discount_id: string | null
+          discount_percentage_applied: number | null
+          id: string
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          period_end: string
+          period_start: string
+          plan_price_id: string
+          plan_total_cop: number
+          reception_date: string
+          reported_date: string
+          status: Database["public"]["Enums"]["payment_status"]
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: {
+          amount_received_cop?: number
+          balance_cop: number
+          client_id: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount_cop?: number
+          discount_id?: string | null
+          discount_percentage_applied?: number | null
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          period_end: string
+          period_start: string
+          plan_price_id: string
+          plan_total_cop: number
+          reception_date: string
+          reported_date: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Update: {
+          amount_received_cop?: number
+          balance_cop?: number
+          client_id?: string
+          created_at?: string
+          created_by?: string | null
+          discount_amount_cop?: number
+          discount_id?: string | null
+          discount_percentage_applied?: number | null
+          id?: string
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          period_end?: string
+          period_start?: string
+          plan_price_id?: string
+          plan_total_cop?: number
+          reception_date?: string
+          reported_date?: string
+          status?: Database["public"]["Enums"]["payment_status"]
+          voided_at?: string | null
+          voided_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_discount_id_fkey"
+            columns: ["discount_id"]
+            isOneToOne: false
+            referencedRelation: "discounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_plan_price_id_fkey"
+            columns: ["plan_price_id"]
+            isOneToOne: false
+            referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_voided_by_fkey"
+            columns: ["voided_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -412,6 +760,161 @@ export type Database = {
           },
         ]
       }
+      provider_bank_accounts: {
+        Row: {
+          account_holder_name: string | null
+          account_number: string
+          account_type: Database["public"]["Enums"]["bank_account_type"]
+          bank: Database["public"]["Enums"]["bank"]
+          created_at: string
+          id: string
+          is_primary: boolean
+          provider_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_holder_name?: string | null
+          account_number: string
+          account_type: Database["public"]["Enums"]["bank_account_type"]
+          bank: Database["public"]["Enums"]["bank"]
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          provider_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_holder_name?: string | null
+          account_number?: string
+          account_type?: Database["public"]["Enums"]["bank_account_type"]
+          bank?: Database["public"]["Enums"]["bank"]
+          created_at?: string
+          id?: string
+          is_primary?: boolean
+          provider_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "provider_bank_accounts_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_providers: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          description: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          email: string | null
+          entity_type: Database["public"]["Enums"]["provider_entity_type"]
+          id: string
+          name: string
+          phone: string | null
+          service_type_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          document_number: string
+          document_type: Database["public"]["Enums"]["document_type"]
+          email?: string | null
+          entity_type: Database["public"]["Enums"]["provider_entity_type"]
+          id?: string
+          name: string
+          phone?: string | null
+          service_type_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          deleted_at?: string | null
+          deleted_by?: string | null
+          description?: string | null
+          document_number?: string
+          document_type?: Database["public"]["Enums"]["document_type"]
+          email?: string | null
+          entity_type?: Database["public"]["Enums"]["provider_entity_type"]
+          id?: string
+          name?: string
+          phone?: string | null
+          service_type_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_providers_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_providers_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "service_providers_service_type_id_fkey"
+            columns: ["service_type_id"]
+            isOneToOne: false
+            referencedRelation: "service_types"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      service_types: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "service_types_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       trainer_bank_accounts: {
         Row: {
           account_number: string
@@ -445,6 +948,119 @@ export type Database = {
             foreignKeyName: "trainer_bank_accounts_trainer_id_fkey"
             columns: ["trainer_id"]
             isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      trainer_closures: {
+        Row: {
+          adjustments_total_cop: number
+          base_cop: number
+          bonus_q_cop: number
+          closed_at: string
+          closed_by: string
+          count_six_days: number
+          count_three_days: number
+          created_at: string
+          equivalente_mes_acum_at_close: number
+          equivalente_q: number
+          id: string
+          month: number
+          paid_at: string | null
+          paid_by: string | null
+          payment_date: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"] | null
+          payment_notes: string | null
+          quincena: Database["public"]["Enums"]["closure_quincena"]
+          reopened_at: string | null
+          reopened_by: string | null
+          status: Database["public"]["Enums"]["closure_status"]
+          total_cop: number
+          trainer_id: string
+          updated_at: string
+          year: number
+        }
+        Insert: {
+          adjustments_total_cop?: number
+          base_cop?: number
+          bonus_q_cop?: number
+          closed_at: string
+          closed_by: string
+          count_six_days?: number
+          count_three_days?: number
+          created_at?: string
+          equivalente_mes_acum_at_close?: number
+          equivalente_q?: number
+          id?: string
+          month: number
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_notes?: string | null
+          quincena: Database["public"]["Enums"]["closure_quincena"]
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status: Database["public"]["Enums"]["closure_status"]
+          total_cop: number
+          trainer_id: string
+          updated_at?: string
+          year: number
+        }
+        Update: {
+          adjustments_total_cop?: number
+          base_cop?: number
+          bonus_q_cop?: number
+          closed_at?: string
+          closed_by?: string
+          count_six_days?: number
+          count_three_days?: number
+          created_at?: string
+          equivalente_mes_acum_at_close?: number
+          equivalente_q?: number
+          id?: string
+          month?: number
+          paid_at?: string | null
+          paid_by?: string | null
+          payment_date?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"] | null
+          payment_notes?: string | null
+          quincena?: Database["public"]["Enums"]["closure_quincena"]
+          reopened_at?: string | null
+          reopened_by?: string | null
+          status?: Database["public"]["Enums"]["closure_status"]
+          total_cop?: number
+          trainer_id?: string
+          updated_at?: string
+          year?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "trainer_closures_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainer_closures_paid_by_fkey"
+            columns: ["paid_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainer_closures_reopened_by_fkey"
+            columns: ["reopened_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "trainer_closures_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -538,7 +1154,63 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      v_clients_with_payment_status: {
+        Row: {
+          created_at: string | null
+          deleted_at: string | null
+          deleted_by: string | null
+          email: string | null
+          full_name: string | null
+          id: string | null
+          is_active: boolean | null
+          joined_at: string | null
+          last_event_amount_cop: number | null
+          last_event_date: string | null
+          last_payment_balance_cop: number | null
+          last_payment_period_end: string | null
+          last_payment_status: string | null
+          origin: Database["public"]["Enums"]["client_origin"] | null
+          phone: string | null
+          plan_amount_cop: number | null
+          plan_id: string | null
+          plan_name: string | null
+          referred_by: string | null
+          referred_by_name: string | null
+          status: Database["public"]["Enums"]["client_status"] | null
+          trainer_name: string | null
+          updated_at: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "clients_deleted_by_fkey"
+            columns: ["deleted_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_plan_id_fkey"
+            columns: ["plan_id"]
+            isOneToOne: false
+            referencedRelation: "plans"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_profiles_fkey"
+            columns: ["id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "clients_referred_by_fkey"
+            columns: ["referred_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       assign_trainer: {
@@ -551,6 +1223,10 @@ export type Database = {
         Returns: undefined
       }
       auth_role: { Args: never; Returns: string }
+      calculate_period_end: {
+        Args: { p_period_start: string }
+        Returns: string
+      }
       change_client_plan: {
         Args: {
           p_changed_by: string
@@ -560,18 +1236,74 @@ export type Database = {
         }
         Returns: undefined
       }
+      compute_trainer_month_payments: {
+        Args: {
+          p_month_end: string
+          p_month_start: string
+          p_trainer_id: string
+        }
+        Returns: {
+          client_id: string
+          client_name: string
+          created_at: string
+          payment_id: string
+          plan_frequency: string
+          reception_date: string
+        }[]
+      }
+      execute_register_installment: {
+        Args: {
+          p_amount_cop: number
+          p_created_by: string
+          p_notes: string
+          p_payment_id: string
+          p_payment_method: string
+          p_reception_date: string
+        }
+        Returns: Json
+      }
+      execute_void_payment: {
+        Args: { p_notes: string; p_payment_id: string; p_voided_by: string }
+        Returns: Json
+      }
+      get_max_allowed_period_start: { Args: never; Returns: string }
+      get_trainers_quincena_counts: {
+        Args: never
+        Returns: {
+          plan_code: string
+          q1_count: number
+          q2_count: number
+          trainer_id: string
+        }[]
+      }
       is_admin: { Args: never; Returns: boolean }
       is_client: { Args: never; Returns: boolean }
       is_trainer: { Args: never; Returns: boolean }
     }
     Enums: {
-      bank: "bancolombia" | "nequi"
+      bank:
+        | "bancolombia"
+        | "nequi"
+        | "davivienda"
+        | "banco_de_bogota"
+        | "bbva"
+        | "banco_popular"
+        | "banco_caja_social"
+        | "colpatria"
+        | "itau"
+        | "scotiabank"
+        | "otro"
       bank_account_type: "ahorros" | "corriente"
       client_origin: "referido" | "publicidad" | "llego_solo"
       client_status: "active" | "inactive" | "suspended" | "overdue"
+      closure_quincena: "q1" | "q2"
+      closure_status: "open" | "closed" | "paid"
       document_type: "cc" | "ce" | "ti" | "pa" | "nit"
       gender: "male" | "female" | "other" | "prefer_not_to_say"
+      payment_method: "cash" | "transfer" | "nequi" | "other"
+      payment_status: "pending" | "partial" | "paid" | "voided"
       plan_frequency: "three_days" | "six_days"
+      provider_entity_type: "persona" | "empresa"
       trainer_document_category:
         | "contrato"
         | "hoja_de_vida"
@@ -707,13 +1439,30 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      bank: ["bancolombia", "nequi"],
+      bank: [
+        "bancolombia",
+        "nequi",
+        "davivienda",
+        "banco_de_bogota",
+        "bbva",
+        "banco_popular",
+        "banco_caja_social",
+        "colpatria",
+        "itau",
+        "scotiabank",
+        "otro",
+      ],
       bank_account_type: ["ahorros", "corriente"],
       client_origin: ["referido", "publicidad", "llego_solo"],
       client_status: ["active", "inactive", "suspended", "overdue"],
+      closure_quincena: ["q1", "q2"],
+      closure_status: ["open", "closed", "paid"],
       document_type: ["cc", "ce", "ti", "pa", "nit"],
       gender: ["male", "female", "other", "prefer_not_to_say"],
+      payment_method: ["cash", "transfer", "nequi", "other"],
+      payment_status: ["pending", "partial", "paid", "voided"],
       plan_frequency: ["three_days", "six_days"],
+      provider_entity_type: ["persona", "empresa"],
       trainer_document_category: [
         "contrato",
         "hoja_de_vida",
@@ -789,3 +1538,54 @@ export type ClientTrainerAssignmentUpdate = Database["public"]["Tables"]["client
 export type ClientBodyMeasurement = Database["public"]["Tables"]["client_body_measurements"]["Row"]
 export type ClientBodyMeasurementInsert = Database["public"]["Tables"]["client_body_measurements"]["Insert"]
 export type ClientBodyMeasurementUpdate = Database["public"]["Tables"]["client_body_measurements"]["Update"]
+
+// payments
+export type PaymentStatus = Database["public"]["Enums"]["payment_status"]
+export type PaymentMethod = Database["public"]["Enums"]["payment_method"]
+export type Payment = Database["public"]["Tables"]["payments"]["Row"]
+export type PaymentInsert = Database["public"]["Tables"]["payments"]["Insert"]
+export type PaymentUpdate = Database["public"]["Tables"]["payments"]["Update"]
+
+// payment_installments
+export type PaymentInstallment = Database["public"]["Tables"]["payment_installments"]["Row"]
+export type PaymentInstallmentInsert = Database["public"]["Tables"]["payment_installments"]["Insert"]
+export type PaymentInstallmentUpdate = Database["public"]["Tables"]["payment_installments"]["Update"]
+
+// discounts
+export type Discount = Database["public"]["Tables"]["discounts"]["Row"]
+export type DiscountInsert = Database["public"]["Tables"]["discounts"]["Insert"]
+export type DiscountUpdate = Database["public"]["Tables"]["discounts"]["Update"]
+
+// v_clients_with_payment_status
+export type ClientWithPaymentStatus = Database["public"]["Views"]["v_clients_with_payment_status"]["Row"]
+
+// service_types
+export type ServiceType = Database["public"]["Tables"]["service_types"]["Row"]
+export type ServiceTypeInsert = Database["public"]["Tables"]["service_types"]["Insert"]
+export type ServiceTypeUpdate = Database["public"]["Tables"]["service_types"]["Update"]
+
+// service_providers
+export type ProviderEntityType = Database["public"]["Enums"]["provider_entity_type"]
+export type ServiceProvider = Database["public"]["Tables"]["service_providers"]["Row"]
+export type ServiceProviderInsert = Database["public"]["Tables"]["service_providers"]["Insert"]
+export type ServiceProviderUpdate = Database["public"]["Tables"]["service_providers"]["Update"]
+
+// provider_bank_accounts
+export type ProviderBankAccount = Database["public"]["Tables"]["provider_bank_accounts"]["Row"]
+export type ProviderBankAccountInsert = Database["public"]["Tables"]["provider_bank_accounts"]["Insert"]
+export type ProviderBankAccountUpdate = Database["public"]["Tables"]["provider_bank_accounts"]["Update"]
+
+// trainer_closures
+export type ClosureStatus = Database["public"]["Enums"]["closure_status"]
+export type ClosureQuincena = Database["public"]["Enums"]["closure_quincena"]
+export type TrainerClosure = Database["public"]["Tables"]["trainer_closures"]["Row"]
+export type TrainerClosureInsert = Database["public"]["Tables"]["trainer_closures"]["Insert"]
+export type TrainerClosureUpdate = Database["public"]["Tables"]["trainer_closures"]["Update"]
+
+// closure_client_entries
+export type ClosureClientEntry = Database["public"]["Tables"]["closure_client_entries"]["Row"]
+export type ClosureClientEntryInsert = Database["public"]["Tables"]["closure_client_entries"]["Insert"]
+
+// closure_adjustments
+export type ClosureAdjustment = Database["public"]["Tables"]["closure_adjustments"]["Row"]
+export type ClosureAdjustmentInsert = Database["public"]["Tables"]["closure_adjustments"]["Insert"]

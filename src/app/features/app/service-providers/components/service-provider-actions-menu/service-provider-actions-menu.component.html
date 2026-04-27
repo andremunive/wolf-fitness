@@ -1,0 +1,94 @@
+<div class="actions-menu">
+  <button
+    type="button"
+    class="actions-menu__trigger"
+    [class.actions-menu__trigger--open]="isOpen"
+    (click)="toggle($event)"
+    [attr.aria-expanded]="isOpen"
+    aria-haspopup="menu"
+    [attr.aria-label]="'Acciones para ' + provider.name"
+  >
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.6"/>
+      <circle cx="12" cy="12" r="1.6"/>
+      <circle cx="12" cy="19" r="1.6"/>
+    </svg>
+  </button>
+
+  <div
+    *ngIf="isOpen"
+    class="actions-menu__dropdown"
+    [ngStyle]="dropdownStyle"
+    role="menu"
+  >
+    <!-- Editar — solo si no está dado de baja -->
+    <button
+      *ngIf="!provider.isDeleted"
+      type="button"
+      class="actions-menu__item"
+      role="menuitem"
+      (click)="onEdit()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Editar</span>
+    </button>
+
+    <!-- Gestionar cuentas bancarias — solo si está activo -->
+    <button
+      *ngIf="!provider.isDeleted"
+      type="button"
+      class="actions-menu__item"
+      role="menuitem"
+      (click)="onManageBankAccounts()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Cuentas bancarias</span>
+    </button>
+
+    <div *ngIf="!provider.isDeleted" class="actions-menu__separator" role="separator"></div>
+
+    <!-- Dar de baja (soft-delete) -->
+    <button
+      *ngIf="!provider.isDeleted"
+      type="button"
+      class="actions-menu__item actions-menu__item--danger"
+      role="menuitem"
+      (click)="onSoftDelete()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Dar de baja</span>
+    </button>
+
+    <!-- Restaurar (si está dado de baja) -->
+    <button
+      *ngIf="provider.isDeleted"
+      type="button"
+      class="actions-menu__item"
+      role="menuitem"
+      (click)="onRestore()"
+    >
+      <span class="actions-menu__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+        </svg>
+      </span>
+      <span class="actions-menu__label">Restaurar</span>
+    </button>
+  </div>
+</div>

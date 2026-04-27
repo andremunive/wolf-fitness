@@ -8,8 +8,9 @@
 
 .table-wrapper {
   width: 100%;
-  // No clip the floating actions dropdown.
-  overflow-x: visible;
+  // overflow-x: auto allows horizontal scroll on narrow viewports (768-900px).
+  // The actions dropdown uses position: fixed so it escapes the stacking context.
+  overflow-x: auto;
   border-radius: 16px;
   border: 1px solid #e5e7eb;
   background: #ffffff;
@@ -174,6 +175,44 @@
     &--inactive {
       background: #f3f4f6;
       color: #6b7280;
+    }
+  }
+
+  &__cell--quincena {
+    min-width: 110px;
+  }
+
+  &__quincena {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
+  }
+
+  &__quincena-empty {
+    color: #9ca3af;
+    font-size: 13px;
+  }
+
+  &__plan-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 8px;
+    border-radius: 999px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+
+    &--6d {
+      background: #cffafe;
+      color: #0e7490;
+    }
+
+    &--3d {
+      background: #ede9fe;
+      color: #6d28d9;
     }
   }
 }

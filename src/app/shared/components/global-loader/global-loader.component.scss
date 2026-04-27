@@ -1,0 +1,51 @@
+:host {
+  display: contents;
+}
+
+.global-loader {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.55);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: global-loader-fade 180ms ease-out both;
+}
+
+.global-loader__spinner {
+  display: block;
+  width: 56px;
+  height: 56px;
+  border: 4px solid rgba(34, 141, 159, 0.18);
+  border-top-color: #228d9f;
+  border-radius: 50%;
+  animation: global-loader-spin 800ms linear infinite;
+}
+
+@keyframes global-loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes global-loader-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .global-loader {
+    animation: none;
+  }
+
+  .global-loader__spinner {
+    animation-duration: 1.6s;
+  }
+}

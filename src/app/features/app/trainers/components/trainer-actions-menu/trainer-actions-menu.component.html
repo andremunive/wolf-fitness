@@ -18,7 +18,7 @@
   <div
     *ngIf="isOpen"
     class="actions-menu__dropdown"
-    [class.actions-menu__dropdown--align-left]="dropdownAlign === 'left'"
+    [ngStyle]="dropdownStyle"
     role="menu"
   >
     <!-- Editar -->

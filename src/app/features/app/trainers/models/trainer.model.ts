@@ -2,6 +2,17 @@ import { Bank, BankAccountType, DocumentType } from 'src/app/core/types/supabase
 
 export { Bank, BankAccountType, DocumentType };
 
+/**
+ * Conteo de clientes activos del trainer por plan, para una quincena del mes actual.
+ * Las claves son el `code` del plan (ej. 'plan_3d', 'plan_6d').
+ */
+export type TrainerQuincenaPlanCounts = Record<string, number>;
+
+export interface TrainerQuincenaCounts {
+  q1: TrainerQuincenaPlanCounts;
+  q2: TrainerQuincenaPlanCounts;
+}
+
 export interface Trainer {
   id: string;
   fullName: string;
@@ -19,6 +30,11 @@ export interface Trainer {
     accountType: BankAccountType;
     accountNumber: string;
   } | null;
+  /**
+   * Clientes asignados al trainer cuyo último pago se completó en la quincena
+   * correspondiente del mes actual, agrupados por código de plan.
+   */
+  quincenaCounts: TrainerQuincenaCounts;
 }
 
 export type TrainerActiveFilter = 'all' | 'active' | 'inactive';

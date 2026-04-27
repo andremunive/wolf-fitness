@@ -19,7 +19,57 @@
     display: flex;
     align-items: center;
     gap: 12px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
+  }
+
+  // ── Banda de estado de pago ──────────────────────────────────────────────────
+
+  &__payment-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+  }
+
+  &__balance {
+    font-size: 12px;
+    font-weight: 600;
+    color: #b45309;
+  }
+
+  // ── Fila de fechas ───────────────────────────────────────────────────────────
+
+  &__dates-row {
+    display: flex;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  &__date-item {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    min-width: 0;
+  }
+
+  &__date-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #9ca3af;
+    line-height: 1.2;
+  }
+
+  &__date-value {
+    font-size: 12px;
+    color: #374151;
+    font-weight: 500;
+    white-space: nowrap;
   }
 
   &__avatar {
@@ -104,5 +154,47 @@
   &--suspended {
     background: #fff7ed;
     color: #c2410c;
+  }
+
+  &--overdue {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+}
+
+// ─── Payment status badge ───────────────────────────────────────────────────────
+
+.payment-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &--paid {
+    background: #d1fae5;
+    color: #065f46;
+  }
+
+  &--partial {
+    background: #fef3c7;
+    color: #92400e;
+  }
+
+  &--pending {
+    background: #ffedd5;
+    color: #9a3412;
+  }
+
+  &--voided {
+    background: #fee2e2;
+    color: #991b1b;
+  }
+
+  &--no-payments {
+    background: #f3f4f6;
+    color: #6b7280;
   }
 }

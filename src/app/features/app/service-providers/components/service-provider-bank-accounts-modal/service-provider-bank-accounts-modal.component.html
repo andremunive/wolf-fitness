@@ -1,0 +1,176 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Gestionar cuentas bancarias" (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <div class="modal-sheet__header">
+      <h2 class="modal-sheet__title">Cuentas bancarias</h2>
+      <p class="modal-sheet__subtitle">{{ provider.name }}</p>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Error global -->
+      <div class="action-error" *ngIf="actionError" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        {{ actionError }}
+      </div>
+
+      <!-- Lista de cuentas existentes -->
+      <ul class="accounts-list" *ngIf="accounts.length > 0">
+        <li
+          *ngFor="let account of accounts; trackBy: trackByAccountId"
+          class="account-item"
+        >
+          <!-- Modo visualización -->
+          <ng-container *ngIf="editingAccountId !== account.id">
+            <div class="account-item__info">
+              <div class="account-item__bank-row">
+                <span class="account-item__bank">{{ getBankLabel(account.bank) }}</span>
+                <span class="account-item__primary-badge" *ngIf="account.isPrimary" aria-label="Cuenta principal">Principal</span>
+              </div>
+              <p class="account-item__detail">
+                {{ getAccountTypeLabel(account.accountType) }} · {{ account.accountNumber }}
+              </p>
+              <p class="account-item__holder" *ngIf="account.accountHolderName">
+                Titular: {{ account.accountHolderName }}
+              </p>
+            </div>
+
+            <div class="account-item__actions">
+              <button
+                *ngIf="!account.isPrimary"
+                type="button"
+                class="account-item__btn account-item__btn--primary"
+                (click)="setPrimary(account)"
+                [disabled]="isSaving"
+                aria-label="Marcar como cuenta principal"
+                title="Marcar como principal"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11.48 3.499a.562.562 0 011.04 0l2.125 5.111a.563.563 0 00.475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 00-.182.557l1.285 5.385a.562.562 0 01-.84.61l-4.725-2.885a.563.563 0 00-.586 0L6.982 20.54a.562.562 0 01-.84-.61l1.285-5.386a.562.562 0 00-.182-.557l-4.204-3.602a.562.562 0 01.321-.988l5.518-.442a.563.563 0 00.475-.345L11.48 3.5z"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="account-item__btn account-item__btn--edit"
+                (click)="startEdit(account)"
+                [disabled]="isSaving"
+                aria-label="Editar cuenta"
+                title="Editar"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="account-item__btn account-item__btn--delete"
+                (click)="deleteAccount(account)"
+                [disabled]="isSaving"
+                aria-label="Eliminar cuenta"
+                title="Eliminar"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0"/>
+                </svg>
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- Modo edición inline -->
+          <form *ngIf="editingAccountId === account.id" [formGroup]="editForm" class="inline-form" novalidate>
+            <div class="inline-form__grid">
+              <div class="form-field">
+                <label class="form-field__label" [for]="'edit-bank-' + account.id">Banco</label>
+                <select [id]="'edit-bank-' + account.id" class="form-field__select" formControlName="bank">
+                  <option *ngFor="let opt of bankOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-field__label" [for]="'edit-type-' + account.id">Tipo</label>
+                <select [id]="'edit-type-' + account.id" class="form-field__select" formControlName="account_type">
+                  <option *ngFor="let opt of accountTypeOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+                </select>
+              </div>
+              <div class="form-field">
+                <label class="form-field__label" [for]="'edit-num-' + account.id">Número</label>
+                <input [id]="'edit-num-' + account.id" type="text" class="form-field__input" formControlName="account_number" placeholder="Número de cuenta" inputmode="numeric"/>
+              </div>
+              <div class="form-field">
+                <label class="form-field__label" [for]="'edit-holder-' + account.id">Titular</label>
+                <input [id]="'edit-holder-' + account.id" type="text" class="form-field__input" formControlName="account_holder_name" placeholder="Nombre del titular"/>
+              </div>
+            </div>
+            <div class="inline-form__actions">
+              <button type="button" class="inline-form__cancel" (click)="cancelEdit()" [disabled]="isSaving">Cancelar</button>
+              <button type="button" class="inline-form__save" (click)="saveEdit()" [disabled]="editForm.invalid || isSaving">Guardar</button>
+            </div>
+          </form>
+        </li>
+      </ul>
+
+      <!-- Estado vacío -->
+      <div class="accounts-empty" *ngIf="accounts.length === 0 && !isAdding">
+        <p>Este proveedor no tiene cuentas bancarias registradas.</p>
+      </div>
+
+      <!-- Formulario nueva cuenta -->
+      <div class="add-account" *ngIf="isAdding">
+        <h3 class="add-account__title">Nueva cuenta bancaria</h3>
+        <form [formGroup]="addForm" class="inline-form" novalidate>
+          <div class="inline-form__grid">
+            <div class="form-field">
+              <label class="form-field__label" for="add-bank">Banco <span class="form-field__required" aria-hidden="true">*</span></label>
+              <select id="add-bank" class="form-field__select" formControlName="bank">
+                <option value="" disabled>Selecciona</option>
+                <option *ngFor="let opt of bankOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label" for="add-type">Tipo <span class="form-field__required" aria-hidden="true">*</span></label>
+              <select id="add-type" class="form-field__select" formControlName="account_type">
+                <option *ngFor="let opt of accountTypeOptions; trackBy: trackByValue" [value]="opt.value">{{ opt.label }}</option>
+              </select>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label" for="add-number">Número <span class="form-field__required" aria-hidden="true">*</span></label>
+              <input id="add-number" type="text" class="form-field__input" formControlName="account_number" placeholder="Número de cuenta" inputmode="numeric"/>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label" for="add-holder">Titular</label>
+              <input id="add-holder" type="text" class="form-field__input" formControlName="account_holder_name" placeholder="Nombre del titular"/>
+            </div>
+          </div>
+          <div class="inline-form__actions">
+            <button type="button" class="inline-form__cancel" (click)="cancelAdd()" [disabled]="isSaving">Cancelar</button>
+            <button type="button" class="inline-form__save" (click)="saveAdd()" [disabled]="addForm.invalid || isSaving">Agregar</button>
+          </div>
+        </form>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button
+        *ngIf="!isAdding && !editingAccountId"
+        type="button"
+        class="modal-footer__add-btn"
+        (click)="startAdd()"
+        [disabled]="isSaving"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Agregar cuenta
+      </button>
+      <button type="button" class="modal-footer__close-btn" (click)="close()">Cerrar</button>
+    </div>
+
+  </div>
+</div>

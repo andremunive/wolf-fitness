@@ -1,0 +1,223 @@
+<div class="pay-backdrop" role="dialog" aria-modal="true" aria-labelledby="register-payment-title" (click)="close()">
+  <div class="pay-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="pay-header">
+      <div class="pay-header__avatar" aria-hidden="true">{{ avatarInitials }}</div>
+      <div class="pay-header__info">
+        <h2 id="register-payment-title" class="pay-header__title">Registrar pago</h2>
+        <p class="pay-header__subtitle">{{ client.fullName }}</p>
+      </div>
+      <button
+        type="button"
+        class="pay-header__close"
+        (click)="close()"
+        aria-label="Cerrar modal de pago"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Summary banner ── -->
+    <div class="pay-summary">
+      <div class="pay-summary__row">
+        <span class="pay-summary__label">Total del plan</span>
+        <span class="pay-summary__value">{{ formatCop(planTotalCop) }}</span>
+      </div>
+      <div class="pay-summary__row" *ngIf="selectedDiscount">
+        <span class="pay-summary__label">
+          Descuento ({{ selectedDiscount.percentage }}% — {{ selectedDiscount.code }})
+        </span>
+        <span class="pay-summary__value pay-summary__value--discount">
+          − {{ formatCop(discountAmountCop) }}
+        </span>
+      </div>
+      <div class="pay-summary__row pay-summary__row--total">
+        <span class="pay-summary__label">Total a pagar</span>
+        <span class="pay-summary__value pay-summary__value--bold">{{ formatCop(totalToPayCop) }}</span>
+      </div>
+      <div class="pay-summary__row">
+        <span class="pay-summary__label">Saldo proyectado</span>
+        <span class="pay-summary__value">{{ formatCop(projectedBalance) }}</span>
+      </div>
+      <div class="pay-summary__row">
+        <span class="pay-summary__label">Estado proyectado</span>
+        <span class="pay-badge" [ngClass]="projectedStatusClass">{{ projectedStatus }}</span>
+      </div>
+    </div>
+
+    <!-- ── First payment hint ── -->
+    <div class="pay-hint" *ngIf="isFirstPayment" role="note">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+      <span>Este es el primer pago del cliente. Ingresa la fecha de inicio del período.</span>
+    </div>
+
+    <!-- ── Body / form ── -->
+    <div class="pay-body">
+      <form [formGroup]="form" class="pay-form" novalidate (ngSubmit)="submit()">
+
+        <!-- period_start -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-period-start">
+            Inicio del período <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="pay-period-start"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="form.get('period_start')!.invalid && form.get('period_start')!.touched"
+            formControlName="period_start"
+          />
+          <p class="form-field__error"
+             *ngIf="form.get('period_start')!.errors?.['required'] && form.get('period_start')!.touched">
+            Obligatorio.
+          </p>
+          <p class="form-field__hint" *ngIf="isFirstPayment">
+            Sugerencia: fecha en que el cliente comenzó a entrenar ({{ joinedAtDate | date:'dd MMM yyyy':'':'es-CO' }}).
+          </p>
+        </div>
+
+        <!-- reception_date -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-reception-date">
+            Fecha de recepción del dinero <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="pay-reception-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="form.get('reception_date')!.invalid && form.get('reception_date')!.touched"
+            formControlName="reception_date"
+          />
+          <p class="form-field__error"
+             *ngIf="form.get('reception_date')!.errors?.['required'] && form.get('reception_date')!.touched">
+            Obligatorio.
+          </p>
+        </div>
+
+        <!-- amount_received_cop -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-amount">
+            Valor recibido (COP) <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <div class="form-field__prefix-wrap">
+            <span class="form-field__prefix" aria-hidden="true">$</span>
+            <input
+              id="pay-amount"
+              type="number"
+              inputmode="numeric"
+              min="0"
+              step="1000"
+              class="form-field__input form-field__input--prefixed"
+              [class.form-field__input--error]="form.get('amount_received_cop')!.invalid && form.get('amount_received_cop')!.touched"
+              formControlName="amount_received_cop"
+              placeholder="0"
+            />
+          </div>
+          <p class="form-field__hint">Ingresa 0 si aún no recibiste ningún pago (quedará pendiente).</p>
+          <p class="form-field__error"
+             *ngIf="form.get('amount_received_cop')!.errors?.['min'] && form.get('amount_received_cop')!.touched">
+            El valor no puede ser negativo.
+          </p>
+        </div>
+
+        <!-- payment_method -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-method">
+            Método de pago
+            <span class="form-field__required" *ngIf="!isPaymentMethodDisabled" aria-hidden="true">*</span>
+            <span class="form-field__optional" *ngIf="isPaymentMethodDisabled">(no aplica si valor = 0)</span>
+          </label>
+          <select
+            id="pay-method"
+            class="form-field__select"
+            [class.form-field__select--disabled]="isPaymentMethodDisabled"
+            formControlName="payment_method"
+          >
+            <option value="" disabled>Selecciona</option>
+            <option
+              *ngFor="let opt of paymentMethodOptions; trackBy: trackByMethodValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+
+        <!-- discount_code (dropdown of active discounts) -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-discount">
+            Descuento <span class="form-field__optional">(opcional)</span>
+          </label>
+          <ng-container *ngIf="discounts$ | async as discounts; else loadingDiscounts">
+            <select
+              id="pay-discount"
+              class="form-field__select"
+              formControlName="discount_code"
+              (change)="onDiscountCodeChange(discounts)"
+            >
+              <option value="">Sin descuento</option>
+              <option
+                *ngFor="let d of discounts; trackBy: trackByDiscountId"
+                [value]="d.code"
+              >{{ d.code }}<ng-container *ngIf="d.description"> — {{ d.description }}</ng-container> ({{ d.percentage }}%)</option>
+            </select>
+          </ng-container>
+          <ng-template #loadingDiscounts>
+            <div class="form-field__loading">Cargando descuentos...</div>
+          </ng-template>
+        </div>
+
+        <!-- notes -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-notes">
+            Notas <span class="form-field__optional">(opcional)</span>
+          </label>
+          <textarea
+            id="pay-notes"
+            class="form-field__textarea"
+            rows="3"
+            formControlName="notes"
+            placeholder="Observaciones del admin..."
+          ></textarea>
+        </div>
+
+        <!-- Error banner -->
+        <div class="pay-error" *ngIf="saveError" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <span>{{ saveError }}</span>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="pay-footer">
+      <button
+        type="button"
+        class="pay-footer__cancel"
+        (click)="close()"
+        [disabled]="isSaving"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="pay-footer__save"
+        (click)="submit()"
+        [disabled]="isSaving"
+      >
+        <span *ngIf="!isSaving">Registrar pago</span>
+        <span *ngIf="isSaving" class="spinner-wrap" aria-label="Registrando...">
+          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
+          </svg>
+          Registrando...
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

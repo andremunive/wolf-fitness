@@ -20,8 +20,8 @@ import {
 type ClientOrigin = Database['public']['Enums']['client_origin'];
 
 /**
- * Tipo crudo que devuelve la query PostgREST para el listado.
- * Incluye los JOINs embebidos: plan, plan_prices, assignment activa, perfil del trainer.
+ * Tipo crudo que devuelve la vista v_clients_with_payment_status.
+ * Todas las columnas de JOIN ya vienen aplanadas — no hay objetos anidados.
  */
 interface ClientListRow {
   id: string;
@@ -30,38 +30,52 @@ interface ClientListRow {
   joined_at: string;
   created_at: string;
   plan_id: string;
-  // JOIN profiles (el cliente mismo comparte id con profiles, vía clients_profiles_fkey)
+  // Campos del perfil del cliente (aplanados por la vista)
+  full_name: string;
+  email: string;
+  phone: string;
+  is_active: boolean;
+  // Campos del plan (aplanados por la vista)
+  plan_name: string | null;
+  plan_amount_cop: number | null;
+  // Trainer activo (aplanado por la vista)
+  trainer_name: string | null;
+  // Referidor (aplanado por la vista)
+  referred_by_name: string | null;
+  // Campos de pagos (nuevos en Hito 4.5)
+  last_payment_status: string | null;
+  last_payment_balance_cop: number | null;
+  last_payment_period_end: string | null;
+  last_event_date: string | null;
+  last_event_amount_cop: number | null;
+}
+
+/**
+ * Tipo crudo para el detalle completo (formulario de edición).
+ * Sigue consultando la tabla `clients` con JOINs explícitos — no usa la vista.
+ */
+interface ClientDetailRow {
+  id: string;
+  status: string;
+  origin: string;
+  joined_at: string;
+  created_at: string;
+  plan_id: string;
+  referred_by: string | null;
   profiles: {
     full_name: string;
     email: string;
     phone: string;
     is_active: boolean;
-  };
-  // JOIN profiles vía clients.referred_by → profiles.id. Sibling de `profiles`,
-  // no anidado dentro: la FK clients_referred_by_fkey vive en clients, no en profiles.
-  referred_by_profile: { full_name: string } | null;
-  // JOIN plan
-  plans: {
-    name: string;
-    plan_prices: Array<{ amount_cop: number }>;
-  } | null;
-  // JOIN client_trainer_assignments activas → perfil del trainer
-  client_trainer_assignments: Array<{
-    ended_at: string | null;
-    trainer_profile: { full_name: string } | null;
-  }>;
-}
-
-/**
- * Tipo crudo para el detalle completo (formulario de edición).
- */
-interface ClientDetailRow extends Omit<ClientListRow, 'profiles' | 'client_trainer_assignments'> {
-  referred_by: string | null;
-  profiles: ClientListRow['profiles'] & {
     birth_date: string;
     neighborhood: string;
     gender: string | null;
   };
+  referred_by_profile: { full_name: string } | null;
+  plans: {
+    name: string;
+    plan_prices: Array<{ amount_cop: number }>;
+  } | null;
   client_trainer_assignments: Array<{
     ended_at: string | null;
     trainer_id: string;
@@ -70,12 +84,8 @@ interface ClientDetailRow extends Omit<ClientListRow, 'profiles' | 'client_train
 }
 
 /**
- * SELECT string para el listado. Se arman los JOINs con la sintaxis PostgREST:
- * - `profiles!clients_profiles_fkey` → datos del perfil del cliente.
- * - `profiles!clients_referred_by_fkey(full_name)` → nombre del referidor.
- * - `plans!clients_plan_id_fkey` → nombre del plan + precio vigente.
- * - `client_trainer_assignments(trainer_id, ended_at, profiles!cta_trainer_id_fkey(full_name))`
- *   → asignación activa de trainer.
+ * SELECT string para el listado desde la vista v_clients_with_payment_status.
+ * La vista resuelve internamente todos los JOINs: los campos vienen aplanados.
  */
 const CLIENT_LIST_SELECT = [
   'id',
@@ -84,10 +94,23 @@ const CLIENT_LIST_SELECT = [
   'joined_at',
   'created_at',
   'plan_id',
-  'profiles!clients_profiles_fkey(full_name, email, phone, is_active)',
-  'referred_by_profile:profiles!clients_referred_by_fkey(full_name)',
-  'plans!clients_plan_id_fkey(name, plan_prices(amount_cop))',
-  'client_trainer_assignments!cta_client_id_fkey(trainer_profile:profiles!cta_trainer_id_fkey(full_name), ended_at)'
+  // Perfil del cliente (aplanado por la vista)
+  'full_name',
+  'email',
+  'phone',
+  'is_active',
+  // Plan (aplanado por la vista)
+  'plan_name',
+  'plan_amount_cop',
+  // Trainer y referidor (aplanados)
+  'trainer_name',
+  'referred_by_name',
+  // Campos de estado de pagos (nuevos en Hito 4.5)
+  'last_payment_status',
+  'last_payment_balance_cop',
+  'last_payment_period_end',
+  'last_event_date',
+  'last_event_amount_cop'
 ].join(', ');
 
 const CLIENT_DETAIL_SELECT = [
@@ -105,14 +128,40 @@ const CLIENT_DETAIL_SELECT = [
 ].join(', ');
 
 function mapListRowToClient(row: ClientListRow): Client {
+  return {
+    id: row.id,
+    fullName: row.full_name,
+    email: row.email,
+    phone: row.phone,
+    isActive: row.is_active,
+    status: row.status as Client['status'],
+    origin: row.origin as Client['origin'],
+    joinedAt: row.joined_at,
+    createdAt: row.created_at,
+    planId: row.plan_id,
+    planName: row.plan_name ?? '—',
+    planAmountCop: row.plan_amount_cop ?? null,
+    trainerName: row.trainer_name ?? null,
+    referredByName: row.referred_by_name ?? null,
+    // Campos de pagos
+    lastPaymentStatus: (row.last_payment_status ?? 'no_payments') as Client['lastPaymentStatus'],
+    lastPaymentBalanceCop: row.last_payment_balance_cop ?? null,
+    lastPaymentPeriodEnd: row.last_payment_period_end ?? null,
+    lastEventDate: row.last_event_date ?? null,
+    lastEventAmountCop: row.last_event_amount_cop ?? null
+  };
+}
+
+function mapDetailRowToClientDetailFull(row: ClientDetailRow): ClientDetailFull {
   const profile = row.profiles;
   const plan = row.plans;
-  // Solo tomamos la asignación vigente (ended_at IS NULL).
   const activeAssignment = row.client_trainer_assignments?.find(
     (a) => a.ended_at === null
   );
 
-  return {
+  // Construimos el base Client manualmente para el detalle porque la query
+  // de detalle consulta `clients` con JOINs explícitos (no la vista).
+  const base: Client = {
     id: row.id,
     fullName: profile.full_name,
     email: profile.email,
@@ -126,16 +175,14 @@ function mapListRowToClient(row: ClientListRow): Client {
     planName: plan?.name ?? '—',
     planAmountCop: plan?.plan_prices?.[0]?.amount_cop ?? null,
     trainerName: activeAssignment?.trainer_profile?.full_name ?? null,
-    referredByName: row.referred_by_profile?.full_name ?? null
+    referredByName: row.referred_by_profile?.full_name ?? null,
+    // El detalle no necesita los campos de pagos; usamos valores vacíos de fallback.
+    lastPaymentStatus: 'no_payments',
+    lastPaymentBalanceCop: null,
+    lastPaymentPeriodEnd: null,
+    lastEventDate: null,
+    lastEventAmountCop: null
   };
-}
-
-function mapDetailRowToClientDetailFull(row: ClientDetailRow): ClientDetailFull {
-  const base = mapListRowToClient(row as unknown as ClientListRow);
-  const profile = row.profiles;
-  const activeAssignment = row.client_trainer_assignments?.find(
-    (a) => a.ended_at === null
-  );
 
   return {
     ...base,
@@ -181,7 +228,7 @@ export class ClientsService {
     rangeTo: number
   ) {
     let query = this.supabase.client
-      .from('clients')
+      .from('v_clients_with_payment_status')
       .select(CLIENT_LIST_SELECT, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(rangeFrom, rangeTo);

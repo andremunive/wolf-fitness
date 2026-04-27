@@ -30,6 +30,8 @@ export class TrainerActionsMenuComponent {
   @Output() toggleActiveRequested = new EventEmitter<{ trainer: Trainer; isActive: boolean }>();
 
   isOpen = false;
+  /** Fixed-position style for the dropdown so it escapes overflow:auto containers. */
+  dropdownStyle: Record<string, string> = {};
 
   constructor(
     private readonly host: ElementRef<HTMLElement>,
@@ -39,7 +41,29 @@ export class TrainerActionsMenuComponent {
   toggle(event: MouseEvent): void {
     event.stopPropagation();
     this.isOpen = !this.isOpen;
+    if (this.isOpen) {
+      this.updateDropdownPosition();
+    }
     this.cdr.markForCheck();
+  }
+
+  private updateDropdownPosition(): void {
+    const trigger = this.host.nativeElement.querySelector<HTMLElement>('.actions-menu__trigger');
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    if (this.dropdownAlign === 'left') {
+      this.dropdownStyle = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        left: `${rect.left}px`
+      };
+    } else {
+      this.dropdownStyle = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        right: `${window.innerWidth - rect.right}px`
+      };
+    }
   }
 
   onEdit(): void {

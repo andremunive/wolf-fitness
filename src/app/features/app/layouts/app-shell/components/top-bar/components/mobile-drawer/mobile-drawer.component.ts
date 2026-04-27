@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   Component,
   EventEmitter,
+  HostListener,
   Input,
   Output
 } from '@angular/core';
@@ -30,6 +31,11 @@ export class MobileDrawerComponent {
 
   constructor(private readonly router: Router) {}
 
+  @HostListener('document:keydown.escape')
+  onEscape(): void {
+    this.closeDrawer.emit();
+  }
+
   toggleSection(id: string): void {
     this.expandedSectionId = this.expandedSectionId === id ? null : id;
   }
@@ -37,6 +43,15 @@ export class MobileDrawerComponent {
   navigateTo(routerLink: string): void {
     void this.router.navigateByUrl(routerLink);
     this.closeDrawer.emit();
+  }
+
+  isActive(routerLink: string): boolean {
+    return this.router.isActive(routerLink, {
+      paths: 'subset',
+      queryParams: 'ignored',
+      fragment: 'ignored',
+      matrixParams: 'ignored'
+    });
   }
 
   getVisibleItems(section: NavMenuSection): NavMenuItem[] {

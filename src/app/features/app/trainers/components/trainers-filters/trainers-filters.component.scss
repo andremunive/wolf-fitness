@@ -61,9 +61,10 @@
 .filters-panel {
   position: absolute;
   top: calc(100% + 6px);
-  left: 0;
+  right: 0;
   z-index: 30;
   width: 260px;
+  max-width: calc(100vw - 32px);
   background: #ffffff;
   border: 1px solid #e5e7eb;
   border-radius: 16px;

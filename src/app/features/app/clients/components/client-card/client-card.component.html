@@ -1,4 +1,6 @@
 <article class="client-card" [attr.aria-label]="'Cliente: ' + client.fullName">
+
+  <!-- ── Cabecera: avatar, nombre, plan, estado cliente, menú ── -->
   <div class="client-card__header">
     <div class="client-card__avatar" aria-hidden="true">{{ initials }}</div>
 
@@ -11,11 +13,48 @@
 
     <app-client-actions-menu
       [client]="client"
+      [isAdmin]="isAdmin"
       (editRequested)="editRequested.emit($event)"
       (deactivateRequested)="deactivateRequested.emit($event)"
+      (registerPaymentRequested)="registerPaymentRequested.emit($event)"
     ></app-client-actions-menu>
   </div>
 
+  <!-- ── Banda de estado de pago (visible siempre, info crítica) ── -->
+  <div class="client-card__payment-row">
+    <span
+      class="payment-badge"
+      [ngClass]="paymentStatusClass"
+      [attr.aria-label]="'Estado de pago: ' + paymentStatusLabel"
+    >
+      {{ paymentStatusLabel }}
+    </span>
+
+    <!-- Saldo: solo cuando > 0 -->
+    <span class="client-card__balance" *ngIf="hasBalance">
+      Saldo: {{ formattedBalance }}
+    </span>
+  </div>
+
+  <!-- ── Fila de fechas: último pago y vencimiento ── -->
+  <div class="client-card__dates-row">
+    <div class="client-card__date-item">
+      <span class="client-card__date-label">Último pago</span>
+      <span class="client-card__date-value">
+        {{ formattedLastEventDate }}
+        <ng-container *ngIf="client.lastEventAmountCop !== null && client.lastEventAmountCop > 0">
+          · {{ formattedLastEventAmount }}
+        </ng-container>
+      </span>
+    </div>
+
+    <div class="client-card__date-item">
+      <span class="client-card__date-label">Vence</span>
+      <span class="client-card__date-value">{{ formattedPeriodEnd }}</span>
+    </div>
+  </div>
+
+  <!-- ── Metadata: trainer, ingreso, referidor ── -->
   <div class="client-card__meta">
     <div class="client-card__meta-item" *ngIf="client.trainerName">
       <svg class="client-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -38,4 +77,5 @@
       <span>Ref: {{ client.referredByName }}</span>
     </div>
   </div>
+
 </article>

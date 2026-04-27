@@ -1,0 +1,77 @@
+<div class="table-wrapper" role="region" aria-label="Tabla de proveedores de servicio">
+  <table class="sp-table">
+    <thead>
+      <tr>
+        <th scope="col" class="sp-table__actions-th"><span class="visually-hidden">Acciones</span></th>
+        <th scope="col">Proveedor</th>
+        <th scope="col">Tipo</th>
+        <th scope="col">Servicio</th>
+        <th scope="col">Documento</th>
+        <th scope="col">Contacto</th>
+        <th scope="col">Cuenta bancaria</th>
+        <th scope="col">Estado</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr
+        *ngFor="let provider of providers; trackBy: trackByProviderId"
+        class="sp-table__row"
+        [class.sp-table__row--deleted]="provider.isDeleted"
+      >
+        <td class="sp-table__cell sp-table__cell--actions">
+          <app-service-provider-actions-menu
+            [provider]="provider"
+            dropdownAlign="left"
+            (editRequested)="editRequested.emit($event)"
+            (manageBankAccountsRequested)="manageBankAccountsRequested.emit($event)"
+            (softDeleteRequested)="softDeleteRequested.emit($event)"
+            (restoreRequested)="restoreRequested.emit($event)"
+          ></app-service-provider-actions-menu>
+        </td>
+
+        <td class="sp-table__cell sp-table__cell--name">
+          <div class="sp-table__provider">
+            <span class="sp-table__avatar" aria-hidden="true">{{ getInitials(provider.name) }}</span>
+            <div class="sp-table__provider-info">
+              <p class="sp-table__provider-name">{{ provider.name }}</p>
+              <p class="sp-table__provider-sub">{{ provider.email ?? provider.phone ?? '' }}</p>
+            </div>
+          </div>
+        </td>
+
+        <td class="sp-table__cell">
+          <span class="sp-table__entity-chip">{{ getEntityTypeLabel(provider) }}</span>
+        </td>
+
+        <td class="sp-table__cell">{{ provider.serviceTypeName }}</td>
+
+        <td class="sp-table__cell">{{ getDocumentLabel(provider) }}</td>
+
+        <td class="sp-table__cell">
+          <div class="sp-table__stack">
+            <p *ngIf="provider.phone" class="sp-table__stack-title">{{ provider.phone }}</p>
+            <p *ngIf="provider.email" class="sp-table__stack-subtitle">{{ provider.email }}</p>
+            <p *ngIf="!provider.phone && !provider.email" class="sp-table__stack-title">—</p>
+          </div>
+        </td>
+
+        <td class="sp-table__cell">
+          <div class="sp-table__stack">
+            <p class="sp-table__stack-title">{{ getPrimaryAccountNumber(provider) }}</p>
+            <p class="sp-table__stack-subtitle">{{ getPrimaryBankLabel(provider) }}</p>
+          </div>
+        </td>
+
+        <td class="sp-table__cell">
+          <span
+            class="sp-table__status-chip"
+            [class.sp-table__status-chip--active]="!provider.isDeleted"
+            [class.sp-table__status-chip--deleted]="provider.isDeleted"
+          >
+            {{ provider.isDeleted ? 'Dado de baja' : 'Activo' }}
+          </span>
+        </td>
+      </tr>
+    </tbody>
+  </table>
+</div>

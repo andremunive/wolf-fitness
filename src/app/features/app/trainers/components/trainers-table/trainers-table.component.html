@@ -4,6 +4,8 @@
       <tr>
         <th scope="col" class="trainers-table__actions-th"><span class="visually-hidden">Acciones</span></th>
         <th scope="col">Entrenador</th>
+        <th scope="col">Clientes Q1</th>
+        <th scope="col">Clientes Q2</th>
         <th scope="col">Documento</th>
         <th scope="col">Teléfono</th>
         <th scope="col">Cuenta</th>
@@ -31,6 +33,38 @@
               <p class="trainers-table__trainer-name">{{ trainer.fullName }}</p>
               <p class="trainers-table__trainer-email">{{ trainer.email }}</p>
             </div>
+          </div>
+        </td>
+
+        <td class="trainers-table__cell trainers-table__cell--quincena">
+          <div class="trainers-table__quincena" *ngIf="getQ1Badges(trainer) as q1Badges">
+            <ng-container *ngIf="q1Badges.length; else q1Empty">
+              <span
+                *ngFor="let badge of q1Badges; trackBy: trackByPlanCode"
+                class="trainers-table__plan-chip"
+                [class.trainers-table__plan-chip--6d]="badge.planCode === 'plan_6d'"
+                [class.trainers-table__plan-chip--3d]="badge.planCode === 'plan_3d'"
+              >
+                {{ badge.count }} - {{ badge.abbr }}
+              </span>
+            </ng-container>
+            <ng-template #q1Empty><span class="trainers-table__quincena-empty">—</span></ng-template>
+          </div>
+        </td>
+
+        <td class="trainers-table__cell trainers-table__cell--quincena">
+          <div class="trainers-table__quincena" *ngIf="getQ2Badges(trainer) as q2Badges">
+            <ng-container *ngIf="q2Badges.length; else q2Empty">
+              <span
+                *ngFor="let badge of q2Badges; trackBy: trackByPlanCode"
+                class="trainers-table__plan-chip"
+                [class.trainers-table__plan-chip--6d]="badge.planCode === 'plan_6d'"
+                [class.trainers-table__plan-chip--3d]="badge.planCode === 'plan_3d'"
+              >
+                {{ badge.count }} - {{ badge.abbr }}
+              </span>
+            </ng-container>
+            <ng-template #q2Empty><span class="trainers-table__quincena-empty">—</span></ng-template>
           </div>
         </td>
 

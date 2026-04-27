@@ -6,7 +6,8 @@ import {
   Output
 } from '@angular/core';
 
-import { Client } from '../../models/client.model';
+import { Client, ClientPaymentStatusDisplay } from '../../models/client.model';
+import { formatDateOnly } from 'src/app/shared/utils/date.utils';
 
 @Component({
   selector: 'app-clients-table',
@@ -16,20 +17,48 @@ import { Client } from '../../models/client.model';
 })
 export class ClientsTableComponent {
   @Input() clients: Client[] = [];
+  @Input() isAdmin = false;
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
+  @Output() registerPaymentRequested = new EventEmitter<Client>();
 
   getStatusLabel(status: Client['status']): string {
     switch (status) {
-      case 'active': return 'Activo';
-      case 'inactive': return 'Inactivo';
+      case 'active':    return 'Activo';
+      case 'inactive':  return 'Inactivo';
+      case 'suspended': return 'Suspendido';
+      case 'overdue':   return 'Moroso';
+      default:          return status;
     }
   }
 
   getStatusClass(status: Client['status']): string {
     switch (status) {
-      case 'active': return 'status--active';
-      case 'inactive': return 'status--inactive';
+      case 'active':    return 'status--active';
+      case 'inactive':  return 'status--inactive';
+      case 'suspended': return 'status--suspended';
+      case 'overdue':   return 'status--overdue';
+      default:          return 'status--inactive';
+    }
+  }
+
+  getPaymentStatusLabel(status: ClientPaymentStatusDisplay): string {
+    switch (status) {
+      case 'paid':        return 'Al día';
+      case 'partial':     return 'Pago parcial';
+      case 'pending':     return 'Pendiente';
+      case 'voided':      return 'Anulado';
+      case 'no_payments': return 'Sin pagos';
+    }
+  }
+
+  getPaymentStatusClass(status: ClientPaymentStatusDisplay): string {
+    switch (status) {
+      case 'paid':        return 'payment-badge--paid';
+      case 'partial':     return 'payment-badge--partial';
+      case 'pending':     return 'payment-badge--pending';
+      case 'voided':      return 'payment-badge--voided';
+      case 'no_payments': return 'payment-badge--no-payments';
     }
   }
 
@@ -42,24 +71,16 @@ export class ClientsTableComponent {
   }
 
   formatDate(dateStr: string | null): string {
-    if (!dateStr) return '—';
-    return new Date(dateStr).toLocaleDateString('es-CO', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
+    return formatDateOnly(dateStr);
   }
 
-  formatPlanLabel(client: Client): string {
-    if (client.planAmountCop !== null) {
-      const formatted = new Intl.NumberFormat('es-CO', {
-        style: 'currency',
-        currency: 'COP',
-        maximumFractionDigits: 0
-      }).format(client.planAmountCop);
-      return `${client.planName} · ${formatted}`;
-    }
-    return client.planName;
+  formatCop(amount: number | null): string {
+    if (amount === null || amount === undefined) return '—';
+    return new Intl.NumberFormat('es-CO', {
+      style: 'currency',
+      currency: 'COP',
+      maximumFractionDigits: 0
+    }).format(amount);
   }
 
   trackByClientId(_index: number, client: Client): string {

@@ -5,9 +5,10 @@
         <th scope="col" class="clients-table__actions-th"><span class="visually-hidden">Acciones</span></th>
         <th scope="col">Cliente</th>
         <th scope="col">Plan</th>
-        <th scope="col">Estado</th>
+        <th scope="col" class="clients-table__th--center">Estado pago</th>
+        <th scope="col">Último pago</th>
+        <th scope="col">Vencimiento</th>
         <th scope="col">Entrenador</th>
-        <th scope="col">Ingreso</th>
         <th scope="col">Origen</th>
       </tr>
     </thead>
@@ -17,14 +18,19 @@
         class="clients-table__row"
         [class.clients-table__row--inactive]="client.status === 'inactive'"
       >
+        <!-- Acciones -->
         <td class="clients-table__cell clients-table__cell--actions">
           <app-client-actions-menu
             [client]="client"
+            [isAdmin]="isAdmin"
             dropdownAlign="left"
             (editRequested)="editRequested.emit($event)"
             (deactivateRequested)="deactivateRequested.emit($event)"
+            (registerPaymentRequested)="registerPaymentRequested.emit($event)"
           ></app-client-actions-menu>
         </td>
+
+        <!-- Cliente: avatar + nombre + email -->
         <td class="clients-table__cell clients-table__cell--name">
           <div class="clients-table__client">
             <span class="clients-table__avatar" aria-hidden="true">{{ getInitials(client.fullName) }}</span>
@@ -34,12 +40,48 @@
             </div>
           </div>
         </td>
-        <td class="clients-table__cell">{{ formatPlanLabel(client) }}</td>
+
+        <!-- Plan: nombre + valor -->
         <td class="clients-table__cell">
-          <span class="status" [ngClass]="getStatusClass(client.status)">{{ getStatusLabel(client.status) }}</span>
+          <p class="clients-table__cell-main">{{ client.planName }}</p>
+          <p class="clients-table__cell-sub" *ngIf="client.planAmountCop !== null">
+            {{ formatCop(client.planAmountCop) }}
+          </p>
         </td>
+
+        <!-- Estado de pago: badge + saldo si > 0 -->
+        <td class="clients-table__cell clients-table__cell--payment-status">
+          <span
+            class="payment-badge"
+            [ngClass]="getPaymentStatusClass(client.lastPaymentStatus)"
+          >
+            {{ getPaymentStatusLabel(client.lastPaymentStatus) }}
+          </span>
+          <p
+            class="clients-table__cell-sub clients-table__cell-sub--balance"
+            *ngIf="client.lastPaymentBalanceCop !== null && client.lastPaymentBalanceCop > 0"
+          >
+            {{ formatCop(client.lastPaymentBalanceCop) }}
+          </p>
+        </td>
+
+        <!-- Último pago: fecha del evento + monto (ocultar monto si es 0) -->
+        <td class="clients-table__cell">
+          <p class="clients-table__cell-main">{{ formatDate(client.lastEventDate) }}</p>
+          <p class="clients-table__cell-sub" *ngIf="client.lastEventAmountCop !== null && client.lastEventAmountCop > 0">
+            {{ formatCop(client.lastEventAmountCop) }}
+          </p>
+        </td>
+
+        <!-- Fecha de vencimiento -->
+        <td class="clients-table__cell">
+          {{ formatDate(client.lastPaymentPeriodEnd) }}
+        </td>
+
+        <!-- Entrenador -->
         <td class="clients-table__cell">{{ client.trainerName ?? '—' }}</td>
-        <td class="clients-table__cell">{{ formatDate(client.joinedAt) }}</td>
+
+        <!-- Origen -->
         <td class="clients-table__cell">
           <span class="origin-badge origin-badge--{{ client.origin }}">
             {{ client.origin === 'referido' ? 'Referido' : client.origin === 'publicidad' ? 'Publicidad' : 'Directo' }}

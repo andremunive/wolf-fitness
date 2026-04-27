@@ -25,4 +25,10 @@ export class HomePageComponent {
         return 'Cliente';
     }
   }
+
+  /** Returns the first word of the user's full name for the greeting. */
+  firstName(profile: Profile): string {
+    const parts = profile.full_name.split(' ');
+    return parts[0] ?? this.roleLabel(profile.role);
+  }
 }

@@ -108,6 +108,21 @@
     outline-offset: 2px;
   }
 
+  &--active {
+    background: #eaf6f9;
+    color: #228d9f;
+
+    .drawer-nav-item__icon {
+      background: #228d9f;
+      color: #ffffff;
+    }
+
+    .drawer-nav-item__label {
+      color: #228d9f;
+      font-weight: 700;
+    }
+  }
+
   &__icon {
     flex-shrink: 0;
     width: 38px;

@@ -26,9 +26,17 @@ import {
 
 import { Client, ClientDetailFull, ClientsPage } from '../../models/client.model';
 import { ClientsService } from '../../services/clients.service';
+import { PaymentsService } from '../../services/payments.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 import { ClientFiltersValue } from '../../components/clients-filters/clients-filters.component';
 import { PaginationState } from '../../components/clients-pagination/clients-pagination.component';
 import { CreateClientResult } from '../../models/client.model';
+import { OpenPaymentInfo, mapPaymentErrorToMessage } from '../../models/payment.model';
+import { RegisterPaymentSuccess } from '../../components/register-payment-modal/register-payment-modal.component';
+import { RegisterInstallmentSuccess } from '../../components/register-installment-modal/register-installment-modal.component';
+import {
+  PaymentSuccessData
+} from '../../components/payment-success-modal/payment-success-modal.component';
 
 interface PageState {
   page: number;
@@ -71,18 +79,47 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     pageSize: 10
   });
 
-  // Dispara refresh después de crear/editar/desactivar.
+  // Dispara refresh después de crear/editar/desactivar/registrar pago.
   private readonly refreshTrigger$ = new BehaviorSubject<void>(undefined);
 
   readonly filters$ = this.filtersSubject.asObservable();
 
-  // ─── Modales ────────────────────────────────────────────────────────────────
+  // ─── Auth state ──────────────────────────────────────────────────────────────
+
+  isAdmin = false;
+
+  // ─── Modales existentes ──────────────────────────────────────────────────────
 
   isWizardOpen = false;
   wizardResult: CreateClientResult | null = null;
 
   editingClient: ClientDetailFull | null = null;
   isLoadingEditClient = false;
+
+  // ─── Modales de pago ─────────────────────────────────────────────────────────
+
+  /** Client selected for payment flow — triggers the flow detection. */
+  paymentFlowClient: Client | null = null;
+  isResolvingPaymentFlow = false;
+  paymentFlowError: string | null = null;
+
+  /**
+   * Handle for the auto-dismiss timer of the payment-flow error toast.
+   * Kept to allow cancellation when the user dismisses manually or a new error arrives.
+   */
+  private toastDismissTimer: ReturnType<typeof setTimeout> | null = null;
+
+  /** Set when new-payment modal should be shown. */
+  registerPaymentClient: Client | null = null;
+  suggestedPeriodStart: string | null = null;
+  isFirstPayment = false;
+
+  /** Set when installment modal should be shown. */
+  registerInstallmentClient: Client | null = null;
+  openPaymentForInstallment: OpenPaymentInfo | null = null;
+
+  /** Set when success modal should be shown. */
+  paymentSuccessData: PaymentSuccessData | null = null;
 
   // ─── Stream principal de la vista ──────────────────────────────────────────
 
@@ -147,6 +184,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly clientsService: ClientsService,
+    private readonly paymentsService: PaymentsService,
+    private readonly authService: AuthService,
     private readonly cdr: ChangeDetectorRef
   ) {}
 
@@ -162,6 +201,14 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
         if (current.page !== 1) {
           this.pageSubject.next({ ...current, page: 1 });
         }
+      });
+
+    // Determine admin role for showing the "Registrar pago" action.
+    this.authService.profile$
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((profile) => {
+        this.isAdmin = profile?.role === 'admin';
+        this.cdr.markForCheck();
       });
   }
 
@@ -266,14 +313,151 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  // ─── Registrar pago (detección automática de flujo) ─────────────────────────
+
+  /**
+   * Entry point for the payment flow. Calls get-next-period-start to decide
+   * whether to open the new-payment modal or the installment modal.
+   * The system decides — the admin does not choose.
+   */
+  onRegisterPaymentRequested(client: Client): void {
+    this.paymentFlowClient = client;
+    this.isResolvingPaymentFlow = true;
+    this.paymentFlowError = null;
+    this.cdr.markForCheck();
+
+    this.paymentsService
+      .resolvePaymentFlow(client.id)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (result) => {
+          this.isResolvingPaymentFlow = false;
+
+          if (result.flow === 'new_payment') {
+            this.suggestedPeriodStart = result.suggestedPeriodStart;
+            this.isFirstPayment = result.isFirstPayment;
+            this.registerPaymentClient = client;
+          } else {
+            this.openPaymentForInstallment = result.openPayment;
+            this.registerInstallmentClient = client;
+          }
+
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          this.isResolvingPaymentFlow = false;
+          console.error('[ClientsListPage] Error al resolver flujo de pago:', err);
+          this.showPaymentFlowError(this.extractErrorMessage(err));
+          this.cdr.markForCheck();
+        }
+      });
+  }
+
+  // ─── Modal de pago nuevo ────────────────────────────────────────────────────
+
+  closeRegisterPaymentModal(): void {
+    this.registerPaymentClient = null;
+    this.paymentFlowClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onPaymentRegistered(result: RegisterPaymentSuccess): void {
+    this.registerPaymentClient = null;
+    this.paymentFlowClient = null;
+    this.paymentSuccessData = {
+      type: 'payment',
+      clientName: result.clientName,
+      paymentResponse: result.response
+    };
+    this.refreshTrigger$.next();
+    this.cdr.markForCheck();
+  }
+
+  // ─── Modal de abono ─────────────────────────────────────────────────────────
+
+  closeRegisterInstallmentModal(): void {
+    this.registerInstallmentClient = null;
+    this.openPaymentForInstallment = null;
+    this.paymentFlowClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onInstallmentRegistered(result: RegisterInstallmentSuccess): void {
+    this.registerInstallmentClient = null;
+    this.openPaymentForInstallment = null;
+    this.paymentFlowClient = null;
+    this.paymentSuccessData = {
+      type: 'installment',
+      clientName: result.clientName,
+      installmentResponse: result.response
+    };
+    this.refreshTrigger$.next();
+    this.cdr.markForCheck();
+  }
+
+  // ─── Modal de éxito de pago ─────────────────────────────────────────────────
+
+  dismissPaymentSuccessModal(): void {
+    this.paymentSuccessData = null;
+    this.cdr.markForCheck();
+  }
+
+  retry(): void {
+    this.refreshTrigger$.next();
+  }
+
   // ─── Utilidades ─────────────────────────────────────────────────────────────
 
   trackByClientId(_index: number, client: Client): string {
     return client.id;
   }
 
+  /**
+   * Shows the payment-flow error toast with a 5-second auto-dismiss.
+   * Cancels any in-flight timer before scheduling a new one so multiple
+   * rapid errors never leave orphaned timers.
+   */
+  private showPaymentFlowError(message: string): void {
+    if (this.toastDismissTimer !== null) {
+      clearTimeout(this.toastDismissTimer);
+    }
+    this.paymentFlowError = message;
+    this.toastDismissTimer = setTimeout(() => {
+      this.paymentFlowError = null;
+      this.toastDismissTimer = null;
+      this.cdr.markForCheck();
+    }, 5000);
+  }
+
+  /** Called by the template "×" button — cancels auto-dismiss before clearing. */
+  dismissPaymentFlowError(): void {
+    if (this.toastDismissTimer !== null) {
+      clearTimeout(this.toastDismissTimer);
+      this.toastDismissTimer = null;
+    }
+    this.paymentFlowError = null;
+    this.cdr.markForCheck();
+  }
+
+  private extractErrorMessage(err: unknown): string {
+    if (err && typeof err === 'object') {
+      const anyErr = err as Record<string, unknown>;
+      if (typeof anyErr['code'] === 'string') {
+        return mapPaymentErrorToMessage(
+          anyErr['code'],
+          (anyErr['details'] ?? {}) as Record<string, unknown>
+        );
+      }
+      if (typeof anyErr['message'] === 'string') return anyErr['message'];
+    }
+    return 'Ocurrió un error inesperado. Intenta de nuevo.';
+  }
+
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+    if (this.toastDismissTimer !== null) {
+      clearTimeout(this.toastDismissTimer);
+    }
   }
 }

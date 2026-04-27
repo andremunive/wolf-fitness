@@ -24,6 +24,42 @@
     ></app-trainer-actions-menu>
   </div>
 
+  <div class="trainer-card__quincenas">
+    <div class="trainer-card__quincena">
+      <span class="trainer-card__quincena-label">Clientes Q1</span>
+      <div class="trainer-card__quincena-badges">
+        <ng-container *ngIf="q1Badges.length; else q1Empty">
+          <span
+            *ngFor="let badge of q1Badges; trackBy: trackByPlanCode"
+            class="trainer-card__plan-chip"
+            [class.trainer-card__plan-chip--6d]="badge.planCode === 'plan_6d'"
+            [class.trainer-card__plan-chip--3d]="badge.planCode === 'plan_3d'"
+          >
+            {{ badge.count }} - {{ badge.abbr }}
+          </span>
+        </ng-container>
+        <ng-template #q1Empty><span class="trainer-card__quincena-empty">—</span></ng-template>
+      </div>
+    </div>
+
+    <div class="trainer-card__quincena">
+      <span class="trainer-card__quincena-label">Clientes Q2</span>
+      <div class="trainer-card__quincena-badges">
+        <ng-container *ngIf="q2Badges.length; else q2Empty">
+          <span
+            *ngFor="let badge of q2Badges; trackBy: trackByPlanCode"
+            class="trainer-card__plan-chip"
+            [class.trainer-card__plan-chip--6d]="badge.planCode === 'plan_6d'"
+            [class.trainer-card__plan-chip--3d]="badge.planCode === 'plan_3d'"
+          >
+            {{ badge.count }} - {{ badge.abbr }}
+          </span>
+        </ng-container>
+        <ng-template #q2Empty><span class="trainer-card__quincena-empty">—</span></ng-template>
+      </div>
+    </div>
+  </div>
+
   <div class="trainer-card__meta">
     <!-- Teléfono -->
     <div class="trainer-card__meta-item">

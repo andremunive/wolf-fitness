@@ -1,0 +1,191 @@
+:host {
+  display: block;
+
+  @media (min-width: 768px) {
+    height: 100%;
+  }
+}
+
+// ─── Page shell ────────────────────────────────────────────────────────────────
+
+.closures-page {
+  min-height: 100%;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: 768px) {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+// ─── Sticky header ────────────────────────────────────────────────────────────
+
+.closures-page__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #ffffff;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e5e7eb;
+
+  @media (min-width: 640px) {
+    padding: 20px 24px 14px;
+  }
+}
+
+.closures-page__header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.closures-page__title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.closures-page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  margin: 0;
+
+  @media (min-width: 640px) {
+    font-size: 26px;
+  }
+}
+
+// ─── Error banner ─────────────────────────────────────────────────────────────
+
+.closures-page__error-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  color: #dc2626;
+  font-size: 13px;
+  font-weight: 500;
+
+  @media (min-width: 640px) {
+    margin: 12px 24px 0;
+  }
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
+
+.closures-page__main {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (min-width: 640px) {
+    padding: 20px 24px;
+  }
+}
+
+// ─── Sections ─────────────────────────────────────────────────────────────────
+
+.closures-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.closures-section__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+// ─── Trainer row ──────────────────────────────────────────────────────────────
+
+.trainer-row {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.trainer-row__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+  padding-left: 4px;
+}
+
+.trainer-row__cards {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+// ─── Skeletons ────────────────────────────────────────────────────────────────
+
+.skeleton-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.skeleton-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 180px;
+}
+
+.skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+
+  &--line-lg { height: 16px; width: 80%; }
+  &--line-md { height: 14px; width: 60%; }
+  &--line-sm { height: 12px; width: 40%; }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ─── Empty state ──────────────────────────────────────────────────────────────
+
+.closures-empty {
+  font-size: 14px;
+  color: #9ca3af;
+  padding: 24px 0;
+  text-align: center;
+}

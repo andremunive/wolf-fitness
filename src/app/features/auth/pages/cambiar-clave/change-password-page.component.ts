@@ -25,6 +25,8 @@ export class ChangePasswordPageComponent implements OnDestroy {
 
   submitting = false;
   errorKey: ChangePasswordErrorKey | null = null;
+  showPassword = false;
+  showConfirm = false;
 
   private readonly destroy$ = new Subject<void>();
 

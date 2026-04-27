@@ -202,8 +202,33 @@ export class NewTrainerWizardComponent implements OnDestroy {
       });
   }
 
-  close(): void {
+  /**
+   * Called when the user clicks the backdrop or presses Escape.
+   * If the user has already entered data (step > 1 or any field touched),
+   * we ask for confirmation before discarding.
+   */
+  onBackdropClick(): void {
+    const hasData = this.currentStep > 1 || this.isAnyStepDirty();
+    if (hasData) {
+      const confirmed = window.confirm(
+        '¿Descartar los datos ingresados? Los cambios no se guardarán.'
+      );
+      if (!confirmed) return;
+    }
     this.closed.emit();
+  }
+
+  close(): void {
+    this.onBackdropClick();
+  }
+
+  private isAnyStepDirty(): boolean {
+    return (
+      this.step1.dirty ||
+      this.step2.dirty ||
+      this.step3.dirty ||
+      this.step4.dirty
+    );
   }
 
   private buildPayload(): CreateTrainerPayload {

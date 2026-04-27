@@ -74,7 +74,17 @@
           </svg>
         </div>
         <p class="clients-page__empty-title">Error al cargar clientes</p>
-        <p class="clients-page__empty-msg">Intenta de nuevo más tarde.</p>
+        <p class="clients-page__empty-msg">Revisa tu conexión e intenta de nuevo.</p>
+        <button
+          type="button"
+          class="clients-page__retry-btn"
+          (click)="retry()"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+          Reintentar
+        </button>
       </div>
 
       <!-- Empty state -->
@@ -109,8 +119,10 @@
           <app-client-card
             *ngFor="let client of state.clients; trackBy: trackByClientId"
             [client]="client"
+            [isAdmin]="isAdmin"
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
+            (registerPaymentRequested)="onRegisterPaymentRequested($event)"
           ></app-client-card>
         </div>
 
@@ -118,8 +130,10 @@
         <div class="clients-page__table-wrapper">
           <app-clients-table
             [clients]="state.clients"
+            [isAdmin]="isAdmin"
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
+            (registerPaymentRequested)="onRegisterPaymentRequested($event)"
           ></app-clients-table>
         </div>
 
@@ -142,6 +156,36 @@
     role="status"
     aria-label="Cargando datos del cliente..."
   ></div>
+
+  <!-- Indicador de carga al detectar flujo de pago -->
+  <div
+    *ngIf="isResolvingPaymentFlow"
+    class="clients-page__edit-loading"
+    role="status"
+    aria-label="Verificando estado de pago..."
+  ></div>
+
+  <!-- Error de flujo de pago (toast inline simple) -->
+  <div
+    *ngIf="paymentFlowError"
+    class="clients-page__payment-error"
+    role="alert"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+    </svg>
+    <span>{{ paymentFlowError }}</span>
+    <button
+      type="button"
+      class="clients-page__payment-error-close"
+      (click)="dismissPaymentFlowError()"
+      aria-label="Cerrar aviso"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
 
   <!-- ===== FAB nuevo cliente ===== -->
   <button
@@ -178,3 +222,34 @@
   (closed)="closeEditModal()"
   (clientUpdated)="onClientUpdated()"
 ></app-edit-client-modal>
+
+<!-- ===== MODAL REGISTRAR PAGO NUEVO ===== -->
+<ng-container *ngIf="registerPaymentClient as payClient">
+  <app-register-payment-modal
+    [client]="payClient"
+    [suggestedPeriodStart]="suggestedPeriodStart"
+    [isFirstPayment]="isFirstPayment"
+    (closed)="closeRegisterPaymentModal()"
+    (paymentRegistered)="onPaymentRegistered($event)"
+  ></app-register-payment-modal>
+</ng-container>
+
+<!-- ===== MODAL REGISTRAR ABONO ===== -->
+<ng-container *ngIf="registerInstallmentClient as instClient">
+  <ng-container *ngIf="openPaymentForInstallment as openPay">
+    <app-register-installment-modal
+      [client]="instClient"
+      [openPayment]="openPay"
+      (closed)="closeRegisterInstallmentModal()"
+      (installmentRegistered)="onInstallmentRegistered($event)"
+    ></app-register-installment-modal>
+  </ng-container>
+</ng-container>
+
+<!-- ===== MODAL ÉXITO PAGO / ABONO ===== -->
+<ng-container *ngIf="paymentSuccessData as successData">
+  <app-payment-success-modal
+    [data]="successData"
+    (dismissed)="dismissPaymentSuccessModal()"
+  ></app-payment-success-modal>
+</ng-container>

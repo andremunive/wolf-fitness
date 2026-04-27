@@ -25,11 +25,19 @@ export class ClientActionsMenuComponent {
    *  - `'left'`: dropdown abierto hacia la derecha.
    */
   @Input() dropdownAlign: 'left' | 'right' = 'right';
+  /**
+   * Cuando es true, muestra la opción "Registrar pago".
+   * El contenedor padre decide si el usuario logueado tiene rol admin.
+   */
+  @Input() isAdmin = false;
 
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
+  @Output() registerPaymentRequested = new EventEmitter<Client>();
 
   isOpen = false;
+  /** Fixed-position style for the dropdown so it escapes overflow:auto containers. */
+  dropdownStyle: Record<string, string> = {};
 
   constructor(
     private readonly host: ElementRef<HTMLElement>,
@@ -39,7 +47,29 @@ export class ClientActionsMenuComponent {
   toggle(event: MouseEvent): void {
     event.stopPropagation();
     this.isOpen = !this.isOpen;
+    if (this.isOpen) {
+      this.updateDropdownPosition();
+    }
     this.cdr.markForCheck();
+  }
+
+  private updateDropdownPosition(): void {
+    const trigger = this.host.nativeElement.querySelector<HTMLElement>('.actions-menu__trigger');
+    if (!trigger) return;
+    const rect = trigger.getBoundingClientRect();
+    if (this.dropdownAlign === 'left') {
+      this.dropdownStyle = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        left: `${rect.left}px`
+      };
+    } else {
+      this.dropdownStyle = {
+        position: 'fixed',
+        top: `${rect.bottom + 6}px`,
+        right: `${window.innerWidth - rect.right}px`
+      };
+    }
   }
 
   onEdit(): void {
@@ -54,6 +84,11 @@ export class ClientActionsMenuComponent {
     if (confirmed) {
       this.deactivateRequested.emit(this.client);
     }
+    this.close();
+  }
+
+  onRegisterPayment(): void {
+    this.registerPaymentRequested.emit(this.client);
     this.close();
   }
 

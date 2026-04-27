@@ -258,6 +258,10 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
       });
   }
 
+  retry(): void {
+    this.refreshTrigger$.next();
+  }
+
   // ─── Utilidades ─────────────────────────────────────────────────────────────
 
   trackByTrainerId(_index: number, trainer: Trainer): string {

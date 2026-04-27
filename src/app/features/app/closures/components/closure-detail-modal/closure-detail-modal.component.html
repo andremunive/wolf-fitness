@@ -1,0 +1,413 @@
+<!-- Backdrop -->
+<div class="modal-backdrop" (click)="closed.emit()" aria-hidden="true"></div>
+
+<!-- Dialog -->
+<div
+  class="modal-dialog"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'Detalle del cierre ' + quincenaLabel + ' · ' + monthLabel"
+  appFocusTrap
+>
+
+  <!-- ── Modal header ── -->
+  <div class="modal-header">
+    <div class="modal-header__info">
+      <p class="modal-header__trainer">{{ trainerName }}</p>
+      <p class="modal-header__period">{{ monthLabel }} · {{ quincenaLabel }}</p>
+    </div>
+    <div class="modal-header__right">
+      <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
+      <button
+        type="button"
+        class="modal-close-btn"
+        (click)="closed.emit()"
+        aria-label="Cerrar modal"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             aria-hidden="true" style="width:20px;height:20px;">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Scrollable body ── -->
+  <div class="modal-body">
+
+    <!-- Error banner -->
+    <div *ngIf="actionError" class="error-banner" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           class="error-banner__icon" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      {{ actionError }}
+    </div>
+
+    <!-- Loading overlay -->
+    <div *ngIf="actionLoading" class="action-loading" role="status" aria-label="Procesando…">
+      <div class="spinner"></div>
+      <span>Procesando…</span>
+    </div>
+
+    <!-- ── Sección 1: Resumen financiero ── -->
+    <section class="modal-section">
+      <h3 class="modal-section__title">Resumen financiero</h3>
+
+      <div class="summary-grid">
+        <div class="summary-item">
+          <span class="summary-item__label">Clientes 6 días</span>
+          <span class="summary-item__value">{{ closure.count_six_days }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-item__label">Clientes 3 días</span>
+          <span class="summary-item__value">{{ closure.count_three_days }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-item__label">Equivalente Q</span>
+          <span class="summary-item__value">{{ closure.equivalente_q | number:'1.1-1' }}</span>
+        </div>
+        <div class="summary-item">
+          <span class="summary-item__label">Equiv. acum. mes</span>
+          <span class="summary-item__value">{{ closure.equivalente_mes_acum_at_close | number:'1.1-1' }}</span>
+        </div>
+      </div>
+
+      <div class="amounts-list">
+        <div class="amounts-list__row">
+          <span>Salario base</span>
+          <span>{{ formatCop(closure.base_cop) }}</span>
+        </div>
+        <div class="amounts-list__row">
+          <span>Bono quincena</span>
+          <span>{{ formatCop(closure.bonus_q_cop) }}</span>
+        </div>
+        <div class="amounts-list__row" *ngIf="closure.adjustments_total_cop !== 0">
+          <span>Ajustes total</span>
+          <span [class.amounts-list__negative]="closure.adjustments_total_cop < 0">
+            {{ formatCop(closure.adjustments_total_cop) }}
+          </span>
+        </div>
+        <div class="amounts-list__row amounts-list__row--total">
+          <span>TOTAL</span>
+          <span>{{ formatCop(closure.total_cop) }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Sección 2: Clientes que aportaron ── -->
+    <section class="modal-section" *ngIf="closure.entries && closure.entries.length > 0">
+      <h3 class="modal-section__title">
+        Clientes que aportaron ({{ closure.entries.length }})
+      </h3>
+
+      <!-- Mobile: lista compacta -->
+      <div class="entries-list md:hidden">
+        <div
+          *ngFor="let entry of closure.entries; let i = index"
+          class="entry-row"
+        >
+          <span class="entry-row__order">{{ entry.payment_order }}</span>
+          <div class="entry-row__info">
+            <span class="entry-row__name">{{ entry.client_name }}</span>
+            <div class="entry-row__meta">
+              <span class="entry-row__date">{{ formatDate(entry.reception_date) }}</span>
+              <span class="entry-row__plan plan-badge"
+                    [class.plan-badge--six]="entry.plan_frequency_snapshot === 'six_days'"
+                    [class.plan-badge--three]="entry.plan_frequency_snapshot === 'three_days'">
+                {{ entry.plan_frequency_snapshot === 'six_days' ? '6 días' : '3 días' }}
+              </span>
+            </div>
+          </div>
+          <div class="entry-row__equiv">
+            <span>+{{ entry.equivalente | number:'1.1-1' }}</span>
+            <span class="entry-row__cumul">Acum: {{ entry.cumulative_equivalente | number:'1.1-1' }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tablet+: tabla -->
+      <div class="entries-table-wrap hidden md:block">
+        <table class="entries-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Cliente</th>
+              <th>Fecha recep.</th>
+              <th>Plan</th>
+              <th>Aporte</th>
+              <th>Acumulado mes</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr *ngFor="let entry of closure.entries">
+              <td>{{ entry.payment_order }}</td>
+              <td class="entries-table__name">{{ entry.client_name }}</td>
+              <td>{{ formatDate(entry.reception_date) }}</td>
+              <td>
+                <span class="plan-badge"
+                      [class.plan-badge--six]="entry.plan_frequency_snapshot === 'six_days'"
+                      [class.plan-badge--three]="entry.plan_frequency_snapshot === 'three_days'">
+                  {{ entry.plan_frequency_snapshot === 'six_days' ? '6 días' : '3 días' }}
+                </span>
+              </td>
+              <td>{{ entry.equivalente | number:'1.1-1' }}</td>
+              <td>{{ entry.cumulative_equivalente | number:'1.1-1' }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="modal-section" *ngIf="!closure.entries || closure.entries.length === 0">
+      <h3 class="modal-section__title">Clientes que aportaron</h3>
+      <p class="empty-text">Sin clientes en esta quincena.</p>
+    </section>
+
+    <!-- ── Sección 3: Ajustes ── -->
+    <section class="modal-section">
+      <div class="modal-section__header-row">
+        <h3 class="modal-section__title">Ajustes</h3>
+        <button
+          *ngIf="canModify && !showAdjustmentForm"
+          type="button"
+          class="section-action-btn"
+          (click)="showAdjustmentForm = true"
+        >
+          + Agregar
+        </button>
+      </div>
+
+      <!-- Formulario de ajuste -->
+      <div *ngIf="showAdjustmentForm" class="adj-form-wrap">
+        <app-closure-adjustment-form
+          (formSubmit)="onAdjustmentSubmit($event)"
+          (formCancel)="showAdjustmentForm = false"
+        ></app-closure-adjustment-form>
+      </div>
+
+      <!-- Lista de ajustes -->
+      <div *ngIf="closure.adjustments && closure.adjustments.length > 0; else noAdjustments"
+           class="adjustments-list">
+        <div
+          *ngFor="let adj of closure.adjustments; trackBy: trackByAdjId"
+          class="adjustment-item"
+        >
+          <div class="adjustment-item__info">
+            <span class="adjustment-item__reason">{{ adj.reason }}</span>
+            <span class="adjustment-item__date">{{ formatDateTime(adj.created_at) }}</span>
+          </div>
+          <div class="adjustment-item__right">
+            <span class="adjustment-item__amount"
+                  [class.adjustment-item__amount--negative]="adj.amount_cop < 0">
+              {{ adj.amount_cop > 0 ? '+' : '' }}{{ formatCop(adj.amount_cop) }}
+            </span>
+            <button
+              *ngIf="canModify"
+              type="button"
+              class="adj-delete-btn"
+              (click)="requestDeleteAdjustment(adj.id)"
+              aria-label="Eliminar ajuste"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   aria-hidden="true" style="width:16px;height:16px;">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6l-1 14H6L5 6"></path>
+                <path d="M10 11v6"></path>
+                <path d="M14 11v6"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+      </div>
+      <ng-template #noAdjustments>
+        <p class="empty-text" *ngIf="!showAdjustmentForm">Sin ajustes en esta quincena.</p>
+      </ng-template>
+    </section>
+
+    <!-- ── Sección 4: Cuenta bancaria del trainer ── -->
+    <section class="modal-section">
+      <h3 class="modal-section__title">Cuenta bancaria del entrenador</h3>
+      <div *ngIf="closure.bank_account; else noBankAccount" class="bank-info">
+        <div class="bank-info__row">
+          <span class="bank-info__label">Banco</span>
+          <span>{{ closure.bank_account.bank }}</span>
+        </div>
+        <div class="bank-info__row">
+          <span class="bank-info__label">Tipo</span>
+          <span>{{ closure.bank_account.account_type }}</span>
+        </div>
+        <div class="bank-info__row">
+          <span class="bank-info__label">Número (últimos 4)</span>
+          <span>···· {{ closure.bank_account.account_number.slice(-4) }}</span>
+        </div>
+      </div>
+      <ng-template #noBankAccount>
+        <p class="empty-text empty-text--warning">Cuenta bancaria no registrada.</p>
+      </ng-template>
+    </section>
+
+    <!-- ── Sección 5: Datos del pago (solo si paid) ── -->
+    <section class="modal-section" *ngIf="closure.status === 'paid'">
+      <h3 class="modal-section__title">Datos del pago</h3>
+      <div class="bank-info">
+        <div class="bank-info__row">
+          <span class="bank-info__label">Fecha de pago</span>
+          <span>{{ formatDate(closure.payment_date) }}</span>
+        </div>
+        <div class="bank-info__row">
+          <span class="bank-info__label">Método</span>
+          <span>{{ paymentMethodLabel }}</span>
+        </div>
+        <div class="bank-info__row" *ngIf="closure.payment_notes">
+          <span class="bank-info__label">Notas</span>
+          <span>{{ closure.payment_notes }}</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── Marcar como pagado (form inline) ── -->
+    <section
+      class="modal-section"
+      *ngIf="showMarkPaidForm"
+    >
+      <h3 class="modal-section__title">Marcar como pagado</h3>
+      <div class="mark-paid-form">
+
+        <div class="adj-form__field">
+          <label class="adj-form__label" for="mp-date">Fecha de pago</label>
+          <input
+            id="mp-date"
+            type="date"
+            class="adj-form__input"
+            [(ngModel)]="markPaidDate"
+            [max]="todayIso()"
+          />
+        </div>
+
+        <div class="adj-form__field">
+          <label class="adj-form__label" for="mp-method">Método de pago</label>
+          <select id="mp-method" class="adj-form__input" [(ngModel)]="markPaidMethod">
+            <option value="" disabled>Selecciona…</option>
+            <option *ngFor="let m of paymentMethods" [value]="m.value">{{ m.label }}</option>
+          </select>
+        </div>
+
+        <div class="adj-form__field">
+          <label class="adj-form__label" for="mp-notes">Notas (opcional)</label>
+          <textarea
+            id="mp-notes"
+            class="adj-form__input adj-form__input--textarea"
+            [(ngModel)]="markPaidNotes"
+            rows="2"
+            placeholder="Número de transacción, observaciones…"
+          ></textarea>
+        </div>
+
+        <p *ngIf="markPaidError" class="adj-form__error" role="alert">{{ markPaidError }}</p>
+
+        <div class="adj-form__actions">
+          <button type="button" class="adj-form__btn adj-form__btn--cancel"
+                  (click)="cancelMarkPaid()">Cancelar</button>
+          <button type="button" class="adj-form__btn adj-form__btn--submit"
+                  [disabled]="actionLoading"
+                  (click)="submitMarkPaid()">Confirmar pago</button>
+        </div>
+
+      </div>
+    </section>
+
+  </div><!-- /modal-body -->
+
+  <!-- ── Footer ── -->
+  <div class="modal-footer">
+    <div class="modal-footer__left">
+      <button
+        *ngIf="isAdmin && closure.status === 'open'"
+        type="button"
+        class="btn btn--primary"
+        (click)="requestCloseQuincena()"
+        [disabled]="actionLoading"
+      >
+        Cerrar quincena
+      </button>
+      <ng-container *ngIf="isAdmin && closure.status === 'closed'">
+        <button type="button" class="btn btn--warning"
+                (click)="requestReopenQuincena()" [disabled]="actionLoading">
+          Reabrir
+        </button>
+        <button type="button" class="btn btn--success"
+                (click)="openMarkPaidForm()" [disabled]="actionLoading || showMarkPaidForm">
+          Marcar pagado
+        </button>
+      </ng-container>
+    </div>
+
+    <div class="modal-footer__right">
+      <button
+        *ngIf="canGeneratePdf"
+        type="button"
+        class="btn btn--ghost"
+        (click)="onGeneratePdf()"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+             style="width:16px;height:16px;" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+          <polyline points="7 10 12 15 17 10"></polyline>
+          <line x1="12" y1="15" x2="12" y2="3"></line>
+        </svg>
+        PDF
+      </button>
+      <button type="button" class="btn btn--secondary" (click)="closed.emit()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+
+  <!-- ── Confirmación dialog ── -->
+  <div *ngIf="showConfirm" class="confirm-overlay" role="dialog" aria-modal="true">
+    <div class="confirm-dialog">
+      <h4 class="confirm-dialog__title">
+        <ng-container [ngSwitch]="confirmAction">
+          <span *ngSwitchCase="'close'">¿Cerrar esta quincena?</span>
+          <span *ngSwitchCase="'reopen'">¿Reabrir esta quincena?</span>
+          <span *ngSwitchCase="'deleteAdjustment'">¿Eliminar este ajuste?</span>
+        </ng-container>
+      </h4>
+      <p class="confirm-dialog__body">
+        <ng-container [ngSwitch]="confirmAction">
+          <span *ngSwitchCase="'close'">
+            Se persistirá el snapshot financiero. Una vez cerrada, el monto quedará fijo y no
+            se recalculará con pagos futuros.
+          </span>
+          <span *ngSwitchCase="'reopen'">
+            Se eliminará el snapshot y todos los ajustes de este cierre.
+            Las cifras se recalcularán cuando vuelvas a cerrar.
+          </span>
+          <span *ngSwitchCase="'deleteAdjustment'">
+            Esta acción no se puede deshacer.
+          </span>
+        </ng-container>
+      </p>
+      <div class="confirm-dialog__actions">
+        <button type="button" class="btn btn--secondary" (click)="cancelConfirm()">
+          Cancelar
+        </button>
+        <button
+          type="button"
+          class="btn"
+          [class.btn--primary]="confirmAction === 'close'"
+          [class.btn--warning]="confirmAction === 'reopen'"
+          [class.btn--danger]="confirmAction === 'deleteAdjustment'"
+          (click)="confirmExecute()"
+        >
+          Confirmar
+        </button>
+      </div>
+    </div>
+  </div>
+
+</div><!-- /modal-dialog -->

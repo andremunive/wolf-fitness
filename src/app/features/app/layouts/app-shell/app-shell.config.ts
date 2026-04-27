@@ -43,6 +43,29 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         iconKey: 'briefcase',
         routerLink: '/app/entrenadores',
         allowedRoles: ['admin']
+      },
+      {
+        label: 'Proveedores',
+        description: 'Personal externo y proveedores de servicio del gimnasio.',
+        iconKey: 'box',
+        routerLink: '/app/proveedores',
+        allowedRoles: ['admin']
+      }
+    ]
+  },
+  {
+    id: 'finanzas',
+    label: 'Finanzas',
+    description: 'Cierres quincenales y pagos del gimnasio.',
+    triggerIcon: 'dollar',
+    allowedRoles: ['admin', 'trainer'],
+    items: [
+      {
+        label: 'Cierres',
+        description: 'Cierre quincenal de pago a entrenadores: cards del mes actual e histórico.',
+        iconKey: 'dollar',
+        routerLink: '/app/cierres'
+        // Sin allowedRoles: visible para admin y trainer (que pasan el filtro de la sección).
       }
     ]
   }

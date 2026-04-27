@@ -1,0 +1,56 @@
+<form [formGroup]="form" (ngSubmit)="submit()" class="adj-form" novalidate>
+
+  <div class="adj-form__field">
+    <label class="adj-form__label" for="adj-amount">
+      Monto (COP)
+      <span class="adj-form__hint">Positivo suma, negativo descuenta</span>
+    </label>
+    <input
+      id="adj-amount"
+      type="number"
+      class="adj-form__input"
+      [class.adj-form__input--error]="hasError('amount_cop')"
+      formControlName="amount_cop"
+      placeholder="Ej: 50000 o -30000"
+      aria-required="true"
+    />
+    <p *ngIf="hasError('amount_cop')" class="adj-form__error" role="alert">
+      <ng-container *ngIf="form.get('amount_cop')?.errors?.['required']">El monto es obligatorio.</ng-container>
+      <ng-container *ngIf="form.get('amount_cop')?.errors?.['notZero']">El monto no puede ser cero.</ng-container>
+    </p>
+  </div>
+
+  <div class="adj-form__field">
+    <label class="adj-form__label" for="adj-reason">Razón del ajuste</label>
+    <textarea
+      id="adj-reason"
+      class="adj-form__input adj-form__input--textarea"
+      [class.adj-form__input--error]="hasError('reason')"
+      formControlName="reason"
+      placeholder="Describe el motivo del ajuste…"
+      rows="3"
+      aria-required="true"
+    ></textarea>
+    <p *ngIf="hasError('reason')" class="adj-form__error" role="alert">
+      La razón del ajuste es obligatoria.
+    </p>
+  </div>
+
+  <div class="adj-form__actions">
+    <button
+      type="button"
+      class="adj-form__btn adj-form__btn--cancel"
+      (click)="formCancel.emit()"
+    >
+      Cancelar
+    </button>
+    <button
+      type="submit"
+      class="adj-form__btn adj-form__btn--submit"
+      [disabled]="submitting"
+    >
+      Agregar ajuste
+    </button>
+  </div>
+
+</form>

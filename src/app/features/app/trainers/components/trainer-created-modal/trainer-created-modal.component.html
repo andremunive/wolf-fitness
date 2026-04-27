@@ -1,5 +1,5 @@
 <div class="success-backdrop" role="dialog" aria-modal="true" aria-labelledby="success-title">
-  <div class="success-sheet" (click)="$event.stopPropagation()">
+  <div class="success-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="dismiss()">
 
     <div class="success-sheet__icon-wrap" aria-hidden="true">
       <svg class="success-sheet__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">

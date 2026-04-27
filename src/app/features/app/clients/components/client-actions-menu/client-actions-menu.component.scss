@@ -11,8 +11,8 @@
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 8px;
   background: transparent;
@@ -42,11 +42,9 @@
 }
 
 .actions-menu__dropdown {
-  position: absolute;
-  // Default: anclado al borde derecho del trigger → se abre hacia la izquierda.
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 40;
+  // position/top/right are injected via [ngStyle] so the dropdown escapes
+  // any overflow:auto ancestor (e.g. the scrollable table wrapper).
+  z-index: 200;
   min-width: 180px;
   padding: 6px;
   background: #ffffff;
@@ -56,14 +54,6 @@
     0 12px 28px rgba(17, 24, 39, 0.14),
     0 2px 8px rgba(17, 24, 39, 0.06);
   animation: dropdown-in 0.12s ease both;
-
-  // Variante: anclado al borde izquierdo → se abre hacia la derecha.
-  // Útil cuando el trigger queda pegado al borde izquierdo de su contenedor
-  // (ej. primera columna de la tabla).
-  &--align-left {
-    right: auto;
-    left: 0;
-  }
 }
 
 .actions-menu__item {
@@ -89,6 +79,35 @@
   &:focus-visible {
     outline: 2px solid #228d9f;
     outline-offset: -2px;
+  }
+
+  // Acción principal (registrar pago): resaltada en color primario.
+  &--primary {
+    color: #228d9f;
+    font-weight: 600;
+
+    .actions-menu__icon {
+      background: #eaf6f9;
+      color: #228d9f;
+    }
+
+    &:hover {
+      background: #eaf6f9;
+    }
+  }
+
+  // Acción destructiva (desactivar): en rojo.
+  &--danger {
+    color: #dc2626;
+
+    .actions-menu__icon {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    &:hover {
+      background: #fef2f2;
+    }
   }
 }
 

@@ -1,0 +1,65 @@
+<article
+  class="provider-card"
+  [class.provider-card--deleted]="provider.isDeleted"
+  [attr.aria-label]="'Proveedor: ' + provider.name"
+>
+  <div class="provider-card__header">
+    <div class="provider-card__avatar" aria-hidden="true">{{ initials }}</div>
+
+    <div class="provider-card__info">
+      <p class="provider-card__name">{{ provider.name }}</p>
+      <p class="provider-card__service-type">{{ provider.serviceTypeName }}</p>
+    </div>
+
+    <div class="provider-card__badges">
+      <span class="provider-card__entity-chip">{{ entityTypeLabel }}</span>
+      <span
+        *ngIf="provider.isDeleted"
+        class="provider-card__deleted-chip"
+      >Dado de baja</span>
+    </div>
+
+    <app-service-provider-actions-menu
+      [provider]="provider"
+      dropdownAlign="right"
+      (editRequested)="editRequested.emit($event)"
+      (manageBankAccountsRequested)="manageBankAccountsRequested.emit($event)"
+      (softDeleteRequested)="softDeleteRequested.emit($event)"
+      (restoreRequested)="restoreRequested.emit($event)"
+    ></app-service-provider-actions-menu>
+  </div>
+
+  <div class="provider-card__meta">
+    <!-- Documento -->
+    <div class="provider-card__meta-item">
+      <svg class="provider-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 9h3.75M15 12h3.75M15 15h3.75M4.5 19.5h15a2.25 2.25 0 002.25-2.25V6.75A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25v10.5A2.25 2.25 0 004.5 19.5zm6-10.125a1.875 1.875 0 11-3.75 0 1.875 1.875 0 013.75 0zm1.294 6.336a6.721 6.721 0 01-3.17.789 6.721 6.721 0 01-3.168-.789 3.376 3.376 0 016.338 0z"/>
+      </svg>
+      <span>{{ documentLabel }}</span>
+    </div>
+
+    <!-- Teléfono -->
+    <div class="provider-card__meta-item" *ngIf="provider.phone">
+      <svg class="provider-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 6.75c0 8.284 6.716 15 15 15h2.25a2.25 2.25 0 002.25-2.25v-1.372c0-.516-.351-.966-.852-1.091l-4.423-1.106c-.44-.11-.902.055-1.173.417l-.97 1.293c-.282.376-.769.542-1.21.38a12.035 12.035 0 01-7.143-7.143c-.162-.441.004-.928.38-1.21l1.293-.97c.363-.271.527-.734.417-1.173L6.963 3.102a1.125 1.125 0 00-1.091-.852H4.5A2.25 2.25 0 002.25 4.5v2.25z"/>
+      </svg>
+      <span>{{ provider.phone }}</span>
+    </div>
+
+    <!-- Email -->
+    <div class="provider-card__meta-item" *ngIf="provider.email">
+      <svg class="provider-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75"/>
+      </svg>
+      <span>{{ provider.email }}</span>
+    </div>
+
+    <!-- Cuenta bancaria principal -->
+    <div class="provider-card__meta-item">
+      <svg class="provider-card__meta-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+      </svg>
+      <span>{{ primaryBankLabel }}</span>
+    </div>
+  </div>
+</article>

@@ -22,6 +22,7 @@ export class LoginPageComponent implements OnInit, OnDestroy {
 
   submitting = false;
   errorKey: LoginErrorKey | null = null;
+  showPassword = false;
 
   private readonly destroy$ = new Subject<void>();
 

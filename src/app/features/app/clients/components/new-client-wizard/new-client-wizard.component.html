@@ -1,5 +1,5 @@
-<div class="wizard-backdrop" (click)="close()" role="dialog" aria-modal="true" [attr.aria-label]="'Paso ' + currentStep + ' de ' + totalSteps + ': ' + currentStepTitle">
-  <div class="wizard-sheet" (click)="$event.stopPropagation()">
+<div class="wizard-backdrop" (click)="onBackdropClick()" role="dialog" aria-modal="true" [attr.aria-label]="'Paso ' + currentStep + ' de ' + totalSteps + ': ' + currentStepTitle">
+  <div class="wizard-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="onBackdropClick()">
 
     <!-- ── Sticky header ── -->
     <div class="wizard-header">

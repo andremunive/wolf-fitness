@@ -1,0 +1,131 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Gestionar tipos de servicio" (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <div class="modal-sheet__header">
+      <h2 class="modal-sheet__title">Tipos de servicio</h2>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Error -->
+      <div class="action-error" *ngIf="actionError" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        {{ actionError }}
+      </div>
+
+      <!-- Loading -->
+      <div class="loading-state" *ngIf="isLoading" aria-label="Cargando tipos de servicio...">
+        <div *ngFor="let i of [1,2,3]" class="skeleton skeleton--line"></div>
+      </div>
+
+      <!-- Lista -->
+      <ul class="types-list" *ngIf="!isLoading">
+        <li
+          *ngFor="let type of serviceTypes; trackBy: trackByTypeId"
+          class="type-item"
+          [class.type-item--inactive]="!type.isActive"
+        >
+          <!-- Vista -->
+          <ng-container *ngIf="editingTypeId !== type.id">
+            <div class="type-item__info">
+              <div class="type-item__name-row">
+                <span class="type-item__name">{{ type.name }}</span>
+                <span class="type-item__inactive-badge" *ngIf="!type.isActive">Inactivo</span>
+              </div>
+              <p class="type-item__description" *ngIf="type.description">{{ type.description }}</p>
+            </div>
+            <div class="type-item__actions">
+              <button
+                type="button"
+                class="type-item__btn type-item__btn--edit"
+                (click)="startEdit(type)"
+                [disabled]="isSaving"
+                aria-label="Editar tipo"
+                title="Editar"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+                </svg>
+              </button>
+              <button
+                type="button"
+                class="type-item__btn"
+                [class.type-item__btn--deactivate]="type.isActive"
+                [class.type-item__btn--activate]="!type.isActive"
+                (click)="toggleActive(type)"
+                [disabled]="isSaving"
+                [attr.aria-label]="type.isActive ? 'Desactivar tipo' : 'Activar tipo'"
+                [title]="type.isActive ? 'Desactivar' : 'Activar'"
+              >
+                <svg *ngIf="type.isActive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"/>
+                </svg>
+                <svg *ngIf="!type.isActive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- Edición inline -->
+          <div *ngIf="editingTypeId === type.id" class="inline-edit">
+            <div class="form-field">
+              <label class="form-field__label" [for]="'edit-type-name-' + type.id">Nombre <span class="form-field__required" aria-hidden="true">*</span></label>
+              <input [id]="'edit-type-name-' + type.id" type="text" class="form-field__input" [formControl]="editNameControl" placeholder="Nombre del tipo"/>
+            </div>
+            <div class="form-field">
+              <label class="form-field__label" [for]="'edit-type-desc-' + type.id">Descripción</label>
+              <input [id]="'edit-type-desc-' + type.id" type="text" class="form-field__input" [formControl]="editDescriptionControl" placeholder="Descripción opcional"/>
+            </div>
+            <div class="inline-edit__actions">
+              <button type="button" class="inline-edit__cancel" (click)="cancelEdit()" [disabled]="isSaving">Cancelar</button>
+              <button type="button" class="inline-edit__save" (click)="saveEdit(type)" [disabled]="editNameControl.invalid || isSaving">Guardar</button>
+            </div>
+          </div>
+        </li>
+      </ul>
+
+      <!-- Formulario agregar -->
+      <div class="add-type" *ngIf="isAdding">
+        <h3 class="add-type__title">Nuevo tipo de servicio</h3>
+        <div class="form-field">
+          <label class="form-field__label" for="new-type-name">Nombre <span class="form-field__required" aria-hidden="true">*</span></label>
+          <input id="new-type-name" type="text" class="form-field__input" [formControl]="newNameControl" placeholder="Ej. Fumigación"/>
+        </div>
+        <div class="form-field">
+          <label class="form-field__label" for="new-type-desc">Descripción</label>
+          <input id="new-type-desc" type="text" class="form-field__input" [formControl]="newDescriptionControl" placeholder="Descripción opcional"/>
+        </div>
+        <div class="add-type__actions">
+          <button type="button" class="add-type__cancel" (click)="cancelAdd()" [disabled]="isSaving">Cancelar</button>
+          <button type="button" class="add-type__save" (click)="saveAdd()" [disabled]="newNameControl.invalid || isSaving">Agregar</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button
+        *ngIf="!isAdding && !editingTypeId"
+        type="button"
+        class="modal-footer__add-btn"
+        (click)="startAdd()"
+        [disabled]="isSaving"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nuevo tipo
+      </button>
+      <button type="button" class="modal-footer__close-btn" (click)="close()">Cerrar</button>
+    </div>
+
+  </div>
+</div>

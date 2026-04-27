@@ -26,6 +26,29 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
+
+/** Retorna la fecha actual en formato YYYY-MM-DD (zona local del dispositivo). */
+function todayIsoDate(): string {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+/**
+ * Valida que joined_at no sea una fecha futura.
+ * El máximo permitido es hoy; el backend rechaza fechas futuras con 422.
+ * Definida fuera de la clase para poder referenciarla en los metadatos del FormGroup.
+ */
+function joinedAtNotFutureValidator(control: AbstractControl): ValidationErrors | null {
+  if (!control.value) return null;
+  // Comparamos solo la parte de fecha (YYYY-MM-DD) para evitar problemas de zona horaria.
+  if (control.value > todayIsoDate()) {
+    return { joinedAtFuture: true };
+  }
+  return null;
+}
 import { Observable, Subject } from 'rxjs';
 import { shareReplay, takeUntil } from 'rxjs/operators';
 
@@ -108,6 +131,7 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
   });
 
   readonly step3: FormGroup = this.fb.group({
+    joined_at: [todayIsoDate(), [Validators.required, joinedAtNotFutureValidator]],
     plan_id: ['', [Validators.required]],
     trainer_id: ['']
   });
@@ -206,8 +230,23 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
       });
   }
 
-  close(): void {
+  onBackdropClick(): void {
+    const hasData = this.currentStep > 1 || this.isAnyStepDirty();
+    if (hasData) {
+      const confirmed = window.confirm(
+        '¿Descartar los datos ingresados? Los cambios no se guardarán.'
+      );
+      if (!confirmed) return;
+    }
     this.closed.emit();
+  }
+
+  close(): void {
+    this.onBackdropClick();
+  }
+
+  private isAnyStepDirty(): boolean {
+    return this.step1.dirty || this.step2.dirty || this.step3.dirty;
   }
 
   trackByValue(_index: number, item: { value: string; label: string }): string {

@@ -1,0 +1,51 @@
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.month-nav__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #e5e7eb;
+  background: #fff;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  min-width: 44px;
+  min-height: 44px;
+
+  &:hover:not(.month-nav__btn--disabled) {
+    background: #f0f9fb;
+    color: #228d9f;
+    border-color: #228d9f;
+  }
+
+  &--disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+  }
+}
+
+.month-nav__icon {
+  width: 18px;
+  height: 18px;
+}
+
+.month-nav__label {
+  min-width: 148px;
+  text-align: center;
+  font-size: 15px;
+  font-weight: 600;
+  color: #111827;
+  white-space: nowrap;
+}

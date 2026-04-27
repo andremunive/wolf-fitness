@@ -1,0 +1,75 @@
+:host { display: block; }
+
+.actions-menu {
+  position: relative;
+
+  &__trigger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    min-width: 36px;
+    border: none;
+    border-radius: 50%;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+
+    svg { width: 20px; height: 20px; }
+
+    &:hover, &--open { background: #f3f4f6; color: #374151; }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: 2px; }
+  }
+
+  &__dropdown {
+    z-index: 100;
+    min-width: 192px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    min-height: 40px;
+    padding: 0 10px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    font-size: 14px;
+    color: #374151;
+    cursor: pointer;
+    text-align: left;
+    transition: background-color 0.12s ease;
+
+    &:hover { background: #f3f4f6; }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: -2px; border-radius: 10px; }
+
+    &--danger { color: #dc2626; }
+    &--danger:hover { background: #fef2f2; }
+  }
+
+  &__icon {
+    display: flex;
+    align-items: center;
+    svg { width: 16px; height: 16px; }
+  }
+
+  &__label { flex: 1; }
+
+  &__separator {
+    height: 1px;
+    background: #f3f4f6;
+    margin: 4px 0;
+  }
+}

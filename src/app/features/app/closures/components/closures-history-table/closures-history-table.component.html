@@ -1,0 +1,190 @@
+<div class="history-table-wrap">
+
+  <!-- ── Filtros ── -->
+  <div class="history-filters">
+
+    <div class="history-filter-group">
+      <label class="history-filter-label" for="filter-year">Año</label>
+      <select
+        id="filter-year"
+        class="history-filter-select"
+        [(ngModel)]="filterYear"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+      </select>
+    </div>
+
+    <div class="history-filter-group" *ngIf="isAdmin && trainerOptions.length > 0">
+      <label class="history-filter-label" for="filter-trainer">Entrenador</label>
+      <select
+        id="filter-trainer"
+        class="history-filter-select"
+        [(ngModel)]="filterTrainerId"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option value="">Todos</option>
+        <option *ngFor="let t of trainerOptions" [value]="t.id">{{ t.name }}</option>
+      </select>
+    </div>
+
+    <div class="history-filter-group">
+      <label class="history-filter-label" for="filter-status">Estado</label>
+      <select
+        id="filter-status"
+        class="history-filter-select"
+        [(ngModel)]="filterStatus"
+        (ngModelChange)="onFilterChange()"
+      >
+        <option value="">Todos</option>
+        <option value="open">Abierta</option>
+        <option value="closed">Cerrada</option>
+        <option value="paid">Pagada</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- ── Loading ── -->
+  <div *ngIf="loading" class="history-state" role="status">
+    <div class="spinner"></div>
+    <span>Cargando historial…</span>
+  </div>
+
+  <!-- ── Error ── -->
+  <div *ngIf="!loading && error" class="history-state history-state--error" role="alert">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         style="width:20px;height:20px;flex-shrink:0;" aria-hidden="true">
+      <circle cx="12" cy="12" r="10"></circle>
+      <line x1="12" y1="8" x2="12" y2="12"></line>
+      <line x1="12" y1="16" x2="12.01" y2="16"></line>
+    </svg>
+    {{ error }}
+  </div>
+
+  <!-- ── Vacío ── -->
+  <div *ngIf="!loading && !error && filteredRows.length === 0" class="history-state">
+    No hay cierres en este período.
+  </div>
+
+  <ng-container *ngIf="!loading && !error && filteredRows.length > 0">
+
+    <!-- ── Mobile: lista de tarjetas compactas ── -->
+    <div class="history-cards md-hidden">
+      <div
+        *ngFor="let row of pagedRows; trackBy: trackByClosureId"
+        class="history-card"
+        (click)="rowClick.emit(row)"
+        role="button"
+        tabindex="0"
+        (keydown.enter)="rowClick.emit(row)"
+        (keydown.space)="rowClick.emit(row)"
+        [attr.aria-label]="'Ver cierre ' + monthLabel(row) + ' ' + quincenaLabel(row)"
+      >
+        <div class="history-card__header">
+          <div class="history-card__meta">
+            <span class="history-card__period">{{ monthLabel(row) }} · {{ quincenaLabel(row) }}</span>
+            <span *ngIf="isAdmin" class="history-card__trainer">{{ row.trainerName }}</span>
+          </div>
+          <span class="badge" [ngClass]="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+        </div>
+        <div class="history-card__footer">
+          <span class="history-card__total">{{ formatCop(row.totalCop) }}</span>
+          <span class="history-card__paid-date" *ngIf="row.status === 'paid'">
+            Pago: {{ formatDate(row.paymentDate) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Tablet+: tabla ── -->
+    <div class="history-table-container md-show">
+      <table class="history-table">
+        <thead>
+          <tr>
+            <th>Período</th>
+            <th *ngIf="isAdmin">Entrenador</th>
+            <th>Base</th>
+            <th>Bono</th>
+            <th>Ajustes</th>
+            <th>Total</th>
+            <th>Estado</th>
+            <th>Fecha pago</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            *ngFor="let row of pagedRows; trackBy: trackByClosureId"
+            class="history-table__row"
+            (click)="rowClick.emit(row)"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="rowClick.emit(row)"
+            [attr.aria-label]="'Ver cierre ' + monthLabel(row) + ' ' + quincenaLabel(row)"
+          >
+            <td>
+              <span class="period-cell">
+                {{ monthLabel(row) }}
+                <span class="period-cell__q">{{ quincenaLabel(row) }}</span>
+              </span>
+            </td>
+            <td *ngIf="isAdmin">{{ row.trainerName }}</td>
+            <td>{{ formatCop(row.baseCop) }}</td>
+            <td>{{ formatCop(row.bonusQCop) }}</td>
+            <td [class.table-negative]="row.adjustmentsTotalCop < 0">
+              {{ row.adjustmentsTotalCop !== 0 ? formatCop(row.adjustmentsTotalCop) : '—' }}
+            </td>
+            <td class="table-total">{{ formatCop(row.totalCop) }}</td>
+            <td>
+              <span class="badge" [ngClass]="statusClass(row.status)">{{ statusLabel(row.status) }}</span>
+            </td>
+            <td>{{ formatDate(row.paymentDate) }}</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ── Paginación ── -->
+    <div class="history-pagination" *ngIf="totalPages > 1">
+      <button
+        type="button"
+        class="page-btn"
+        [class.page-btn--disabled]="currentPage === 1"
+        (click)="goToPage(currentPage - 1)"
+        aria-label="Página anterior"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             style="width:16px;height:16px;" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+
+      <button
+        *ngFor="let p of pagesArray"
+        type="button"
+        class="page-btn"
+        [class.page-btn--active]="p === currentPage"
+        (click)="goToPage(p)"
+        [attr.aria-current]="p === currentPage ? 'page' : null"
+        [attr.aria-label]="'Página ' + p"
+      >
+        {{ p }}
+      </button>
+
+      <button
+        type="button"
+        class="page-btn"
+        [class.page-btn--disabled]="currentPage === totalPages"
+        (click)="goToPage(currentPage + 1)"
+        aria-label="Página siguiente"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"
+             style="width:16px;height:16px;" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+  </ng-container>
+
+</div>

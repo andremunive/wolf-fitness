@@ -1,0 +1,132 @@
+<article class="closure-card" [attr.aria-label]="'Cierre ' + quincenaLabel + ' · ' + monthLabel">
+
+  <!-- ── Header: trainer (admin only) + quincena + badge ── -->
+  <div class="closure-card__header">
+    <div class="closure-card__header-left">
+      <p *ngIf="isAdmin && trainerName" class="closure-card__trainer-name">
+        {{ trainerName }}
+      </p>
+      <p class="closure-card__quincena">{{ quincenaLabel }}</p>
+    </div>
+    <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
+  </div>
+
+  <!-- ── Conteos ── -->
+  <div class="closure-card__counts">
+    <div class="closure-card__count-item">
+      <span class="closure-card__count-label">6 días</span>
+      <span class="closure-card__count-value">{{ closure.count_six_days }}</span>
+    </div>
+    <div class="closure-card__count-item">
+      <span class="closure-card__count-label">3 días</span>
+      <span class="closure-card__count-value">{{ closure.count_three_days }}</span>
+    </div>
+    <div class="closure-card__count-item">
+      <span class="closure-card__count-label">Equiv.</span>
+      <span class="closure-card__count-value">{{ closure.equivalente_q | number:'1.1-1' }}</span>
+    </div>
+  </div>
+
+  <!-- ── Montos ── -->
+  <div class="closure-card__amounts">
+    <div class="closure-card__amount-row">
+      <span class="closure-card__amount-label">Base</span>
+      <span class="closure-card__amount-value">{{ formatCop(closure.base_cop) }}</span>
+    </div>
+    <div class="closure-card__amount-row">
+      <span class="closure-card__amount-label">Bono Q</span>
+      <span class="closure-card__amount-value">{{ formatCop(closure.bonus_q_cop) }}</span>
+    </div>
+    <div class="closure-card__amount-row" *ngIf="closure.adjustments_total_cop !== 0">
+      <span class="closure-card__amount-label">Ajustes</span>
+      <span class="closure-card__amount-value"
+            [class.closure-card__amount-value--negative]="closure.adjustments_total_cop < 0">
+        {{ formatCop(closure.adjustments_total_cop) }}
+      </span>
+    </div>
+  </div>
+
+  <!-- ── Total final ── -->
+  <div class="closure-card__total">
+    <span class="closure-card__total-label">Total</span>
+    <span class="closure-card__total-value">{{ formatCop(closure.total_cop) }}</span>
+  </div>
+
+  <!-- ── Fecha de pago (solo si paid) ── -->
+  <div class="closure-card__paid-info" *ngIf="closure.status === 'paid'">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         class="closure-card__paid-icon" aria-hidden="true">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+      <polyline points="22 4 12 14.01 9 11.01"></polyline>
+    </svg>
+    <span>Pagado el {{ paidOnLabel }} · {{ paymentMethodLabel }}</span>
+  </div>
+
+  <!-- ── Acciones ── -->
+  <div class="closure-card__actions">
+
+    <!-- Ver detalles — siempre visible -->
+    <button
+      type="button"
+      class="btn btn--secondary btn--sm"
+      (click)="viewDetails.emit(closure)"
+      aria-label="Ver detalles del cierre"
+    >
+      Ver detalles
+    </button>
+
+    <!-- Generar PDF — solo si closed o paid -->
+    <button
+      *ngIf="canGeneratePdf"
+      type="button"
+      class="btn btn--ghost btn--sm"
+      (click)="generatePdf.emit(closure)"
+      aria-label="Generar PDF del comprobante"
+    >
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           class="btn__icon" aria-hidden="true">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+        <polyline points="7 10 12 15 17 10"></polyline>
+        <line x1="12" y1="15" x2="12" y2="3"></line>
+      </svg>
+      PDF
+    </button>
+
+    <!-- Admin: cerrar quincena (solo si open) -->
+    <button
+      *ngIf="isAdmin && closure.status === 'open'"
+      type="button"
+      class="btn btn--primary btn--sm"
+      (click)="closeQuincena.emit(closure)"
+    >
+      Cerrar quincena
+    </button>
+
+    <!-- Admin: acciones si closed -->
+    <ng-container *ngIf="isAdmin && closure.status === 'closed'">
+      <button
+        type="button"
+        class="btn btn--warning btn--sm"
+        (click)="reopenQuincena.emit(closure)"
+      >
+        Reabrir
+      </button>
+      <button
+        type="button"
+        class="btn btn--success btn--sm"
+        (click)="markPaid.emit(closure)"
+      >
+        Marcar pagado
+      </button>
+      <button
+        type="button"
+        class="btn btn--ghost btn--sm"
+        (click)="addAdjustment.emit(closure)"
+      >
+        + Ajuste
+      </button>
+    </ng-container>
+
+  </div>
+
+</article>

@@ -1,0 +1,124 @@
+<div class="closures-page">
+
+  <ng-container *ngIf="viewState$ | async as state">
+
+    <!-- ── Sticky header ── -->
+    <header class="closures-page__header">
+      <div class="closures-page__header-content">
+        <div class="closures-page__title-row">
+          <h1 class="closures-page__title">Cierres</h1>
+          <app-month-navigator
+            [current]="currentMonth"
+            [nextBlocked]="state.nextBlocked"
+            (monthChange)="onMonthChange($event)"
+          ></app-month-navigator>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Error global ── -->
+    <div *ngIf="state.error" class="closures-page__error-banner" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           style="width:18px;height:18px;flex-shrink:0;" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      {{ state.error }}
+    </div>
+
+    <main class="closures-page__main">
+
+      <!-- ── Sección mes actual ── -->
+      <section class="closures-section">
+        <h2 class="closures-section__title">Mes actual</h2>
+
+        <!-- Loading skeleton -->
+        <ng-container *ngIf="state.loading">
+          <div class="skeleton-grid">
+            <div *ngFor="let i of [1,2,3,4]" class="skeleton-card" aria-hidden="true">
+              <div class="skeleton skeleton--line-lg"></div>
+              <div class="skeleton skeleton--line-sm"></div>
+              <div class="skeleton skeleton--line-md"></div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Sin entrenadores -->
+        <div
+          *ngIf="!state.loading && !state.error && state.cards.length === 0"
+          class="closures-empty"
+        >
+          No hay entrenadores activos para este mes.
+        </div>
+
+        <!-- Grilla de cards por trainer -->
+        <ng-container *ngIf="!state.loading && !state.error">
+          <div
+            *ngFor="let card of state.cards; trackBy: trackByTrainerId"
+            class="trainer-row"
+          >
+            <!-- Nombre del trainer (solo admin) -->
+            <p *ngIf="isAdmin" class="trainer-row__name">{{ card.trainerName }}</p>
+
+            <div class="trainer-row__cards">
+
+              <!-- Q1 -->
+              <app-trainer-closure-card
+                [closure]="card.q1"
+                [trainerName]="card.trainerName"
+                [isAdmin]="isAdmin"
+                (viewDetails)="onViewDetails($event, card.trainerName)"
+                (closeQuincena)="onViewDetails($event, card.trainerName)"
+                (reopenQuincena)="onViewDetails($event, card.trainerName)"
+                (markPaid)="onViewDetails($event, card.trainerName)"
+                (addAdjustment)="onViewDetails($event, card.trainerName)"
+                (generatePdf)="onGeneratePdf($event, card.trainerName)"
+              ></app-trainer-closure-card>
+
+              <!-- Q2 -->
+              <app-trainer-closure-card
+                [closure]="card.q2"
+                [trainerName]="card.trainerName"
+                [isAdmin]="isAdmin"
+                (viewDetails)="onViewDetails($event, card.trainerName)"
+                (closeQuincena)="onViewDetails($event, card.trainerName)"
+                (reopenQuincena)="onViewDetails($event, card.trainerName)"
+                (markPaid)="onViewDetails($event, card.trainerName)"
+                (addAdjustment)="onViewDetails($event, card.trainerName)"
+                (generatePdf)="onGeneratePdf($event, card.trainerName)"
+              ></app-trainer-closure-card>
+
+            </div>
+          </div>
+        </ng-container>
+      </section>
+
+      <!-- ── Sección histórico ── -->
+      <section class="closures-section" *ngIf="!state.loading && !state.error">
+        <h2 class="closures-section__title">Histórico</h2>
+
+        <app-closures-history-table
+          [rows]="state.historyRows"
+          [isAdmin]="isAdmin"
+          [trainerOptions]="state.trainerOptions"
+          (rowClick)="onHistoryRowClick($event)"
+        ></app-closures-history-table>
+      </section>
+
+    </main>
+
+    <!-- ── Modal de detalle ── -->
+    <ng-container *ngIf="selectedDetail">
+      <app-closure-detail-modal
+        [closure]="selectedDetail.closure"
+        [trainerName]="selectedDetail.trainerName"
+        [isAdmin]="isAdmin"
+        (closed)="onCloseModal()"
+        (refreshNeeded)="onRefreshNeeded()"
+      ></app-closure-detail-modal>
+    </ng-container>
+
+  </ng-container>
+
+</div>

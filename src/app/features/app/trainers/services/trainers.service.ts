@@ -1,5 +1,5 @@
 import { Injectable } from '@angular/core';
-import { from, Observable } from 'rxjs';
+import { forkJoin, from, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
@@ -8,12 +8,14 @@ import {
   CreateTrainerResult,
   Trainer,
   TrainerDetailFull,
+  TrainerQuincenaCounts,
   TrainersPage,
   TrainersQueryParams,
   UpdateTrainerPayload,
   UpdateTrainerResult
 } from '../models/trainer.model';
 import { Bank, BankAccountType, DocumentType } from 'src/app/core/types/supabase';
+import { ClosuresService } from '../../closures/services/closures.service';
 
 // Tipo de la fila cruda que devuelve PostgREST con los JOINs embebidos.
 interface TrainerRow {
@@ -38,6 +40,10 @@ interface TrainerRow {
   } | null;
 }
 
+function emptyQuincenaCounts(): TrainerQuincenaCounts {
+  return { q1: {}, q2: {} };
+}
+
 function mapRowToTrainer(row: TrainerRow): Trainer {
   return {
     id: row.id,
@@ -59,7 +65,8 @@ function mapRowToTrainer(row: TrainerRow): Trainer {
           accountType: row.trainer_bank_accounts.account_type,
           accountNumber: row.trainer_bank_accounts.account_number
         }
-      : null
+      : null,
+    quincenaCounts: emptyQuincenaCounts()
   };
 }
 
@@ -88,25 +95,72 @@ const TRAINER_SELECT = [
 
 @Injectable({ providedIn: 'root' })
 export class TrainersService {
-  constructor(private readonly supabase: SupabaseService) {}
+  constructor(
+    private readonly supabase: SupabaseService,
+    private readonly closures: ClosuresService
+  ) {}
 
   getTrainers(params: TrainersQueryParams): Observable<TrainersPage> {
     const { search, activeFilter, page, pageSize } = params;
     const from_ = (page - 1) * pageSize;
     const to = from_ + pageSize - 1;
 
-    return from(this.buildTrainersQuery(search ?? '', activeFilter, from_, to)).pipe(
-      map(({ data, count, error }) => {
-        if (error) throw error;
-        const rows = (data ?? []) as unknown as TrainerRow[];
-        return {
-          items: rows.map(mapRowToTrainer),
-          total: count ?? 0
-        };
-      }),
+    return forkJoin({
+      page: from(this.buildTrainersQuery(search ?? '', activeFilter, from_, to)).pipe(
+        map(({ data, count, error }) => {
+          if (error) throw error;
+          const rows = (data ?? []) as unknown as TrainerRow[];
+          return {
+            items: rows.map(mapRowToTrainer),
+            total: count ?? 0
+          };
+        })
+      ),
+      quincena: this.getQuincenaCountsByTrainer()
+    }).pipe(
+      map(({ page: pageData, quincena }) => ({
+        items: pageData.items.map((trainer) => ({
+          ...trainer,
+          quincenaCounts: quincena[trainer.id] ?? emptyQuincenaCounts()
+        })),
+        total: pageData.total
+      })),
       catchError((err) => {
         console.error('[TrainersService] getTrainers error:', err);
         throw err;
+      })
+    );
+  }
+
+  /**
+   * Obtiene conteos de clientes por quincena para todos los trainers del mes actual.
+   * Reemplaza el RPC `get_trainers_quincena_counts` (deprecado en Hito 5).
+   * Usa la EF `list-trainers-closures-for-month` que retorna datos histórica y semánticamente
+   * correctos (asignación al momento del pago, sin DISTINCT por cliente).
+   */
+  private getQuincenaCountsByTrainer(): Observable<Record<string, TrainerQuincenaCounts>> {
+    const now = new Date();
+    return this.closures.listTrainersClosuresForMonth(now.getFullYear(), now.getMonth() + 1).pipe(
+      map((result) => {
+        const countsMap: Record<string, TrainerQuincenaCounts> = {};
+        for (const trainer of result.trainers) {
+          const q1: Record<string, number> = {};
+          const q2: Record<string, number> = {};
+
+          if (trainer.q1.count_six_days > 0)   q1['plan_6d'] = trainer.q1.count_six_days;
+          if (trainer.q1.count_three_days > 0)  q1['plan_3d'] = trainer.q1.count_three_days;
+          if (trainer.q2.count_six_days > 0)    q2['plan_6d'] = trainer.q2.count_six_days;
+          if (trainer.q2.count_three_days > 0)  q2['plan_3d'] = trainer.q2.count_three_days;
+
+          countsMap[trainer.trainer_id] = { q1, q2 };
+        }
+        return countsMap;
+      }),
+      catchError((err) => {
+        // Degradación silenciosa: si la EF falla, los conteos aparecen vacíos.
+        // La lista de entrenadores sigue visible sin interrumpir la UX.
+        console.warn('[TrainersService] getQuincenaCountsByTrainer error (degraded):', err);
+        return [{}];
       })
     );
   }

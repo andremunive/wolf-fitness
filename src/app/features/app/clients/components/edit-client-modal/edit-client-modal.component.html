@@ -1,5 +1,5 @@
-<div class="edit-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-client-title" (click)="close()">
-  <div class="edit-sheet" (click)="$event.stopPropagation()">
+<div class="edit-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-client-title" (click)="closeWithConfirmation()">
+  <div class="edit-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeWithConfirmation()">
 
     <!-- ── Header ── -->
     <div class="edit-header">
@@ -11,7 +11,7 @@
       <button
         type="button"
         class="edit-header__close"
-        (click)="close()"
+        (click)="closeWithConfirmation()"
         aria-label="Cerrar"
       >
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -242,7 +242,7 @@
       <button
         type="button"
         class="edit-footer__cancel"
-        (click)="close()"
+        (click)="closeWithConfirmation()"
         [disabled]="isSaving"
       >Cancelar</button>
       <button

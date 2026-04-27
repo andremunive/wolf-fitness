@@ -7,6 +7,10 @@ import {
 } from '@angular/core';
 
 import { Trainer } from '../../models/trainer.model';
+import {
+  QuincenaBadge,
+  toQuincenaBadges
+} from '../trainers-table/trainers-table.component';
 
 @Component({
   selector: 'app-trainer-card',
@@ -45,6 +49,18 @@ export class TrainerCardComponent {
       nequi: 'Nequi'
     };
     return bankNames[this.trainer.bankAccount.bank] ?? this.trainer.bankAccount.bank;
+  }
+
+  get q1Badges(): QuincenaBadge[] {
+    return toQuincenaBadges(this.trainer.quincenaCounts.q1);
+  }
+
+  get q2Badges(): QuincenaBadge[] {
+    return toQuincenaBadges(this.trainer.quincenaCounts.q2);
+  }
+
+  trackByPlanCode(_index: number, badge: QuincenaBadge): string {
+    return badge.planCode;
   }
 }
 

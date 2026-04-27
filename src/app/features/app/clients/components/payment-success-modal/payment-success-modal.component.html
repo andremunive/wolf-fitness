@@ -1,0 +1,48 @@
+<div class="success-backdrop" role="dialog" aria-modal="true" aria-labelledby="payment-success-title" (click)="dismiss()">
+  <div class="success-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="dismiss()">
+
+    <!-- ── Icon ── -->
+    <div class="success-icon" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+      </svg>
+    </div>
+
+    <!-- ── Title / subtitle ── -->
+    <h2 id="payment-success-title" class="success-title">{{ title }}</h2>
+    <p class="success-subtitle">{{ subtitle }}</p>
+
+    <!-- ── Summary cards ── -->
+    <div class="success-cards">
+
+      <!-- Period (only for new payments) -->
+      <div class="success-card" *ngIf="data.type === 'payment' && periodLabel">
+        <span class="success-card__label">Período</span>
+        <span class="success-card__value">{{ periodLabel }}</span>
+      </div>
+
+      <!-- New balance -->
+      <div class="success-card success-card--prominent">
+        <span class="success-card__label">Nuevo saldo</span>
+        <span class="success-card__value success-card__value--large">
+          {{ formatCop(newBalanceCop) }}
+        </span>
+      </div>
+
+      <!-- New status -->
+      <div class="success-card">
+        <span class="success-card__label">Estado</span>
+        <span class="pay-badge" [ngClass]="statusClass">{{ newStatusLabel }}</span>
+      </div>
+
+    </div>
+
+    <!-- ── CTA ── -->
+    <button
+      type="button"
+      class="success-btn"
+      (click)="dismiss()"
+    >Entendido</button>
+
+  </div>
+</div>
