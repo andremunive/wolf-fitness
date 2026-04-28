@@ -1,0 +1,10 @@
+<div class="summary-card">
+  <div class="summary-card__label">Total egresos · {{ periodLabel }}</div>
+  <div class="summary-card__amount" *ngIf="!isLoading; else loadingTpl">
+    {{ formattedTotal }}
+  </div>
+  <ng-template #loadingTpl>
+    <div class="summary-card__skeleton" aria-hidden="true"></div>
+  </ng-template>
+  <div class="summary-card__count" *ngIf="!isLoading">{{ recordCountLabel }}</div>
+</div>

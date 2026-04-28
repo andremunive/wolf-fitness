@@ -1,0 +1,142 @@
+<div class="expense-page">
+
+  <!-- ===== HEADER ===== -->
+  <header class="expense-page__header">
+    <div class="expense-page__header-inner">
+      <div class="expense-page__title-row">
+        <h1 class="expense-page__title">Registro de egresos</h1>
+        <button
+          type="button"
+          class="expense-page__manage-btn"
+          (click)="openManageCategories()"
+          aria-label="Gestionar categorías"
+          title="Gestionar categorías"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="expense-page__main">
+
+    <!-- Summary card + chart -->
+    <section class="expense-page__analytics">
+
+      <h2 class="expense-page__section-title">Resumen del período</h2>
+
+      <app-expenses-summary-card
+        [totalCop]="chartState.totalCop"
+        [periodLabel]="currentPeriodLabel"
+        [isLoading]="chartState.isLoading"
+        [recordCount]="chartState.recordCount"
+      ></app-expenses-summary-card>
+
+      <app-expenses-summary-chart
+        [summaryData]="chartState.data"
+        [selectedPeriod]="currentPeriod"
+        [isLoading]="chartState.isLoading"
+        (periodChange)="onPeriodChange($event)"
+      ></app-expenses-summary-chart>
+
+    </section>
+
+    <!-- Month navigator + table -->
+    <section class="expense-page__records">
+
+      <h2 class="expense-page__section-title">Movimientos de {{ currentMonthLabel }}</h2>
+
+      <!-- Month navigator -->
+      <div class="month-nav" role="group" aria-label="Navegación de mes">
+        <button
+          type="button"
+          class="month-nav__btn"
+          (click)="goToPreviousMonth()"
+          aria-label="Mes anterior"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <polyline points="15 18 9 12 15 6"></polyline>
+          </svg>
+        </button>
+
+        <span class="month-nav__label">{{ currentMonthLabel }}</span>
+
+        <button
+          type="button"
+          class="month-nav__btn"
+          [class.month-nav__btn--disabled]="isNextMonthBlocked"
+          [attr.aria-disabled]="isNextMonthBlocked ? 'true' : null"
+          [title]="isNextMonthBlocked ? 'Ya estás en el mes actual' : null"
+          (click)="goToNextMonth()"
+          aria-label="Mes siguiente"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <polyline points="9 18 15 12 9 6"></polyline>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Records table + pagination + filter -->
+      <app-expense-records-table
+        [records]="recordsState.records"
+        [totalCount]="recordsState.total"
+        [currentPage]="currentPage"
+        [isLoading]="recordsState.isLoading"
+        [categories]="activeCategories"
+        [selectedCategoryId]="selectedCategoryId"
+        (pageChange)="onPageChange($event)"
+        (categoryFilterChange)="onCategoryFilterChange($event)"
+        (detailRequested)="onDetailRequested($event)"
+      ></app-expense-records-table>
+
+    </section>
+
+  </main>
+
+  <!-- ===== FAB nuevo egreso ===== -->
+  <button
+    type="button"
+    class="expense-page__fab"
+    (click)="openNewRecordModal()"
+    aria-label="Nuevo egreso"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+    </svg>
+  </button>
+
+</div>
+
+<!-- ===== MODAL NUEVO EGRESO ===== -->
+<app-new-expense-record-modal
+  *ngIf="isNewRecordModalOpen"
+  (closed)="closeNewRecordModal()"
+  (recordCreated)="onRecordCreated()"
+></app-new-expense-record-modal>
+
+<!-- ===== MODAL EDITAR EGRESO ===== -->
+<app-edit-expense-record-modal
+  *ngIf="editingRecord"
+  [record]="editingRecord"
+  (closed)="closeEditModal()"
+  (recordUpdated)="onRecordUpdated()"
+  (recordAnnulled)="onRecordAnnulled()"
+></app-edit-expense-record-modal>
+
+<!-- ===== MODAL DETALLE EGRESO ===== -->
+<app-expense-record-detail-modal
+  *ngIf="detailRecord"
+  [record]="detailRecord"
+  (closed)="closeDetailModal()"
+  (editRequested)="onEditFromDetail($event)"
+></app-expense-record-detail-modal>
+
+<!-- ===== MODAL GESTIONAR CATEGORÍAS ===== -->
+<app-manage-expense-categories-modal
+  *ngIf="isManageCategoriesOpen"
+  (closed)="closeManageCategories()"
+></app-manage-expense-categories-modal>

@@ -1,0 +1,28 @@
+<div class="autocomplete">
+  <input
+    type="text"
+    class="autocomplete__input"
+    [class.autocomplete__input--error]="isInvalid"
+    [formControl]="searchControl"
+    placeholder="Buscar o crear categoría..."
+    autocomplete="off"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    aria-label="Categoría de egreso"
+    aria-autocomplete="list"
+    [attr.aria-expanded]="isOpen"
+  />
+
+  <div class="autocomplete__dropdown" *ngIf="isOpen && filteredOptions.length > 0" role="listbox" aria-label="Opciones de categoría">
+    <button
+      *ngFor="let option of filteredOptions; trackBy: trackByOptionLabel"
+      type="button"
+      class="autocomplete__option"
+      [class.autocomplete__option--create]="option.isCreateNew"
+      role="option"
+      (mousedown)="selectOption(option)"
+    >
+      {{ option.label }}
+    </button>
+  </div>
+</div>

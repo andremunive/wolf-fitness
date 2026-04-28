@@ -1,0 +1,193 @@
+:host {
+  display: block;
+
+  @media (min-width: 768px) {
+    height: 100%;
+  }
+}
+
+.expense-page {
+  min-height: 100%;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+  padding-bottom: calc(56px + 16px + env(safe-area-inset-bottom, 0px) + 16px);
+
+  @media (min-width: 768px) {
+    height: 100%;
+    min-height: 0;
+    padding-bottom: 0;
+    overflow-y: auto;
+  }
+
+  // ─── Header ────────────────────────────────────────────────────────────────
+
+  &__header {
+    background: #ffffff;
+    padding: 20px 16px 16px;
+    border-bottom: 1px solid #f3f4f6;
+
+    @media (min-width: 640px) {
+      padding: 24px 24px 20px;
+    }
+  }
+
+  &__header-inner {
+    max-width: 900px;
+    margin: 0 auto;
+  }
+
+  &__title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  &__title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.2;
+
+    @media (min-width: 640px) {
+      font-size: 26px;
+    }
+  }
+
+  &__manage-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 44px;
+    height: 44px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    flex-shrink: 0;
+
+    svg { width: 20px; height: 20px; }
+
+    &:hover { border-color: #228d9f; color: #228d9f; background: #eaf6f9; }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: 2px; }
+  }
+
+  // ─── Main ──────────────────────────────────────────────────────────────────
+
+  &__main {
+    flex: 1;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    max-width: 932px; // 900 + 16*2
+    width: 100%;
+    margin: 0 auto;
+
+    @media (min-width: 640px) {
+      padding: 20px 24px;
+      max-width: 948px; // 900 + 24*2
+    }
+  }
+
+  // ─── Section titles ─────────────────────────────────────────────────────────
+
+  &__section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: #334155;
+    margin: 0 0 4px;
+  }
+
+  // ─── Analytics section ──────────────────────────────────────────────────────
+
+  &__analytics {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  // ─── Records section ────────────────────────────────────────────────────────
+
+  &__records {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  // ─── FAB ──────────────────────────────────────────────────────────────────
+
+  &__fab {
+    position: fixed;
+    bottom: calc(56px + env(safe-area-inset-bottom, 0px) + 12px);
+    right: 16px;
+    z-index: 30;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: #228d9f;
+    color: #ffffff;
+    box-shadow: 0 4px 16px rgba(34, 141, 159, 0.4);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
+
+    svg { width: 24px; height: 24px; }
+
+    @media (min-width: 768px) {
+      bottom: 32px;
+      right: 32px;
+    }
+
+    &:hover { background: #1b7281; box-shadow: 0 6px 20px rgba(34, 141, 159, 0.5); }
+    &:active { transform: scale(0.96); }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: 3px; }
+  }
+}
+
+// ─── Month navigator (inline, not using closures component to avoid cross-module dep) ──
+
+.month-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  &__btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 44px;
+    min-height: 44px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    background: #ffffff;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s ease;
+
+    svg { width: 18px; height: 18px; }
+
+    &:hover:not(.month-nav__btn--disabled) { border-color: #228d9f; color: #228d9f; }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: 2px; }
+
+    &--disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+  }
+
+  &__label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    min-width: 130px;
+    text-align: center;
+  }
+}

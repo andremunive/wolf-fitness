@@ -1,0 +1,40 @@
+<div class="autocomplete">
+  <input
+    type="text"
+    class="autocomplete__input"
+    [class.autocomplete__input--error]="isInvalid"
+    [formControl]="searchControl"
+    placeholder="Buscar proveedor..."
+    autocomplete="off"
+    (focus)="onFocus()"
+    (blur)="onBlur()"
+    aria-label="Proveedor del egreso"
+    aria-autocomplete="list"
+    [attr.aria-expanded]="isOpen"
+  />
+
+  <div
+    class="autocomplete__dropdown"
+    *ngIf="isOpen && filteredProviders.length > 0"
+    role="listbox"
+    aria-label="Opciones de proveedor"
+  >
+    <button
+      *ngFor="let provider of filteredProviders; trackBy: trackById"
+      type="button"
+      class="autocomplete__option"
+      role="option"
+      (mousedown)="select(provider)"
+    >
+      <span class="autocomplete__option-name">{{ provider.name }}</span>
+      <span class="autocomplete__option-type">{{ provider.serviceTypeName }}</span>
+    </button>
+  </div>
+
+  <div
+    class="autocomplete__empty"
+    *ngIf="isOpen && filteredProviders.length === 0 && providers.length > 0"
+  >
+    Sin resultados
+  </div>
+</div>

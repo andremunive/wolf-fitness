@@ -1,0 +1,145 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Detalle del egreso" (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <div class="modal-sheet__header">
+      <h2 class="modal-sheet__title">Detalle del egreso</h2>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <!-- Main info rows -->
+      <div class="detail-section">
+        <div class="detail-row">
+          <span class="detail-row__label">Fecha</span>
+          <span class="detail-row__value">{{ formatDate(record.expenseDate) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Monto total</span>
+          <span class="detail-row__value detail-row__value--amount">{{ formatAmount(record.amountCop) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Método de pago</span>
+          <span class="detail-row__value">{{ getPaymentMethodLabel(record.paymentMethod) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Categoría</span>
+          <span class="detail-row__value">
+            <span *ngIf="record.categoryEmoji">{{ record.categoryEmoji }}&nbsp;</span>{{ record.categoryName }}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Proveedor</span>
+          <span class="detail-row__value">{{ record.providerName }}</span>
+        </div>
+        <div class="detail-row" *ngIf="record.serviceTypeName">
+          <span class="detail-row__label">Tipo de servicio</span>
+          <span class="detail-row__value">{{ record.serviceTypeName }}</span>
+        </div>
+        <div class="detail-row" *ngIf="record.notes">
+          <span class="detail-row__label">Notas</span>
+          <span class="detail-row__value detail-row__value--notes">{{ record.notes }}</span>
+        </div>
+      </div>
+
+      <!-- Invoice section -->
+      <div class="detail-section">
+        <h3 class="detail-section__title">Factura adjunta</h3>
+
+        <div *ngIf="!record.hasInvoice" class="detail-empty-hint">
+          No hay factura adjunta en este egreso.
+        </div>
+
+        <div *ngIf="record.hasInvoice" class="invoice-info">
+          <div class="invoice-info__meta">
+            <svg class="invoice-info__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 01-6.364-6.364l10.94-10.94A3 3 0 1119.5 7.372L8.552 18.32m.009-.01l-.01.01m5.699-9.941l-7.81 7.81a1.5 1.5 0 002.112 2.13"/>
+            </svg>
+            <span class="invoice-info__type">{{ record.invoiceMimeType }}</span>
+            <span class="invoice-info__size" *ngIf="record.invoiceSizeBytes">
+              ({{ (record.invoiceSizeBytes / 1024).toFixed(0) }} KB)
+            </span>
+          </div>
+
+          <div class="action-error" *ngIf="invoiceUrlError" role="alert">
+            {{ invoiceUrlError }}
+          </div>
+
+          <button
+            type="button"
+            class="invoice-info__btn"
+            (click)="openInvoice()"
+            [disabled]="isLoadingSignedUrl"
+            aria-label="Ver o descargar factura"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3"/>
+            </svg>
+            <ng-container *ngIf="isLoadingSignedUrl; else invoiceBtnLabel">Generando enlace...</ng-container>
+            <ng-template #invoiceBtnLabel>Ver / Descargar factura</ng-template>
+          </button>
+        </div>
+      </div>
+
+      <!-- Items section -->
+      <div class="detail-section">
+        <h3 class="detail-section__title">
+          Desglose de compra
+          <span class="detail-section__badge" *ngIf="record.items.length > 0">{{ record.items.length }}</span>
+        </h3>
+
+        <div *ngIf="record.items.length === 0" class="detail-empty-hint">
+          Este egreso no tiene desglose de ítems.
+        </div>
+
+        <div *ngIf="record.items.length > 0" class="items-table-wrap">
+          <table class="items-table">
+            <thead>
+              <tr>
+                <th class="items-table__th">Ítem</th>
+                <th class="items-table__th items-table__th--right">Cant.</th>
+                <th class="items-table__th items-table__th--right">P. Unit.</th>
+                <th class="items-table__th items-table__th--right">Subtotal</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let item of record.items; trackBy: trackByItemId"
+                class="items-table__row"
+              >
+                <td class="items-table__td">
+                  <span class="items-table__name">{{ item.name }}</span>
+                  <span class="items-table__desc" *ngIf="item.description">{{ item.description }}</span>
+                </td>
+                <td class="items-table__td items-table__td--right">{{ item.quantity }}</td>
+                <td class="items-table__td items-table__td--right">{{ formatAmount(item.unitPriceCop) }}</td>
+                <td class="items-table__td items-table__td--right items-table__td--subtotal">{{ formatAmount(item.subtotalCop) }}</td>
+              </tr>
+            </tbody>
+            <tfoot>
+              <tr class="items-table__total-row">
+                <td class="items-table__td" colspan="3">Suma de ítems (informativa)</td>
+                <td class="items-table__td items-table__td--right items-table__td--total">{{ formatAmount(itemsTotal) }}</td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__close-btn" (click)="close()">
+        Cerrar
+      </button>
+      <button type="button" class="modal-footer__edit-btn" (click)="requestEdit()">
+        Editar
+      </button>
+    </div>
+
+  </div>
+</div>

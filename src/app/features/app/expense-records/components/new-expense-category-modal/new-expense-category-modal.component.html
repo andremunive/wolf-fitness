@@ -1,0 +1,90 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Nueva categoría" (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <div class="modal-sheet__header">
+      <h2 class="modal-sheet__title">Nueva categoría</h2>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div class="action-error" *ngIf="errorMessage" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        {{ errorMessage }}
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+
+        <div class="form-field">
+          <label class="form-field__label" for="cat-name">
+            Nombre <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cat-name"
+            type="text"
+            class="form-field__input"
+            formControlName="name"
+            placeholder="Ej. Servicios públicos"
+            [class.form-field__input--error]="form.controls.name.invalid && form.controls.name.touched"
+          />
+          <span
+            class="form-field__hint-error"
+            *ngIf="form.controls.name.invalid && form.controls.name.touched"
+          >
+            Mínimo 2 caracteres.
+          </span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="cat-emoji">Emoji</label>
+          <div class="form-field__emoji-wrap">
+            <input
+              id="cat-emoji"
+              type="text"
+              class="form-field__input form-field__input--emoji"
+              formControlName="emoji"
+              placeholder="☕"
+              maxlength="8"
+            />
+            <span class="form-field__emoji-hint">Escribe o pega un emoji (opcional)</span>
+          </div>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="cat-desc">Descripción</label>
+          <input
+            id="cat-desc"
+            type="text"
+            class="form-field__input"
+            formControlName="description"
+            placeholder="Descripción opcional"
+          />
+        </div>
+
+      </form>
+
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel-btn" (click)="close()" [disabled]="isSaving">
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="modal-footer__save-btn"
+        (click)="save()"
+        [disabled]="form.invalid || isSaving"
+      >
+        <ng-container *ngIf="isSaving; else saveLabel">Guardando...</ng-container>
+        <ng-template #saveLabel>Crear categoría</ng-template>
+      </button>
+    </div>
+
+  </div>
+</div>
