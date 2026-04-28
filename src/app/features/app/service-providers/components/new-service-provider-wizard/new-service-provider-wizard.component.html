@@ -252,15 +252,7 @@
         class="wizard-footer__submit"
         (click)="submit()"
         [disabled]="isSubmitting"
-      >
-        <span *ngIf="!isSubmitting">Guardar proveedor</span>
-        <span *ngIf="isSubmitting" class="wizard-footer__spinner" aria-label="Guardando...">
-          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
-          </svg>
-          Guardando...
-        </span>
-      </button>
+      >Guardar proveedor</button>
     </div>
 
   </div>

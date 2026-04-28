@@ -10,8 +10,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { Client } from '../../models/client.model';
 import {
   OpenPaymentInfo,
@@ -59,7 +60,8 @@ export class RegisterInstallmentModalComponent implements OnInit, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly paymentsService: PaymentsService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     this.form = this.fb.group({
       amount_cop: [null, [Validators.required, Validators.min(1)]],
@@ -137,6 +139,7 @@ export class RegisterInstallmentModalComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     this.saveError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const notes = this.form.get('notes')!.value?.trim() || null;
@@ -149,20 +152,23 @@ export class RegisterInstallmentModalComponent implements OnInit, OnDestroy {
         payment_method: this.form.get('payment_method')!.value as PaymentMethod,
         notes
       })
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
-          this.isSaving = false;
           this.installmentRegistered.emit({ response, clientName: this.client.fullName });
-          this.cdr.markForCheck();
         },
         error: (err: EdgeFunctionError | unknown) => {
-          this.isSaving = false;
           const efErr = err as EdgeFunctionError;
           this.saveError = efErr?.code
             ? mapPaymentErrorToMessage(efErr.code, efErr.details ?? {})
             : 'Ocurrió un error inesperado. Intenta de nuevo.';
-          this.cdr.markForCheck();
         }
       });
   }

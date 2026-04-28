@@ -129,6 +129,14 @@ export interface CreateServiceProviderResult {
   provider: ServiceProviderViewModel;
 }
 
+// ─── Lightweight option for provider selectors in other features ──────────────
+
+export interface SimpleProviderOption {
+  id: string;
+  name: string;
+  serviceTypeName: string;
+}
+
 // ─── Mappers from raw DB rows ─────────────────────────────────────────────────
 
 export function mapBankAccountRow(row: ProviderBankAccount): BankAccountViewModel {

@@ -149,22 +149,6 @@
     </ng-container>
   </main>
 
-  <!-- Indicador de carga al editar (subtle) -->
-  <div
-    *ngIf="isLoadingEditClient"
-    class="clients-page__edit-loading"
-    role="status"
-    aria-label="Cargando datos del cliente..."
-  ></div>
-
-  <!-- Indicador de carga al detectar flujo de pago -->
-  <div
-    *ngIf="isResolvingPaymentFlow"
-    class="clients-page__edit-loading"
-    role="status"
-    aria-label="Verificando estado de pago..."
-  ></div>
-
   <!-- Error de flujo de pago (toast inline simple) -->
   <div
     *ngIf="paymentFlowError"

@@ -5,6 +5,8 @@
 .pay-backdrop {
   position: fixed;
   inset: 0;
+  height: 100vh;
+  height: 100dvh;
   background: rgba(17, 24, 39, 0.55);
   z-index: 50;
   display: flex;
@@ -24,6 +26,7 @@
   display: flex;
   flex-direction: column;
   max-height: 92vh;
+  max-height: 92dvh;
   padding-bottom: env(safe-area-inset-bottom, 0px);
   animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 
@@ -31,6 +34,7 @@
     border-radius: 20px;
     margin: 16px;
     max-height: 90vh;
+    max-height: 90dvh;
     animation: fadeScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   }
 }
@@ -430,22 +434,6 @@
       outline-offset: 3px;
     }
   }
-}
-
-.spinner-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.spinner-icon {
-  width: 18px;
-  height: 18px;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 @keyframes slideUp {

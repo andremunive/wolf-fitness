@@ -50,9 +50,10 @@ function joinedAtNotFutureValidator(control: AbstractControl): ValidationErrors 
   return null;
 }
 import { Observable, Subject } from 'rxjs';
-import { shareReplay, takeUntil } from 'rxjs/operators';
+import { finalize, shareReplay, takeUntil } from 'rxjs/operators';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ClientsService } from '../../services/clients.service';
 import {
   CreateClientPayload,
@@ -140,7 +141,8 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
     private readonly fb: FormBuilder,
     private readonly clientsService: ClientsService,
     private readonly authService: AuthService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     this.plans$ = this.clientsService.getActivePlans().pipe(shareReplay(1));
     this.trainers$ = this.clientsService.getActiveTrainers().pipe(shareReplay(1));
@@ -209,23 +211,27 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     this.submitError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const payload = this.buildPayload();
 
     this.clientsService
       .createClient(payload)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (result) => {
-          this.isSubmitting = false;
           this.clientCreated.emit({ result });
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSubmitting = false;
           this.handleSubmitError(err);
-          this.cdr.markForCheck();
         }
       });
   }

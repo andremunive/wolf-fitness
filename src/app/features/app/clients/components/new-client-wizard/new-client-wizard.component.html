@@ -314,15 +314,7 @@
         class="wizard-footer__submit"
         (click)="submit()"
         [disabled]="!isCurrentStepValid || isSubmitting"
-      >
-        <span *ngIf="!isSubmitting">Registrar cliente</span>
-        <span *ngIf="isSubmitting" class="wizard-footer__spinner" aria-label="Registrando...">
-          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
-          </svg>
-          Registrando...
-        </span>
-      </button>
+      >Registrar cliente</button>
     </div>
 
   </div>

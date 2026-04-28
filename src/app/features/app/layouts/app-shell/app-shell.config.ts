@@ -1,6 +1,6 @@
 import { UserRole } from 'src/app/core/types/supabase';
 
-export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase';
+export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase' | 'receipt';
 
 export interface NavMenuItem {
   label: string;
@@ -66,6 +66,13 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         iconKey: 'dollar',
         routerLink: '/app/cierres'
         // Sin allowedRoles: visible para admin y trainer (que pasan el filtro de la sección).
+      },
+      {
+        label: 'Registro',
+        description: 'Registro cronológico de egresos del gimnasio por categoría.',
+        iconKey: 'receipt',
+        routerLink: '/app/registro',
+        allowedRoles: ['admin']
       }
     ]
   }

@@ -17,8 +17,9 @@ import {
   Validators
 } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { TrainersService } from '../../services/trainers.service';
 import {
   Bank,
@@ -114,7 +115,8 @@ export class EditTrainerModalComponent implements OnChanges, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly trainersService: TrainersService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     this.bankForm
       .get('bank')!
@@ -182,25 +184,29 @@ export class EditTrainerModalComponent implements OnChanges, OnDestroy {
     this.isSaving = true;
     this.saveError = null;
     this.saveSuccess = false;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const payload = this.buildPatchPayload();
 
     this.trainersService
       .updateTrainer(payload)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
-          this.isSaving = false;
           this.saveSuccess = true;
           this.originalValues = this.captureValues();
           this.trainerUpdated.emit();
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSaving = false;
           this.saveError = this.extractErrorMessage(err);
-          this.cdr.markForCheck();
         }
       });
   }

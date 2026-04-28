@@ -406,23 +406,6 @@
     }
   }
 
-  &__spinner {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-  }
-}
-
-// ─── Spinner ───────────────────────────────────────────────────────────────────
-
-.spinner-icon {
-  width: 18px;
-  height: 18px;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
 }
 
 // ─── Animaciones de entrada ────────────────────────────────────────────────────

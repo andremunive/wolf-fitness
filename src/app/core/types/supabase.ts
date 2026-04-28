@@ -1,5 +1,5 @@
 // Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras el hito closures_module (Hito 5).
+// Refleja el estado de la base tras expense_records_extension_provider_items_invoice.
 // NO editar a mano. Regenerar cuando el esquema cambie.
 
 export type Json =
@@ -447,6 +447,174 @@ export type Database = {
           {
             foreignKeyName: "discounts_created_by_fkey"
             columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_categories: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          emoji: string | null
+          id: string
+          is_active: boolean
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          emoji?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_record_items: {
+        Row: {
+          created_at: string
+          description: string | null
+          expense_record_id: string
+          id: string
+          name: string
+          quantity: number
+          subtotal_cop: number
+          unit_price_cop: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          expense_record_id: string
+          id?: string
+          name: string
+          quantity?: number
+          subtotal_cop: number
+          unit_price_cop: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          expense_record_id?: string
+          id?: string
+          name?: string
+          quantity?: number
+          subtotal_cop?: number
+          unit_price_cop?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_record_items_expense_record_id_fkey"
+            columns: ["expense_record_id"]
+            isOneToOne: false
+            referencedRelation: "expense_records"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expense_records: {
+        Row: {
+          amount_cop: number
+          category_id: string
+          created_at: string
+          created_by: string
+          expense_date: string
+          id: string
+          invoice_mime_type: string | null
+          invoice_size_bytes: number | null
+          invoice_storage_path: string | null
+          is_active: boolean
+          notes: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          provider_id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_cop: number
+          category_id: string
+          created_at?: string
+          created_by: string
+          expense_date: string
+          id?: string
+          invoice_mime_type?: string | null
+          invoice_size_bytes?: number | null
+          invoice_storage_path?: string | null
+          is_active?: boolean
+          notes?: string | null
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          provider_id: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          category_id?: string
+          created_at?: string
+          created_by?: string
+          expense_date?: string
+          id?: string
+          invoice_mime_type?: string | null
+          invoice_size_bytes?: number | null
+          invoice_storage_path?: string | null
+          is_active?: boolean
+          notes?: string | null
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          provider_id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_records_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_records_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_records_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expense_records_updated_by_fkey"
+            columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1266,6 +1434,26 @@ export type Database = {
         Args: { p_notes: string; p_payment_id: string; p_voided_by: string }
         Returns: Json
       }
+      get_expense_summary_by_category: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          category_emoji: string
+          category_id: string
+          category_name: string
+          record_count: number
+          total_cop: number
+        }[]
+      }
+      get_expense_summary_by_provider: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          provider_id: string
+          provider_name: string
+          record_count: number
+          service_type_name: string
+          total_cop: number
+        }[]
+      }
       get_max_allowed_period_start: { Args: never; Returns: string }
       get_trainers_quincena_counts: {
         Args: never
@@ -1589,3 +1777,18 @@ export type ClosureClientEntryInsert = Database["public"]["Tables"]["closure_cli
 // closure_adjustments
 export type ClosureAdjustment = Database["public"]["Tables"]["closure_adjustments"]["Row"]
 export type ClosureAdjustmentInsert = Database["public"]["Tables"]["closure_adjustments"]["Insert"]
+
+// expense_categories
+export type ExpenseCategory = Database["public"]["Tables"]["expense_categories"]["Row"]
+export type ExpenseCategoryInsert = Database["public"]["Tables"]["expense_categories"]["Insert"]
+export type ExpenseCategoryUpdate = Database["public"]["Tables"]["expense_categories"]["Update"]
+
+// expense_records
+export type ExpenseRecord = Database["public"]["Tables"]["expense_records"]["Row"]
+export type ExpenseRecordInsert = Database["public"]["Tables"]["expense_records"]["Insert"]
+export type ExpenseRecordUpdate = Database["public"]["Tables"]["expense_records"]["Update"]
+
+// expense_record_items
+export type ExpenseRecordItem = Database["public"]["Tables"]["expense_record_items"]["Row"]
+export type ExpenseRecordItemInsert = Database["public"]["Tables"]["expense_record_items"]["Insert"]
+export type ExpenseRecordItemUpdate = Database["public"]["Tables"]["expense_record_items"]["Update"]

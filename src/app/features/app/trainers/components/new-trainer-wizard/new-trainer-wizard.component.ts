@@ -14,8 +14,9 @@ import {
   Validators
 } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { TrainersService } from '../../services/trainers.service';
 import {
   Bank,
@@ -117,7 +118,8 @@ export class NewTrainerWizardComponent implements OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly trainersService: TrainersService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     // Cuando bank cambia a nequi, forzar account_type = 'ahorros'.
     this.step4
@@ -181,23 +183,27 @@ export class NewTrainerWizardComponent implements OnDestroy {
 
     this.isSubmitting = true;
     this.submitError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const payload = this.buildPayload();
 
     this.trainersService
       .createTrainer(payload)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (result) => {
-          this.isSubmitting = false;
           this.trainerCreated.emit({ result });
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSubmitting = false;
           this.handleSubmitError(err);
-          this.cdr.markForCheck();
         }
       });
   }

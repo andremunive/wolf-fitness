@@ -11,8 +11,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ServiceProvidersService } from '../../services/service-providers.service';
 import { ServiceTypesService } from '../../services/service-types.service';
 import {
@@ -84,7 +85,8 @@ export class EditServiceProviderModalComponent implements OnChanges, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly serviceProvidersService: ServiceProvidersService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {}
 
   ngOnChanges(changes: SimpleChanges): void {
@@ -121,6 +123,7 @@ export class EditServiceProviderModalComponent implements OnChanges, OnDestroy {
     this.isSaving = true;
     this.saveError = null;
     this.saveSuccess = false;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const current = this.captureValues();
@@ -138,19 +141,22 @@ export class EditServiceProviderModalComponent implements OnChanges, OnDestroy {
 
     this.serviceProvidersService
       .update(this.provider.id, patch)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
-          this.isSaving = false;
           this.saveSuccess = true;
           this.originalValues = this.captureValues();
           this.providerUpdated.emit();
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSaving = false;
           this.saveError = this.extractErrorMessage(err);
-          this.cdr.markForCheck();
         }
       });
   }

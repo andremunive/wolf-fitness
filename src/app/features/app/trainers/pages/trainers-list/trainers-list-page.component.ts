@@ -17,6 +17,7 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  finalize,
   map,
   shareReplay,
   startWith,
@@ -24,6 +25,7 @@ import {
   takeUntil
 } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { Trainer, TrainersPage } from '../../models/trainer.model';
 import { TrainersService } from '../../services/trainers.service';
 import { TrainersPaginationState } from '../../components/trainers-pagination/trainers-pagination.component';
@@ -143,7 +145,8 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
 
   constructor(
     private readonly trainersService: TrainersService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {}
 
   ngOnInit(): void {
@@ -213,21 +216,24 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
 
   onEditRequested(trainer: Trainer): void {
     this.isLoadingEditTrainer = true;
+    this.loader.show();
     this.cdr.markForCheck();
 
     this.trainersService
       .getTrainerById(trainer.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isLoadingEditTrainer = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (full) => {
           this.editingTrainer = full;
-          this.isLoadingEditTrainer = false;
-          this.cdr.markForCheck();
         },
-        error: () => {
-          this.isLoadingEditTrainer = false;
-          this.cdr.markForCheck();
-        }
+        error: () => {}
       });
   }
 

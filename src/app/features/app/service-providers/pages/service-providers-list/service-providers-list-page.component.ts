@@ -17,6 +17,7 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  finalize,
   map,
   shareReplay,
   startWith,
@@ -24,6 +25,7 @@ import {
   takeUntil
 } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ServiceProvidersService } from '../../services/service-providers.service';
 import { ServiceTypesService } from '../../services/service-types.service';
 import {
@@ -148,7 +150,8 @@ export class ServiceProvidersListPageComponent implements OnInit, OnDestroy {
   constructor(
     private readonly serviceProvidersService: ServiceProvidersService,
     private readonly serviceTypesService: ServiceTypesService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {}
 
   ngOnInit(): void {
@@ -227,21 +230,24 @@ export class ServiceProvidersListPageComponent implements OnInit, OnDestroy {
 
   onEditRequested(provider: ServiceProviderViewModel): void {
     this.isLoadingProvider = true;
+    this.loader.show();
     this.cdr.markForCheck();
 
     this.serviceProvidersService
       .getById(provider.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isLoadingProvider = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (full) => {
           this.editingProvider = full;
-          this.isLoadingProvider = false;
-          this.cdr.markForCheck();
         },
-        error: () => {
-          this.isLoadingProvider = false;
-          this.cdr.markForCheck();
-        }
+        error: () => {}
       });
   }
 

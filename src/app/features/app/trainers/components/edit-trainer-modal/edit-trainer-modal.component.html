@@ -285,15 +285,7 @@
         class="edit-footer__save"
         (click)="save()"
         [disabled]="!hasChanges || isSaving"
-      >
-        <span *ngIf="!isSaving">Guardar cambios</span>
-        <span *ngIf="isSaving" class="spinner-wrap" aria-label="Guardando...">
-          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
-          </svg>
-          Guardando...
-        </span>
-      </button>
+      >Guardar cambios</button>
     </div>
 
   </div>

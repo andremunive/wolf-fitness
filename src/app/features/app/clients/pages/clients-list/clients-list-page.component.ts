@@ -17,6 +17,7 @@ import {
   catchError,
   debounceTime,
   distinctUntilChanged,
+  finalize,
   map,
   shareReplay,
   startWith,
@@ -28,6 +29,7 @@ import { Client, ClientDetailFull, ClientsPage } from '../../models/client.model
 import { ClientsService } from '../../services/clients.service';
 import { PaymentsService } from '../../services/payments.service';
 import { AuthService } from 'src/app/core/services/auth.service';
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ClientFiltersValue } from '../../components/clients-filters/clients-filters.component';
 import { PaginationState } from '../../components/clients-pagination/clients-pagination.component';
 import { CreateClientResult } from '../../models/client.model';
@@ -186,7 +188,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     private readonly clientsService: ClientsService,
     private readonly paymentsService: PaymentsService,
     private readonly authService: AuthService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {}
 
   ngOnInit(): void {
@@ -268,21 +271,24 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
 
   onEditRequested(client: Client): void {
     this.isLoadingEditClient = true;
+    this.loader.show();
     this.cdr.markForCheck();
 
     this.clientsService
       .getClientById(client.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isLoadingEditClient = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (full) => {
           this.editingClient = full;
-          this.isLoadingEditClient = false;
-          this.cdr.markForCheck();
         },
-        error: () => {
-          this.isLoadingEditClient = false;
-          this.cdr.markForCheck();
-        }
+        error: () => {}
       });
   }
 
@@ -324,15 +330,21 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     this.paymentFlowClient = client;
     this.isResolvingPaymentFlow = true;
     this.paymentFlowError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     this.paymentsService
       .resolvePaymentFlow(client.id)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isResolvingPaymentFlow = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (result) => {
-          this.isResolvingPaymentFlow = false;
-
           if (result.flow === 'new_payment') {
             this.suggestedPeriodStart = result.suggestedPeriodStart;
             this.isFirstPayment = result.isFirstPayment;
@@ -341,14 +353,10 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
             this.openPaymentForInstallment = result.openPayment;
             this.registerInstallmentClient = client;
           }
-
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isResolvingPaymentFlow = false;
           console.error('[ClientsListPage] Error al resolver flujo de pago:', err);
           this.showPaymentFlowError(this.extractErrorMessage(err));
-          this.cdr.markForCheck();
         }
       });
   }

@@ -16,8 +16,9 @@ import {
   Validators
 } from '@angular/forms';
 import { Subject } from 'rxjs';
-import { takeUntil } from 'rxjs/operators';
+import { finalize, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ServiceProvidersService } from '../../services/service-providers.service';
 import {
   Bank,
@@ -115,7 +116,8 @@ export class NewServiceProviderWizardComponent implements OnInit, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly serviceProvidersService: ServiceProvidersService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {}
 
   ngOnInit(): void {
@@ -193,6 +195,7 @@ export class NewServiceProviderWizardComponent implements OnInit, OnDestroy {
 
     this.isSubmitting = true;
     this.submitError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const providerPayload = {
@@ -218,17 +221,20 @@ export class NewServiceProviderWizardComponent implements OnInit, OnDestroy {
 
     this.serviceProvidersService
       .create(providerPayload, bankPayload)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSubmitting = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (provider) => {
-          this.isSubmitting = false;
           this.providerCreated.emit({ provider });
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSubmitting = false;
           this.submitError = this.extractErrorMessage(err);
-          this.cdr.markForCheck();
         }
       });
   }

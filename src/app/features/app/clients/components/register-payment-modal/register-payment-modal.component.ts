@@ -10,8 +10,9 @@ import {
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
 import { Observable, Subject } from 'rxjs';
-import { shareReplay, takeUntil } from 'rxjs/operators';
+import { finalize, shareReplay, takeUntil } from 'rxjs/operators';
 
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { Client } from '../../models/client.model';
 import {
   Discount,
@@ -53,6 +54,9 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
   isSaving = false;
   saveError: string | null = null;
 
+  /** Formatted display value for the amount input (es-CO thousands separators). */
+  amountDisplay = '';
+
   readonly paymentMethodOptions: Array<{ value: PaymentMethod; label: string }> = [
     { value: 'cash', label: PAYMENT_METHOD_LABELS.cash },
     { value: 'transfer', label: PAYMENT_METHOD_LABELS.transfer },
@@ -68,12 +72,13 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
   constructor(
     private readonly fb: FormBuilder,
     private readonly paymentsService: PaymentsService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     this.form = this.fb.group({
       period_start: ['', [Validators.required]],
       reception_date: ['', [Validators.required]],
-      amount_received_cop: [0, [Validators.required, Validators.min(0)]],
+      amount_received_cop: [null, [Validators.required, Validators.min(0)]],
       payment_method: [{ value: '', disabled: true }],
       discount_code: [''],
       notes: ['']
@@ -183,6 +188,44 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
+  /**
+   * Handles input on the amount field: strips non-digits, formats with es-CO
+   * thousands separators, and writes the numeric value back to the form control.
+   * Cursor is restored to the equivalent digit position after re-formatting.
+   */
+  onAmountInput(event: Event): void {
+    const input = event.target as HTMLInputElement;
+    const oldValue = input.value;
+    const oldCursor = input.selectionStart ?? oldValue.length;
+    const digitsBeforeCursor = oldValue.slice(0, oldCursor).replace(/\D/g, '').length;
+
+    const digits = oldValue.replace(/\D/g, '');
+    const amountCtrl = this.form.get('amount_received_cop')!;
+
+    if (digits === '') {
+      this.amountDisplay = '';
+      input.value = '';
+      amountCtrl.setValue(null);
+      this.cdr.markForCheck();
+      return;
+    }
+
+    const num = Number(digits);
+    const formatted = new Intl.NumberFormat('es-CO').format(num);
+    this.amountDisplay = formatted;
+    input.value = formatted;
+    amountCtrl.setValue(num);
+
+    let newCursor = 0;
+    let counted = 0;
+    while (counted < digitsBeforeCursor && newCursor < formatted.length) {
+      if (/\d/.test(formatted[newCursor])) counted++;
+      newCursor++;
+    }
+    input.setSelectionRange(newCursor, newCursor);
+    this.cdr.markForCheck();
+  }
+
   submit(): void {
     this.form.markAllAsTouched();
     if (this.form.invalid || this.isSaving) return;
@@ -203,6 +246,7 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
 
     this.isSaving = true;
     this.saveError = null;
+    this.loader.show();
     this.cdr.markForCheck();
 
     this.paymentsService
@@ -215,20 +259,23 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
         discount_code: discountCode,
         notes
       })
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: (response) => {
-          this.isSaving = false;
           this.paymentRegistered.emit({ response, clientName: this.client.fullName });
-          this.cdr.markForCheck();
         },
         error: (err: EdgeFunctionError | unknown) => {
-          this.isSaving = false;
           const efErr = err as EdgeFunctionError;
           this.saveError = efErr?.code
             ? mapPaymentErrorToMessage(efErr.code, efErr.details ?? {})
             : 'Ocurrió un error inesperado. Intenta de nuevo.';
-          this.cdr.markForCheck();
         }
       });
   }

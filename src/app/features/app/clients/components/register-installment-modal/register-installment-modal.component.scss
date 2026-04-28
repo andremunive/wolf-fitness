@@ -428,22 +428,6 @@
   }
 }
 
-.spinner-wrap {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.spinner-icon {
-  width: 18px;
-  height: 18px;
-  animation: spin 0.7s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
 @keyframes slideUp {
   from { transform: translateY(100%); }
   to   { transform: translateY(0); }

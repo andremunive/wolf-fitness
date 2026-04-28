@@ -18,9 +18,10 @@ import {
   Validators
 } from '@angular/forms';
 import { Observable, Subject } from 'rxjs';
-import { shareReplay, takeUntil } from 'rxjs/operators';
+import { finalize, shareReplay, takeUntil } from 'rxjs/operators';
 
 import { AuthService } from 'src/app/core/services/auth.service';
+import { LoaderService } from 'src/app/core/services/loader.service';
 import { ClientsService } from '../../services/clients.service';
 import {
   ClientDetailFull,
@@ -106,7 +107,8 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
     private readonly fb: FormBuilder,
     private readonly clientsService: ClientsService,
     private readonly authService: AuthService,
-    private readonly cdr: ChangeDetectorRef
+    private readonly cdr: ChangeDetectorRef,
+    private readonly loader: LoaderService
   ) {
     this.plans$ = this.clientsService.getActivePlans().pipe(shareReplay(1));
     this.trainers$ = this.clientsService.getActiveTrainers().pipe(shareReplay(1));
@@ -174,26 +176,30 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
     this.isSaving = true;
     this.saveError = null;
     this.saveSuccess = false;
+    this.loader.show();
     this.cdr.markForCheck();
 
     const payload = this.buildPatchPayload();
 
     this.clientsService
       .updateClient(payload)
-      .pipe(takeUntil(this.destroy$))
+      .pipe(
+        finalize(() => {
+          this.isSaving = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
       .subscribe({
         next: () => {
-          this.isSaving = false;
           this.saveSuccess = true;
           this.originalValues = this.captureValues();
           this.originalReferredById = this.selectedReferredBy?.id ?? null;
           this.clientUpdated.emit();
-          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.isSaving = false;
           this.saveError = this.extractErrorMessage(err);
-          this.cdr.markForCheck();
         }
       });
   }

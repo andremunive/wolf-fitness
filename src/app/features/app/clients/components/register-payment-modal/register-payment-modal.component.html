@@ -108,17 +108,21 @@
             <span class="form-field__prefix" aria-hidden="true">$</span>
             <input
               id="pay-amount"
-              type="number"
+              type="text"
               inputmode="numeric"
-              min="0"
-              step="1000"
+              autocomplete="off"
               class="form-field__input form-field__input--prefixed"
               [class.form-field__input--error]="form.get('amount_received_cop')!.invalid && form.get('amount_received_cop')!.touched"
-              formControlName="amount_received_cop"
-              placeholder="0"
+              [value]="amountDisplay"
+              (input)="onAmountInput($event)"
+              (blur)="form.get('amount_received_cop')!.markAsTouched()"
             />
           </div>
           <p class="form-field__hint">Ingresa 0 si aún no recibiste ningún pago (quedará pendiente).</p>
+          <p class="form-field__error"
+             *ngIf="form.get('amount_received_cop')!.errors?.['required'] && form.get('amount_received_cop')!.touched">
+            Obligatorio.
+          </p>
           <p class="form-field__error"
              *ngIf="form.get('amount_received_cop')!.errors?.['min'] && form.get('amount_received_cop')!.touched">
             El valor no puede ser negativo.
@@ -208,15 +212,7 @@
         class="pay-footer__save"
         (click)="submit()"
         [disabled]="isSaving"
-      >
-        <span *ngIf="!isSaving">Registrar pago</span>
-        <span *ngIf="isSaving" class="spinner-wrap" aria-label="Registrando...">
-          <svg class="spinner-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
-            <path stroke-linecap="round" d="M12 2a10 10 0 0 1 10 10"/>
-          </svg>
-          Registrando...
-        </span>
-      </button>
+      >Registrar pago</button>
     </div>
 
   </div>

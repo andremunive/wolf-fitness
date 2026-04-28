@@ -13,7 +13,8 @@ import {
   UpdateBankAccountPayload,
   UpdateServiceProviderPayload,
   mapBankAccountRow,
-  mapProviderRow
+  mapProviderRow,
+  SimpleProviderOption
 } from '../models/service-provider.model';
 import {
   ProviderBankAccount,
@@ -254,6 +255,34 @@ export class ServiceProvidersService {
       }),
       catchError((err) => {
         console.error('[ServiceProvidersService] softDelete error:', err);
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Returns a lightweight list of all non-deleted providers sorted by name.
+   * Used by dropdowns/autocompletes in other features (e.g. expense records).
+   * Does not fetch bank accounts or full detail — only id, name, service type.
+   */
+  listActiveSimple(): Observable<SimpleProviderOption[]> {
+    return from(
+      this.supabase.client
+        .from('service_providers')
+        .select('id, name, service_types(name)')
+        .is('deleted_at', null)
+        .order('name', { ascending: true })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return (data ?? []).map((row: any) => ({
+          id: row.id as string,
+          name: row.name as string,
+          serviceTypeName: (row.service_types as { name: string } | null)?.name ?? ''
+        }));
+      }),
+      catchError((err) => {
+        console.error('[ServiceProvidersService] listActiveSimple error:', err);
         throw err;
       })
     );
