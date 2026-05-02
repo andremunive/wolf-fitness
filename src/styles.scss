@@ -24,9 +24,22 @@ body {
   font-family: 'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Evita zoom en iOS al enfocar inputs */
-input,
-select,
-textarea {
-  font-size: 16px;
+/**
+ * iOS Safari hace zoom automático al enfocar un input/select/textarea con
+ * font-size < 16px. Forzamos 16px como mínimo solo en mobile (< 768px) con
+ * !important para ganarle a los estilos de componente que usan tamaños menores
+ * por diseño. En desktop (>= 768px) los componentes mantienen su tipografía,
+ * porque el zoom-on-focus solo aplica en iOS.
+ *
+ * Cobertura: text, email, password, search, url, tel, number, date/datetime,
+ * month, week, time y los selects/textareas. Se excluyen los tipos sin
+ * texto (checkbox, radio, range, color, file, hidden, submit, reset, button)
+ * para no inflar artificialmente su caja.
+ */
+@media (max-width: 767.98px) {
+  textarea,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="submit"]):not([type="reset"]):not([type="button"]) {
+    font-size: 16px !important;
+  }
 }
