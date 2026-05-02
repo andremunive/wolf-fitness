@@ -1,0 +1,186 @@
+<div class="cm-backdrop" role="dialog" aria-modal="true" aria-labelledby="cm-title" (click)="close()">
+  <div class="cm-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="cm-header">
+      <button
+        *ngIf="viewMode === 'compare'"
+        type="button"
+        class="cm-header__back"
+        (click)="backToList()"
+        aria-label="Volver a la selección"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+
+      <div class="cm-header__info">
+        <h2 id="cm-title" class="cm-header__title">Comparar medidas</h2>
+        <p class="cm-header__subtitle">{{ client.fullName }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="cm-header__close"
+        (click)="close()"
+        aria-label="Cerrar comparador de medidas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── List / selection view ── -->
+    <ng-container *ngIf="viewMode === 'list'">
+
+      <!-- Selection hint -->
+      <div class="cm-hint" role="status">
+        <ng-container *ngIf="selectedIds.length === 0">Selecciona dos mediciones para comparar.</ng-container>
+        <ng-container *ngIf="selectedIds.length === 1">Selecciona una medición más.</ng-container>
+        <ng-container *ngIf="selectedIds.length === 2">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+          </svg>
+          Listo. Presiona "Comparar".
+        </ng-container>
+      </div>
+
+      <div class="cm-body">
+
+        <!-- Loading -->
+        <div *ngIf="isLoading && measurements.length === 0" class="cm-skeleton-list" aria-hidden="true">
+          <div *ngFor="let i of [1,2,3]" class="cm-skeleton-card">
+            <div class="cm-skeleton cm-skeleton--check"></div>
+            <div class="cm-skeleton cm-skeleton--line"></div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="loadError" class="cm-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="cm-empty__icon" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <p class="cm-empty__title">Error al cargar medidas</p>
+          <p class="cm-empty__msg">Revisa tu conexión e intenta de nuevo.</p>
+          <button
+            type="button"
+            class="cm-show-more"
+            (click)="loadPage(0)"
+          >Reintentar</button>
+        </div>
+
+        <!-- Empty -->
+        <div *ngIf="isEmpty" class="cm-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="cm-empty__icon" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p class="cm-empty__title">Sin medidas registradas</p>
+          <p class="cm-empty__msg">Registra al menos dos mediciones para poder comparar.</p>
+        </div>
+
+        <!-- Selectable cards -->
+        <div *ngIf="!loadError && measurements.length > 0" class="cm-list">
+          <button
+            *ngFor="let m of measurements; trackBy: trackById"
+            type="button"
+            class="cm-card"
+            [class.cm-card--selected]="isSelected(m.id)"
+            (click)="toggleSelection(m.id)"
+            [attr.aria-pressed]="isSelected(m.id)"
+          >
+            <span
+              class="cm-card__check"
+              [class.cm-card__check--active]="isSelected(m.id)"
+              aria-hidden="true"
+            >
+              <svg *ngIf="isSelected(m.id)" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/>
+              </svg>
+            </span>
+            <div class="cm-card__content">
+              <span class="cm-card__date">{{ formatDate(m.measured_at) }}</span>
+              <span class="cm-card__weight">{{ m.weight_kg }} kg</span>
+            </div>
+          </button>
+
+          <button
+            *ngIf="hasMore"
+            type="button"
+            class="cm-show-more"
+            [disabled]="isLoading"
+            (click)="loadMore()"
+          >
+            <span *ngIf="isLoading" class="cm-spinner" aria-hidden="true"></span>
+            {{ isLoading ? 'Cargando…' : 'Mostrar más' }}
+          </button>
+        </div>
+
+      </div>
+
+      <!-- Compare button -->
+      <div class="cm-footer">
+        <button
+          type="button"
+          class="cm-btn cm-btn--primary"
+          [disabled]="!canCompare || isLoading"
+          (click)="compare()"
+        >
+          <span *ngIf="isLoading" class="cm-btn__spinner" aria-hidden="true"></span>
+          Comparar
+        </button>
+      </div>
+
+    </ng-container>
+
+    <!-- ── Compare result view ── -->
+    <ng-container *ngIf="viewMode === 'compare' && olderMeasurement && newerMeasurement">
+      <div class="cm-body">
+
+        <!-- Column headers -->
+        <div class="cm-compare-header">
+          <div class="cm-compare-header__label">Campo</div>
+          <div class="cm-compare-header__date">{{ formatDate(olderMeasurement.measured_at) }}</div>
+          <div class="cm-compare-header__date cm-compare-header__date--newer">{{ formatDate(newerMeasurement.measured_at) }}</div>
+          <div class="cm-compare-header__trend" aria-label="Tendencia"></div>
+        </div>
+
+        <!-- Comparison rows -->
+        <div class="cm-compare-rows">
+          <div
+            *ngFor="let row of compareRows; trackBy: trackByLabel"
+            class="cm-compare-row"
+          >
+            <div class="cm-compare-row__label" [title]="row.label">{{ row.label }}</div>
+            <div class="cm-compare-row__old">{{ formatValue(row.oldValue) }}</div>
+            <div class="cm-compare-row__new">{{ formatValue(row.newValue) }}</div>
+            <div class="cm-compare-row__trend">
+              <span
+                *ngIf="row.trend === 1"
+                class="cm-trend cm-trend--up"
+                aria-label="Subió"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M5 15l7-7 7 7"/>
+                </svg>
+              </span>
+              <span
+                *ngIf="row.trend === -1"
+                class="cm-trend cm-trend--down"
+                aria-label="Bajó"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </ng-container>
+
+  </div>
+</div>

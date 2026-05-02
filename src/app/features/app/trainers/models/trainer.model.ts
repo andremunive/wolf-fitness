@@ -1,6 +1,6 @@
-import { Bank, BankAccountType, DocumentType } from 'src/app/core/types/supabase';
+import { Bank, BankAccountType, DocumentType, Gender } from 'src/app/core/types/supabase';
 
-export { Bank, BankAccountType, DocumentType };
+export { Bank, BankAccountType, DocumentType, Gender };
 
 /**
  * Conteo de clientes activos del trainer por plan, para una quincena del mes actual.
@@ -65,7 +65,7 @@ export interface CreateTrainerPayload {
   bank: Bank;
   account_type: BankAccountType;
   account_number: string;
-  gender?: string;
+  gender?: Gender;
 }
 
 export interface CreateTrainerResult {
@@ -81,7 +81,7 @@ export interface UpdateTrainerPayload {
     phone?: string;
     birth_date?: string;
     neighborhood?: string;
-    gender?: string;
+    gender?: Gender;
     avatar_url?: string | null;
     is_active?: boolean;
     password_change_required?: boolean;
@@ -109,5 +109,5 @@ export interface UpdateTrainerResult {
 export interface TrainerDetailFull extends Trainer {
   birthDate: string;
   neighborhood: string;
-  gender: string | null;
+  gender: Gender | null;
 }

@@ -6,17 +6,19 @@ import {
   OnDestroy
 } from '@angular/core';
 
+import { BodyScrollLockService } from 'src/app/core/services/body-scroll-lock.service';
+
 /**
- * Traps keyboard focus within the host element and closes it on Escape.
+ * Modal accessibility helper applied to the inner sheet of any modal:
+ *
+ * - Traps Tab / Shift+Tab inside the host so focus cannot escape.
+ * - Moves focus to the first focusable child on init.
+ * - Closes the host on Escape via a CustomEvent "appFocusTrapEscape".
+ * - Locks <body> scroll while the host is mounted (via BodyScrollLockService),
+ *   to prevent scroll-chaining onto the page underneath on mobile.
  *
  * Usage:
  *   <div appFocusTrap (appFocusTrapEscape)="close()">…</div>
- *
- * The directive:
- * - Moves focus to the first focusable child on init.
- * - Prevents Tab / Shift+Tab from leaving the trap boundary.
- * - Emits via the native CustomEvent "appFocusTrapEscape" so the host
- *   can listen with Angular's (appFocusTrapEscape) event binding.
  *
  * Note: we use a CustomEvent on the host element rather than an @Output because
  * this directive is applied to arbitrary elements and the parent template
@@ -29,7 +31,15 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
   private readonly focusableSelectors =
     'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])';
 
-  constructor(private readonly el: ElementRef<HTMLElement>) {}
+  constructor(
+    private readonly el: ElementRef<HTMLElement>,
+    private readonly bodyScrollLock: BodyScrollLockService
+  ) {
+    // Lock body scroll as soon as the directive is instantiated. Modals are
+    // mounted via *ngIf, so the directive constructor runs only when the
+    // modal opens — the lock is released in ngOnDestroy when *ngIf flips.
+    this.bodyScrollLock.lock();
+  }
 
   ngAfterViewInit(): void {
     // Defer one tick so Angular has time to render any *ngIf children.
@@ -42,7 +52,7 @@ export class FocusTrapDirective implements AfterViewInit, OnDestroy {
   }
 
   ngOnDestroy(): void {
-    // Nothing to clean up — HostListeners are removed automatically.
+    this.bodyScrollLock.unlock();
   }
 
   @HostListener('keydown', ['$event'])

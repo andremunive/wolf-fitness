@@ -108,9 +108,7 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
 
   readonly genderOptions: Array<{ value: string; label: string }> = [
     { value: 'male', label: 'Masculino' },
-    { value: 'female', label: 'Femenino' },
-    { value: 'other', label: 'Otro' },
-    { value: 'prefer_not_to_say', label: 'Prefiero no especificar' }
+    { value: 'female', label: 'Femenino' }
   ];
 
   // ─── Steps como FormGroups independientes ──────────────────────────────────
@@ -124,6 +122,7 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
     ],
     birth_date: ['', [Validators.required, this.birthDateNotFutureValidator]],
     gender: [''],
+    height_cm: [null, [Validators.required, Validators.min(50), Validators.max(250)]],
     neighborhood: ['', [Validators.required]]
   });
 
@@ -286,6 +285,7 @@ export class NewClientWizardComponent implements OnInit, OnDestroy {
       email: s1.email,
       phone: s1.phone,
       birth_date: s1.birth_date,
+      height_cm: s1.height_cm,
       neighborhood: s1.neighborhood,
       origin: s2.origin,
       plan_id: s3.plan_id

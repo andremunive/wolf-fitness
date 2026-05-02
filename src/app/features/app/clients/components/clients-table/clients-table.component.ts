@@ -21,6 +21,7 @@ export class ClientsTableComponent {
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
   @Output() registerPaymentRequested = new EventEmitter<Client>();
+  @Output() measurementsRequested = new EventEmitter<Client>();
 
   getStatusLabel(status: Client['status']): string {
     switch (status) {

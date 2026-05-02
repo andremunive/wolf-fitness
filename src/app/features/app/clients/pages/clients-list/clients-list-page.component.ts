@@ -26,10 +26,12 @@ import {
 } from 'rxjs/operators';
 
 import { Client, ClientDetailFull, ClientsPage } from '../../models/client.model';
+import { MeasurementAction } from '../../measurements/components/measurements-hub-modal/measurements-hub-modal.component';
 import { ClientsService } from '../../services/clients.service';
 import { PaymentsService } from '../../services/payments.service';
 import { AuthService } from 'src/app/core/services/auth.service';
 import { LoaderService } from 'src/app/core/services/loader.service';
+import { ToastService } from 'src/app/shared/services/toast.service';
 import { ClientFiltersValue } from '../../components/clients-filters/clients-filters.component';
 import { PaginationState } from '../../components/clients-pagination/clients-pagination.component';
 import { CreateClientResult } from '../../models/client.model';
@@ -97,6 +99,18 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
 
   editingClient: ClientDetailFull | null = null;
   isLoadingEditClient = false;
+
+  // ─── Modal de medidas ────────────────────────────────────────────────────────
+
+  /** Client whose hub is open (uses base Client, no full detail needed for hub). */
+  measurementsHubClient: Client | null = null;
+  /** Full detail fetched on demand for the register form (needs birthDate/gender). */
+  measurementsRegisterClient: ClientDetailFull | null = null;
+  /** Base client retained for view/compare modals (no full detail needed). */
+  measurementsBaseClient: Client | null = null;
+  /** Active modal within the measurements flow. */
+  measurementsAction: MeasurementAction | null = null;
+  isLoadingMeasurementsClient = false;
 
   // ─── Modales de pago ─────────────────────────────────────────────────────────
 
@@ -188,6 +202,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     private readonly clientsService: ClientsService,
     private readonly paymentsService: PaymentsService,
     private readonly authService: AuthService,
+    private readonly toastService: ToastService,
     private readonly cdr: ChangeDetectorRef,
     private readonly loader: LoaderService
   ) {}
@@ -412,6 +427,75 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
 
   retry(): void {
     this.refreshTrigger$.next();
+  }
+
+  // ─── Medidas ─────────────────────────────────────────────────────────────────
+
+  onMeasurementsRequested(client: Client): void {
+    this.measurementsHubClient = client;
+    this.measurementsAction = null;
+    this.cdr.markForCheck();
+  }
+
+  onMeasurementsHubClosed(): void {
+    this.measurementsHubClient = null;
+    this.measurementsBaseClient = null;
+    this.measurementsAction = null;
+    this.measurementsRegisterClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onMeasurementsActionSelected(action: MeasurementAction): void {
+    const baseClient = this.measurementsHubClient!;
+    // Close the hub immediately regardless of action so the UX is snappy and
+    // the loader covers the page while the fetch is in flight.
+    this.measurementsHubClient = null;
+    this.cdr.markForCheck();
+
+    if (action === 'register') {
+      // The register modal needs birthDate + gender, so fetch the full detail first.
+      this.isLoadingMeasurementsClient = true;
+      this.loader.show();
+      this.cdr.markForCheck();
+
+      this.clientsService
+        .getClientById(baseClient.id)
+        .pipe(
+          finalize(() => {
+            this.isLoadingMeasurementsClient = false;
+            this.loader.hide();
+            this.cdr.markForCheck();
+          }),
+          takeUntil(this.destroy$)
+        )
+        .subscribe({
+          next: (full) => {
+            this.measurementsRegisterClient = full;
+            this.measurementsAction = 'register';
+          },
+          error: () => {
+            // Hub is already closed — show error toast instead of re-opening.
+            this.toastService.error('No se pudo cargar el detalle del cliente. Intenta de nuevo.');
+          }
+        });
+    } else {
+      // View and compare only need the base Client.
+      this.measurementsBaseClient = baseClient;
+      this.measurementsAction = action;
+      this.cdr.markForCheck();
+    }
+  }
+
+  closeMeasurementsModal(): void {
+    this.measurementsAction = null;
+    this.measurementsRegisterClient = null;
+    this.measurementsBaseClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onMeasurementRegistered(clientName: string): void {
+    this.toastService.success('Medida guardada para ' + clientName);
+    this.closeMeasurementsModal();
   }
 
   // ─── Utilidades ─────────────────────────────────────────────────────────────

@@ -1,0 +1,15 @@
+<div class="tooltip" role="status" aria-live="polite">
+  <span class="tooltip__text">
+    Último valor: <strong>{{ formattedValue }} {{ unit }}</strong>
+  </span>
+  <button
+    type="button"
+    class="tooltip__close"
+    (click)="dismiss($event)"
+    aria-label="Cerrar sugerencia"
+  >
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+      <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+    </svg>
+  </button>
+</div>

@@ -1,0 +1,96 @@
+:host {
+  // Positioned absolutely by the parent .rm-input-wrap context.
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  z-index: 10;
+  pointer-events: auto; // The X button must be clickable.
+  // Defensive cap so the tooltip never overflows on narrow screens.
+  max-width: calc(100vw - 32px);
+
+  // When the host has the modifier class, anchor to the right edge instead
+  // (prevents the tooltip from overflowing the right side on grid column 2).
+  &.last-value-tooltip--align-right {
+    left: auto;
+    right: 0;
+  }
+}
+
+.tooltip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  padding: 6px 10px 6px 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.12);
+  white-space: nowrap;
+  animation: tooltipIn 0.15s ease-out;
+
+  // Small downward arrow
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    border: 5px solid transparent;
+    border-top-color: #d1d5db;
+  }
+
+  &::before {
+    content: '';
+    position: absolute;
+    top: calc(100% - 1px);
+    left: 16px;
+    border: 5px solid transparent;
+    border-top-color: #ffffff;
+    z-index: 1;
+  }
+
+  &__text {
+    font-size: 12px;
+    color: #374151;
+    line-height: 1.4;
+
+    strong {
+      color: #228d9f;
+      font-weight: 700;
+    }
+  }
+
+  &__close {
+    flex-shrink: 0;
+    // 44×44 touch area — extends inward via negative margin so the tooltip height
+    // doesn't grow visually.
+    width: 44px;
+    height: 44px;
+    margin: -10px -10px -10px 0;
+    border: none;
+    background: transparent;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #9ca3af;
+    transition: background 0.12s, color 0.12s;
+
+    svg { width: 12px; height: 12px; }
+
+    &:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 1px;
+    }
+  }
+}
+
+@keyframes tooltipIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}

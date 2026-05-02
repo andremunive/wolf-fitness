@@ -3,7 +3,7 @@ import { from, Observable } from 'rxjs';
 import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
-import { Database } from 'src/app/core/types/supabase';
+import { Database, Gender } from 'src/app/core/types/supabase';
 import {
   Client,
   ClientDetailFull,
@@ -62,6 +62,7 @@ interface ClientDetailRow {
   created_at: string;
   plan_id: string;
   referred_by: string | null;
+  height_cm: number | null;
   profiles: {
     full_name: string;
     email: string;
@@ -69,7 +70,8 @@ interface ClientDetailRow {
     is_active: boolean;
     birth_date: string;
     neighborhood: string;
-    gender: string | null;
+    /** NOT NULL in profiles — typed as Gender to match the DB constraint. */
+    gender: Gender;
   };
   referred_by_profile: { full_name: string } | null;
   plans: {
@@ -121,6 +123,7 @@ const CLIENT_DETAIL_SELECT = [
   'created_at',
   'plan_id',
   'referred_by',
+  'height_cm',
   'profiles!clients_profiles_fkey(full_name, email, phone, is_active, birth_date, neighborhood, gender)',
   'referred_by_profile:profiles!clients_referred_by_fkey(full_name)',
   'plans!clients_plan_id_fkey(name, plan_prices(amount_cop))',
@@ -189,6 +192,7 @@ function mapDetailRowToClientDetailFull(row: ClientDetailRow): ClientDetailFull 
     birthDate: profile.birth_date,
     neighborhood: profile.neighborhood,
     gender: profile.gender,
+    heightCm: row.height_cm,
     referredById: row.referred_by,
     trainerId: activeAssignment?.trainer_id ?? null
   };
@@ -338,46 +342,53 @@ export class ClientsService {
 
     const steps: Observable<unknown>[] = [];
 
-    // 1. Actualización de campos del perfil + campos de clients (origen, referred_by).
+    // 1. Actualización de campos del perfil (tabla profiles).
     if (profile && Object.keys(profile).length > 0) {
       // Construimos el objeto con tipos exactos de Supabase para el UPDATE de profiles.
-      // gender: null no es aceptado por el tipo generado; usamos 'prefer_not_to_say' como
-      // valor semántico para "sin especificar", o bien lo omitimos si es undefined.
+      // gender omite los valores eliminados del enum; solo acepta 'male' | 'female'.
+      // Si el valor es vacío o null, omitimos el campo para no enviar un valor inválido.
       const profileUpdate: {
         full_name?: string;
         phone?: string;
         birth_date?: string;
         neighborhood?: string;
-        gender?: 'male' | 'female' | 'other' | 'prefer_not_to_say';
+        gender?: 'male' | 'female';
       } = {};
 
       if (profile.full_name !== undefined) profileUpdate.full_name = profile.full_name;
       if (profile.phone !== undefined) profileUpdate.phone = profile.phone;
       if (profile.birth_date !== undefined) profileUpdate.birth_date = profile.birth_date;
       if (profile.neighborhood !== undefined) profileUpdate.neighborhood = profile.neighborhood;
-      if (profile.gender !== undefined && profile.gender !== null) {
-        profileUpdate.gender = profile.gender as 'male' | 'female' | 'other' | 'prefer_not_to_say';
+      if (profile.gender === 'male' || profile.gender === 'female') {
+        profileUpdate.gender = profile.gender;
       }
 
-      steps.push(
-        from(
-          this.supabase.client
-            .from('profiles')
-            .update(profileUpdate)
-            .eq('id', client_id)
-        ).pipe(
-          map(({ error }) => {
-            if (error) throw error;
-          })
-        )
-      );
+      if (Object.keys(profileUpdate).length > 0) {
+        steps.push(
+          from(
+            this.supabase.client
+              .from('profiles')
+              .update(profileUpdate)
+              .eq('id', client_id)
+          ).pipe(
+            map(({ error }) => {
+              if (error) throw error;
+            })
+          )
+        );
+      }
     }
 
-    // Actualizamos origin y/o referred_by directamente en la tabla clients.
-    // El tipo generado de Supabase exige el enum exacto para `origin`.
-    const clientFields: { origin?: ClientOrigin; referred_by?: string | null } = {};
+    // Actualizamos origin, referred_by y/o height_cm en la tabla clients.
+    // height_cm reside en clients (no en profiles) según el esquema actual.
+    const clientFields: {
+      origin?: ClientOrigin;
+      referred_by?: string | null;
+      height_cm?: number | null;
+    } = {};
     if (origin !== undefined) clientFields.origin = origin as ClientOrigin;
     if (referred_by !== undefined) clientFields.referred_by = referred_by;
+    if (profile?.height_cm !== undefined) clientFields.height_cm = profile.height_cm;
 
     if (Object.keys(clientFields).length > 0) {
       steps.push(

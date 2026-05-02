@@ -4,10 +4,11 @@ import { FormsModule, ReactiveFormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
 
 import { GlobalLoaderComponent } from './components/global-loader/global-loader.component';
+import { ToastHostComponent } from './components/toast-host/toast-host.component';
 import { FocusTrapDirective } from './directives/focus-trap.directive';
 
 @NgModule({
-  declarations: [GlobalLoaderComponent, FocusTrapDirective],
+  declarations: [GlobalLoaderComponent, ToastHostComponent, FocusTrapDirective],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   exports: [
     CommonModule,
@@ -15,6 +16,7 @@ import { FocusTrapDirective } from './directives/focus-trap.directive';
     ReactiveFormsModule,
     RouterModule,
     GlobalLoaderComponent,
+    ToastHostComponent,
     FocusTrapDirective
   ]
 })

@@ -17,7 +17,12 @@
       "mcp__supabase__generate_typescript_types",
       "mcp__supabase__list_edge_functions",
       "mcp__supabase__get_edge_function",
-      "mcp__supabase__get_logs"
+      "mcp__supabase__get_logs",
+      "Bash(python3 -c ' *)",
+      "Bash(node -e ' *)",
+      "Bash(node -e \"const fs=require\\('fs'\\); const g=fs.readFileSync\\('c:/Users/USUARIO/Documents/Projects/WF/wolf-fitness-gym/src/app/core/types/supabase_generated.ts','utf-8'\\); console.log\\('Lines:',g.split\\('\\\\n'\\).length,'Chars:',g.length\\);\")",
+      "Bash(node build_supabase_ts.js)",
+      "Bash(npx ng *)"
     ]
   }
 }

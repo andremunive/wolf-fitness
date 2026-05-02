@@ -1,0 +1,224 @@
+:host {
+  display: contents;
+}
+
+.hub-backdrop {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(17, 24, 39, 0.55);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  @media (min-width: 640px) {
+    align-items: center;
+  }
+}
+
+.hub-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  max-height: 92dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (min-width: 640px) {
+    border-radius: 20px;
+    margin: 16px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    animation: fadeScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+
+.hub-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f3f4f6;
+
+  &__avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0f2f4;
+    color: #228d9f;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    line-height: 1.3;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    transition: background 0.15s;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+
+    &:hover {
+      background: #e5e7eb;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ─── Body ─────────────────────────────────────────────────────────────────────
+
+.hub-body {
+  padding: 16px 20px 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+}
+
+// ─── Action cards ─────────────────────────────────────────────────────────────
+
+.hub-action {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 16px;
+  border: 1.5px solid #e5e7eb;
+  border-radius: 14px;
+  background: #ffffff;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  min-height: 72px; // Minimum 44px touch target covered by padding
+
+  &:hover {
+    border-color: #228d9f;
+    background: #f0fafb;
+  }
+
+  &:focus-visible {
+    border-color: #228d9f;
+    background: #f0fafb;
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+  }
+
+  &:active {
+    background: #e0f2f4;
+  }
+
+  &__icon {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #e0f2f4;
+    color: #228d9f;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    svg {
+      width: 22px;
+      height: 22px;
+    }
+  }
+
+  &__content {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  &__label {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.3;
+  }
+
+  &__desc {
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.4;
+  }
+
+  &__arrow {
+    flex-shrink: 0;
+    color: #9ca3af;
+
+    svg {
+      width: 18px;
+      height: 18px;
+    }
+  }
+}
+
+// ─── Animations ───────────────────────────────────────────────────────────────
+
+@keyframes slideUp {
+  from {
+    transform: translateY(32px);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeScale {
+  from {
+    transform: scale(0.97);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

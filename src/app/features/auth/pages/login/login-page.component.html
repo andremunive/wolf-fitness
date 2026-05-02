@@ -14,20 +14,20 @@
         <h1 id="login-title" class="text-2xl sm:text-3xl font-semibold text-ink tracking-tight">
           Bienvenido de nuevo
         </h1>
-        <p class="mt-2 text-sm text-ink-soft">
+        <p class="mt-1 text-sm text-ink-soft">
           Ingresa con tu cuenta para continuar.
         </p>
 
         <div
           *ngIf="errorMessage"
           role="alert"
-          class="mt-5 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700"
+          class="mt-4 rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-700"
         >
           {{ errorMessage }}
         </div>
 
         <form
-          class="mt-6 space-y-4"
+          class="mt-5 space-y-3"
           [formGroup]="form"
           (ngSubmit)="submit()"
           novalidate
@@ -107,7 +107,7 @@
 
           <button
             type="submit"
-            class="mt-2 inline-flex w-full min-h-touch items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
+            class="mt-1 inline-flex w-full min-h-touch items-center justify-center gap-2 rounded-xl bg-primary px-4 py-3 text-base font-semibold text-white shadow-sm transition hover:bg-primary-600 active:bg-primary-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70"
             [disabled]="submitting"
           >
             <svg
@@ -136,7 +136,7 @@
           </button>
         </form>
 
-        <p class="mt-8 text-center text-xs" style="color:#4b5563;">
+        <p class="mt-5 text-center text-xs text-ink-muted">
           ¿Problemas para ingresar? Contacta al administrador del gimnasio.
         </p>
       </div>

@@ -211,6 +211,26 @@
     line-height: 1.4;
   }
 
+  &__input-suffix-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+
+    .form-field__input {
+      padding-right: 44px;
+    }
+  }
+
+  &__suffix {
+    position: absolute;
+    right: 14px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #9ca3af;
+    pointer-events: none;
+    user-select: none;
+  }
+
   &__hint {
     font-size: 12px;
     color: #6b7280;

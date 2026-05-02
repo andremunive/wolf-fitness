@@ -1,0 +1,176 @@
+<div class="vm-backdrop" role="dialog" aria-modal="true" aria-labelledby="vm-title" (click)="close()">
+  <div class="vm-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="vm-header">
+      <!-- Back arrow — only in detail view -->
+      <button
+        *ngIf="viewMode === 'detail'"
+        type="button"
+        class="vm-header__back"
+        (click)="backToList()"
+        aria-label="Volver a la lista"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+
+      <div class="vm-header__info">
+        <h2 id="vm-title" class="vm-header__title">
+          <ng-container *ngIf="viewMode === 'list'">Consultar medidas</ng-container>
+          <ng-container *ngIf="viewMode === 'detail' && selectedMeasurement">
+            {{ formatDate(selectedMeasurement.measured_at) }}
+          </ng-container>
+        </h2>
+        <p class="vm-header__subtitle">{{ client.fullName }}</p>
+      </div>
+
+      <button
+        type="button"
+        class="vm-header__close"
+        (click)="close()"
+        aria-label="Cerrar consulta de medidas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── List view ── -->
+    <ng-container *ngIf="viewMode === 'list'">
+      <div class="vm-body">
+
+        <!-- Loading -->
+        <ng-container *ngIf="isLoading && measurements.length === 0">
+          <div class="vm-skeleton-list" aria-hidden="true">
+            <div *ngFor="let i of [1,2,3]" class="vm-skeleton-card">
+              <div class="vm-skeleton vm-skeleton--line-lg"></div>
+              <div class="vm-skeleton vm-skeleton--line-sm"></div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- Error -->
+        <div *ngIf="loadError" class="vm-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="vm-empty__icon" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          <p class="vm-empty__title">Error al cargar medidas</p>
+          <p class="vm-empty__msg">Revisa tu conexión e intenta de nuevo.</p>
+          <button
+            type="button"
+            class="vm-show-more"
+            (click)="loadPage(0)"
+          >Reintentar</button>
+        </div>
+
+        <!-- Empty state -->
+        <div *ngIf="isEmpty" class="vm-empty">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="vm-empty__icon" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+          <p class="vm-empty__title">Sin medidas registradas</p>
+          <p class="vm-empty__msg">Este cliente aún no tiene mediciones.</p>
+        </div>
+
+        <!-- Measurement cards -->
+        <div
+          *ngIf="!loadError && measurements.length > 0"
+          class="vm-list"
+        >
+          <button
+            *ngFor="let m of measurements; trackBy: trackById"
+            type="button"
+            class="vm-card"
+            (click)="openDetail(m)"
+          >
+            <div class="vm-card__date">{{ formatDate(m.measured_at) }}</div>
+            <div class="vm-card__meta">
+              <span class="vm-card__chip">{{ m.weight_kg }} kg</span>
+              <span *ngIf="hasCircumferences(m)" class="vm-card__chip">Medidas</span>
+              <span *ngIf="m.body_fat_pct !== null" class="vm-card__chip">{{ m.body_fat_pct }}% grasa</span>
+            </div>
+            <svg class="vm-card__arrow" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+            </svg>
+          </button>
+
+          <!-- Show more -->
+          <button
+            *ngIf="hasMore"
+            type="button"
+            class="vm-show-more"
+            [disabled]="isLoading"
+            (click)="loadMore()"
+          >
+            <span *ngIf="isLoading" class="vm-spinner" aria-hidden="true"></span>
+            {{ isLoading ? 'Cargando…' : 'Mostrar más' }}
+          </button>
+        </div>
+
+      </div>
+    </ng-container>
+
+    <!-- ── Detail view ── -->
+    <ng-container *ngIf="viewMode === 'detail' && selectedMeasurement as m">
+      <div class="vm-body">
+
+        <!-- General -->
+        <section class="vm-detail-section">
+          <h3 class="vm-detail-section__title">Datos generales</h3>
+          <div class="vm-detail-rows">
+            <div class="vm-detail-row">
+              <span class="vm-detail-row__label">Fecha</span>
+              <span class="vm-detail-row__value">{{ formatDate(m.measured_at) }}</span>
+            </div>
+            <div class="vm-detail-row">
+              <span class="vm-detail-row__label">Peso</span>
+              <span class="vm-detail-row__value vm-detail-row__value--highlight">{{ m.weight_kg }} kg</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Circumferences -->
+        <section class="vm-detail-section" *ngIf="hasCircumferences(m)">
+          <h3 class="vm-detail-section__title">Medidas corporales</h3>
+          <div class="vm-detail-rows">
+            <ng-container *ngFor="let field of circumferenceFields; trackBy: trackByField">
+              <div class="vm-detail-row" *ngIf="m[field] !== null">
+                <span class="vm-detail-row__label">{{ fieldLabels[field] }}</span>
+                <span class="vm-detail-row__value">{{ m[field] }} cm</span>
+              </div>
+            </ng-container>
+          </div>
+        </section>
+
+        <!-- Skinfolds + body fat -->
+        <section class="vm-detail-section" *ngIf="hasSkinfolds(m) || m.body_fat_pct !== null">
+          <h3 class="vm-detail-section__title">Pliegues y % grasa</h3>
+          <div class="vm-detail-rows">
+            <ng-container *ngFor="let field of skinfoldFields; trackBy: trackByField">
+              <div class="vm-detail-row" *ngIf="m[field] !== null">
+                <span class="vm-detail-row__label">{{ fieldLabels[field] }}</span>
+                <span class="vm-detail-row__value">{{ m[field] }} mm</span>
+              </div>
+            </ng-container>
+            <div class="vm-detail-row vm-detail-row--fat" *ngIf="m.body_fat_pct !== null">
+              <span class="vm-detail-row__label">% Grasa corporal</span>
+              <span class="vm-detail-row__value vm-detail-row__value--fat">{{ m.body_fat_pct }}%</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- Notes -->
+        <section class="vm-detail-section" *ngIf="m.notes">
+          <h3 class="vm-detail-section__title">Notas</h3>
+          <p class="vm-detail-notes">{{ m.notes }}</p>
+        </section>
+
+      </div>
+    </ng-container>
+
+  </div>
+</div>

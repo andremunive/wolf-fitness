@@ -25,6 +25,7 @@ import {
   Bank,
   BankAccountType,
   DocumentType,
+  Gender,
   TrainerDetailFull,
   UpdateTrainerPayload
 } from '../../models/trainer.model';
@@ -294,7 +295,8 @@ export class EditTrainerModalComponent implements OnChanges, OnDestroy {
       profileChanges.birth_date = current.identity.birth_date;
     }
     if (current.identity.gender !== original.identity.gender) {
-      profileChanges.gender = current.identity.gender || undefined;
+      const g = current.identity.gender as Gender | '';
+      profileChanges.gender = (g === 'male' || g === 'female') ? g : undefined;
     }
     if (current.address.neighborhood !== original.address.neighborhood) {
       profileChanges.neighborhood = current.address.neighborhood;

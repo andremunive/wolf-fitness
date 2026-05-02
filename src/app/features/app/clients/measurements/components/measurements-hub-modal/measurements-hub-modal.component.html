@@ -1,0 +1,92 @@
+<div class="hub-backdrop" role="dialog" aria-modal="true" [attr.aria-labelledby]="'hub-title-' + client.id" (click)="close()">
+  <div class="hub-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- Header -->
+    <div class="hub-header">
+      <div class="hub-header__avatar" aria-hidden="true">{{ initials }}</div>
+      <div class="hub-header__info">
+        <h2 [id]="'hub-title-' + client.id" class="hub-header__title">Medidas de {{ client.fullName }}</h2>
+      </div>
+      <button
+        type="button"
+        class="hub-header__close"
+        (click)="close()"
+        aria-label="Cerrar panel de medidas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Action cards -->
+    <div class="hub-body">
+      <button
+        type="button"
+        class="hub-action"
+        (click)="selectAction('register')"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 4v16m8-8H4"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Registrar medida</span>
+          <span class="hub-action__desc">Nueva sesión de mediciones corporales</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="hub-action"
+        (click)="selectAction('view')"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Consultar medidas</span>
+          <span class="hub-action__desc">Historial de sesiones anteriores</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="hub-action"
+        (click)="selectAction('compare')"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M8 7h12M8 12h12M8 17h12M4 7h.01M4 12h.01M4 17h.01"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Comparar medidas</span>
+          <span class="hub-action__desc">Ver evolución entre dos sesiones</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+  </div>
+</div>

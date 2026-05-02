@@ -17,6 +17,12 @@ import { EditClientModalComponent } from './components/edit-client-modal/edit-cl
 import { RegisterPaymentModalComponent } from './components/register-payment-modal/register-payment-modal.component';
 import { RegisterInstallmentModalComponent } from './components/register-installment-modal/register-installment-modal.component';
 import { PaymentSuccessModalComponent } from './components/payment-success-modal/payment-success-modal.component';
+// Measurements sub-feature
+import { MeasurementsHubModalComponent } from './measurements/components/measurements-hub-modal/measurements-hub-modal.component';
+import { RegisterMeasurementModalComponent } from './measurements/components/register-measurement-modal/register-measurement-modal.component';
+import { ViewMeasurementsModalComponent } from './measurements/components/view-measurements-modal/view-measurements-modal.component';
+import { CompareMeasurementsModalComponent } from './measurements/components/compare-measurements-modal/compare-measurements-modal.component';
+import { LastValueTooltipComponent } from './measurements/components/last-value-tooltip/last-value-tooltip.component';
 
 @NgModule({
   declarations: [
@@ -33,7 +39,13 @@ import { PaymentSuccessModalComponent } from './components/payment-success-modal
     EditClientModalComponent,
     RegisterPaymentModalComponent,
     RegisterInstallmentModalComponent,
-    PaymentSuccessModalComponent
+    PaymentSuccessModalComponent,
+    // Measurements
+    MeasurementsHubModalComponent,
+    RegisterMeasurementModalComponent,
+    ViewMeasurementsModalComponent,
+    CompareMeasurementsModalComponent,
+    LastValueTooltipComponent
   ],
   imports: [
     SharedModule,

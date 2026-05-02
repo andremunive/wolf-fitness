@@ -21,6 +21,7 @@ export class ClientCardComponent {
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
   @Output() registerPaymentRequested = new EventEmitter<Client>();
+  @Output() measurementsRequested = new EventEmitter<Client>();
 
   get initials(): string {
     return this.client.fullName

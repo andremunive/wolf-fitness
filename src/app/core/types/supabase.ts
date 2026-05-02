@@ -1,5 +1,5 @@
 // Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras expense_records_extension_provider_items_invoice.
+// Refleja el estado de la base tras medidas_08_fix_search_path.
 // NO editar a mano. Regenerar cuando el esquema cambie.
 
 export type Json =
@@ -18,79 +18,103 @@ export type Database = {
   }
   public: {
     Tables: {
-      client_body_measurements: {
+      client_measurements: {
         Row: {
+          abdomen_cm: number | null
+          arm_left_cm: number | null
+          arm_right_cm: number | null
           body_fat_pct: number | null
+          calf_left_cm: number | null
+          calf_right_cm: number | null
           chest_cm: number | null
           client_id: string
           created_at: string
-          height_cm: number | null
-          hips_cm: number | null
+          hip_cm: number | null
           id: string
-          left_arm_cm: number | null
-          left_thigh_cm: number | null
           measured_at: string
-          measured_by: string | null
           notes: string | null
-          right_arm_cm: number | null
-          right_thigh_cm: number | null
-          waist_cm: number | null
-          weight_kg: number | null
+          registered_by: string | null
+          skinfold_abdomen_mm: number | null
+          skinfold_axilla_mm: number | null
+          skinfold_chest_mm: number | null
+          skinfold_subscapular_mm: number | null
+          skinfold_suprailiac_mm: number | null
+          skinfold_thigh_mm: number | null
+          skinfold_triceps_mm: number | null
+          thigh_left_cm: number | null
+          thigh_right_cm: number | null
+          weight_kg: number
         }
         Insert: {
+          abdomen_cm?: number | null
+          arm_left_cm?: number | null
+          arm_right_cm?: number | null
           body_fat_pct?: number | null
+          calf_left_cm?: number | null
+          calf_right_cm?: number | null
           chest_cm?: number | null
           client_id: string
           created_at?: string
-          height_cm?: number | null
-          hips_cm?: number | null
+          hip_cm?: number | null
           id?: string
-          left_arm_cm?: number | null
-          left_thigh_cm?: number | null
-          measured_at?: string
-          measured_by?: string | null
+          measured_at: string
           notes?: string | null
-          right_arm_cm?: number | null
-          right_thigh_cm?: number | null
-          waist_cm?: number | null
-          weight_kg?: number | null
+          registered_by?: string | null
+          skinfold_abdomen_mm?: number | null
+          skinfold_axilla_mm?: number | null
+          skinfold_chest_mm?: number | null
+          skinfold_subscapular_mm?: number | null
+          skinfold_suprailiac_mm?: number | null
+          skinfold_thigh_mm?: number | null
+          skinfold_triceps_mm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
+          weight_kg: number
         }
         Update: {
+          abdomen_cm?: number | null
+          arm_left_cm?: number | null
+          arm_right_cm?: number | null
           body_fat_pct?: number | null
+          calf_left_cm?: number | null
+          calf_right_cm?: number | null
           chest_cm?: number | null
           client_id?: string
           created_at?: string
-          height_cm?: number | null
-          hips_cm?: number | null
+          hip_cm?: number | null
           id?: string
-          left_arm_cm?: number | null
-          left_thigh_cm?: number | null
           measured_at?: string
-          measured_by?: string | null
           notes?: string | null
-          right_arm_cm?: number | null
-          right_thigh_cm?: number | null
-          waist_cm?: number | null
-          weight_kg?: number | null
+          registered_by?: string | null
+          skinfold_abdomen_mm?: number | null
+          skinfold_axilla_mm?: number | null
+          skinfold_chest_mm?: number | null
+          skinfold_subscapular_mm?: number | null
+          skinfold_suprailiac_mm?: number | null
+          skinfold_thigh_mm?: number | null
+          skinfold_triceps_mm?: number | null
+          thigh_left_cm?: number | null
+          thigh_right_cm?: number | null
+          weight_kg?: number
         }
         Relationships: [
           {
-            foreignKeyName: "cbm_client_id_fkey"
+            foreignKeyName: "cm_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cbm_client_id_fkey"
+            foreignKeyName: "cm_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "v_clients_with_payment_status"
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "cbm_measured_by_fkey"
-            columns: ["measured_by"]
+            foreignKeyName: "cm_registered_by_fkey"
+            columns: ["registered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -236,6 +260,7 @@ export type Database = {
           created_at: string
           deleted_at: string | null
           deleted_by: string | null
+          height_cm: number | null
           id: string
           joined_at: string
           origin: Database["public"]["Enums"]["client_origin"]
@@ -248,6 +273,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          height_cm?: number | null
           id: string
           joined_at?: string
           origin: Database["public"]["Enums"]["client_origin"]
@@ -260,6 +286,7 @@ export type Database = {
           created_at?: string
           deleted_at?: string | null
           deleted_by?: string | null
+          height_cm?: number | null
           id?: string
           joined_at?: string
           origin?: Database["public"]["Enums"]["client_origin"]
@@ -1434,6 +1461,10 @@ export type Database = {
         Args: { p_notes: string; p_payment_id: string; p_voided_by: string }
         Returns: Json
       }
+      get_client_last_field_values: {
+        Args: { p_client_id: string }
+        Returns: Json
+      }
       get_expense_summary_by_category: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -1487,7 +1518,7 @@ export type Database = {
       closure_quincena: "q1" | "q2"
       closure_status: "open" | "closed" | "paid"
       document_type: "cc" | "ce" | "ti" | "pa" | "nit"
-      gender: "male" | "female" | "other" | "prefer_not_to_say"
+      gender: "male" | "female"
       payment_method: "cash" | "transfer" | "nequi" | "other"
       payment_status: "pending" | "partial" | "paid" | "voided"
       plan_frequency: "three_days" | "six_days"
@@ -1646,7 +1677,7 @@ export const Constants = {
       closure_quincena: ["q1", "q2"],
       closure_status: ["open", "closed", "paid"],
       document_type: ["cc", "ce", "ti", "pa", "nit"],
-      gender: ["male", "female", "other", "prefer_not_to_say"],
+      gender: ["male", "female"],
       payment_method: ["cash", "transfer", "nequi", "other"],
       payment_status: ["pending", "partial", "paid", "voided"],
       plan_frequency: ["three_days", "six_days"],
@@ -1722,10 +1753,10 @@ export type ClientTrainerAssignment = Database["public"]["Tables"]["client_train
 export type ClientTrainerAssignmentInsert = Database["public"]["Tables"]["client_trainer_assignments"]["Insert"]
 export type ClientTrainerAssignmentUpdate = Database["public"]["Tables"]["client_trainer_assignments"]["Update"]
 
-// client_body_measurements
-export type ClientBodyMeasurement = Database["public"]["Tables"]["client_body_measurements"]["Row"]
-export type ClientBodyMeasurementInsert = Database["public"]["Tables"]["client_body_measurements"]["Insert"]
-export type ClientBodyMeasurementUpdate = Database["public"]["Tables"]["client_body_measurements"]["Update"]
+// client_measurements
+export type ClientMeasurement = Database["public"]["Tables"]["client_measurements"]["Row"]
+export type ClientMeasurementInsert = Database["public"]["Tables"]["client_measurements"]["Insert"]
+export type ClientMeasurementUpdate = Database["public"]["Tables"]["client_measurements"]["Update"]
 
 // payments
 export type PaymentStatus = Database["public"]["Enums"]["payment_status"]

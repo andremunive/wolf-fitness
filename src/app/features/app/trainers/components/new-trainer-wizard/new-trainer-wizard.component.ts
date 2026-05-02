@@ -23,7 +23,8 @@ import {
   BankAccountType,
   CreateTrainerPayload,
   CreateTrainerResult,
-  DocumentType
+  DocumentType,
+  Gender
 } from '../../models/trainer.model';
 
 export interface WizardSuccessEvent {
@@ -257,8 +258,9 @@ export class NewTrainerWizardComponent implements OnDestroy {
       account_number: s4.account_number
     };
 
-    if (s1.gender) {
-      payload.gender = s1.gender;
+    const gender = s1.gender as Gender | '';
+    if (gender === 'male' || gender === 'female') {
+      payload.gender = gender;
     }
 
     return payload;

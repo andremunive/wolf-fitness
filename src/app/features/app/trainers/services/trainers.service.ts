@@ -14,7 +14,7 @@ import {
   UpdateTrainerPayload,
   UpdateTrainerResult
 } from '../models/trainer.model';
-import { Bank, BankAccountType, DocumentType } from 'src/app/core/types/supabase';
+import { Bank, BankAccountType, DocumentType, Gender } from 'src/app/core/types/supabase';
 import { ClosuresService } from '../../closures/services/closures.service';
 
 // Tipo de la fila cruda que devuelve PostgREST con los JOINs embebidos.
@@ -27,7 +27,7 @@ interface TrainerRow {
   created_at: string;
   birth_date: string;
   neighborhood: string;
-  gender: string | null;
+  gender: Gender | null;
   trainer_details: {
     address: string;
     document_type: DocumentType;

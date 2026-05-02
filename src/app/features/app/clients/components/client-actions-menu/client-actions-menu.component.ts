@@ -34,6 +34,7 @@ export class ClientActionsMenuComponent {
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
   @Output() registerPaymentRequested = new EventEmitter<Client>();
+  @Output() measurementsRequested = new EventEmitter<Client>();
 
   isOpen = false;
   /** Fixed-position style for the dropdown so it escapes overflow:auto containers. */
@@ -89,6 +90,11 @@ export class ClientActionsMenuComponent {
 
   onRegisterPayment(): void {
     this.registerPaymentRequested.emit(this.client);
+    this.close();
+  }
+
+  onMeasurements(): void {
+    this.measurementsRequested.emit(this.client);
     this.close();
   }
 

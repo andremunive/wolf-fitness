@@ -4,16 +4,19 @@
 
 /* =========================================================================
    Shell + frame
-   Mobile-first: columna única (hero arriba, form abajo).
-   Desktop: card única partida en dos paneles (form izq, arte der).
+   Mobile-first: pantalla completa sin scroll. El art-panel ocupa el espacio
+   restante arriba (pegado al borde del device) y el form-panel emerge
+   desde abajo como una card (bottom-sheet) con esquinas superiores
+   redondeadas y animación slide-up, igual que los wizards del app.
+   Desktop (≥1024px): card única partida en dos paneles (form izq, arte der).
    ========================================================================= */
 
 .login-shell {
   position: relative;
-  min-height: 100vh;
-  min-height: 100dvh;
+  height: 100vh;
+  height: 100dvh;
   display: flex;
-  overflow-x: hidden; /* el ::before decorativo desborda a propósito */
+  overflow: hidden;
   background: linear-gradient(180deg, #f4fbfc 0%, #dff1f4 100%);
 
   /* Ambient glow del shell (detrás de todo, muy sutil) */
@@ -33,37 +36,44 @@
   position: relative;
   z-index: 1;
   width: 100%;
+  height: 100%;
   display: flex;
   flex-direction: column;
 }
 
 /* =========================================================================
-   Form panel (mobile: abajo; desktop: izquierda)
+   Form panel (mobile: bottom-sheet; desktop: izquierda)
    ========================================================================= */
 
 .login-form-panel {
   position: relative;
   order: 2;
-  flex: 1 1 auto;
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 100%;
   background: #ffffff;
-  padding: 1.75rem 1.5rem 2.25rem;
+  padding: 2.25rem 1.5rem calc(1.5rem + env(safe-area-inset-bottom, 0px));
   display: flex;
   flex-direction: column;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 
-  /* Saca el form de la esquina: borde superior redondo cuando está bajo el hero */
-  border-top-left-radius: 1.75rem;
-  border-top-right-radius: 1.75rem;
-  margin-top: -1.25rem;
-  box-shadow: 0 -12px 32px rgba(10, 42, 51, 0.06);
+  /* Card con borde superior redondo que nace desde abajo */
+  border-top-left-radius: 2.25rem;
+  border-top-right-radius: 2.25rem;
+  margin-top: -2rem;
+  box-shadow: 0 -16px 36px rgba(10, 42, 51, 0.10);
+
+  animation: sheetSlideUp 0.42s cubic-bezier(0.32, 0.72, 0, 1);
 
   &__brand {
     display: flex;
     justify-content: center;
-    margin-bottom: 1.25rem;
+    margin-bottom: 0.5rem;
   }
 
   &__logo {
-    width: 150px;
+    width: 100px;
     height: auto;
     filter: drop-shadow(0 8px 18px rgba(10, 42, 51, 0.14));
   }
@@ -76,26 +86,25 @@
 }
 
 /* =========================================================================
-   Art panel (mobile: arriba; desktop: derecha)
-   Glow + rayos diagonales + imagen 3D centrada
+   Password visibility toggle (mobile + desktop)
    ========================================================================= */
 
-// Password visibility toggle button — sits inside the relative wrapper
 .password-toggle {
   position: absolute;
   top: 50%;
-  right: 0;
+  right: 4px;
   transform: translateY(-50%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 40px;
+  height: 40px;
   border: none;
   background: transparent;
   color: #6b7280;
   cursor: pointer;
-  border-radius: 0 12px 12px 0;
+  border-radius: 10px;
+  transition: color 0.15s ease, background 0.15s ease;
 
   svg {
     width: 20px;
@@ -104,31 +113,36 @@
 
   &:hover {
     color: #228d9f;
+    background: rgba(34, 141, 159, 0.06);
   }
 
   &:focus-visible {
     outline: 2px solid #228d9f;
     outline-offset: -2px;
-    border-radius: 8px;
   }
 }
+
+/* =========================================================================
+   Art panel (mobile: arriba pegado al borde; desktop: derecha)
+   Glow + rayos diagonales + imagen 3D centrada
+   ========================================================================= */
 
 .login-art-panel {
   position: relative;
   order: 1;
   overflow: hidden;
   isolation: isolate;
-  flex: 0 0 auto;
-  min-height: 200px;
+  flex: 1 1 0;
+  min-height: 140px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 1.5rem;
+  padding: 1rem 1.5rem 2rem;
   background:
     radial-gradient(ellipse at 50% 45%, #d4ecf1 0%, #b8dfe6 40%, #8fcad4 100%);
 }
 
-/* Núcleo del glow: más intenso, detrás del elemento */
+/* Núcleo del glow */
 .art-glow {
   position: absolute;
   border-radius: 9999px;
@@ -156,7 +170,7 @@
   }
 }
 
-/* Rayos diagonales sutiles tipo "luz cayendo" */
+/* Rayos diagonales sutiles */
 .art-rays {
   position: absolute;
   inset: 0;
@@ -180,9 +194,11 @@
   position: relative;
   z-index: 2;
   display: block;
-  width: 70%;
-  max-width: 300px;
+  width: 85%;
+  max-width: 360px;
+  max-height: 85%;
   height: auto;
+  object-fit: contain;
   filter: drop-shadow(0 24px 32px rgba(10, 42, 51, 0.28));
   animation: rusas-float 6s ease-in-out infinite;
 }
@@ -192,31 +208,31 @@
   50%      { transform: translateY(-8px); }
 }
 
+@keyframes sheetSlideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
 /* =========================================================================
    Breakpoints
    ========================================================================= */
 
-/* Tablet: crece el hero (ya no aplica en < 1024 porque el split es horizontal) */
 @media (min-width: 640px) {
-  .login-art-panel {
-    min-height: 260px;
+  .login-form-panel {
+    padding: 2.5rem 2rem 2rem;
+
+    &__logo {
+      width: 120px;
+    }
   }
 
   .art-image {
-    max-width: 360px;
-  }
-
-  .login-form-panel {
-    padding: 2rem 2rem 2.5rem;
-
-    &__logo {
-      width: 170px;
-    }
+    max-width: 440px;
   }
 }
 
-/* Desktop: split horizontal — form izq, arte der (como la referencia).
-   Shell fija al viewport y sin scroll; el frame se centra con flex. */
+/* Desktop: split horizontal — form izq, arte der.
+   Sin animación de sheet ni overlap; card con sombra envolvente. */
 @media (min-width: 1024px) {
   .login-shell {
     align-items: center;
@@ -224,13 +240,13 @@
     padding: 2.5rem;
     height: 100vh;
     height: 100dvh;
-    min-height: 0;
     overflow: hidden;
   }
 
   .login-frame {
     flex-direction: row;
     width: 100%;
+    height: auto;
     max-width: 1120px;
     max-height: 100%;
     background: #ffffff;
@@ -248,6 +264,8 @@
     border-radius: 0;
     box-shadow: none;
     justify-content: center;
+    overflow-y: auto;
+    animation: none;
 
     &__brand {
       justify-content: flex-start;
@@ -275,6 +293,7 @@
   .art-image {
     max-width: 420px;
     width: 75%;
+    max-height: none;
   }
 
   .art-glow--core {

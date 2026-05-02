@@ -76,9 +76,7 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
   readonly genderOptions: Array<{ value: string; label: string }> = [
     { value: '', label: 'Prefiero no decir' },
     { value: 'male', label: 'Masculino' },
-    { value: 'female', label: 'Femenino' },
-    { value: 'other', label: 'Otro' },
-    { value: 'prefer_not_to_say', label: 'Prefiero no especificar' }
+    { value: 'female', label: 'Femenino' }
   ];
 
   // ─── Form groups por pestaña ───────────────────────────────────────────────
@@ -88,6 +86,7 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
     phone: ['', [Validators.required, Validators.pattern(/^\d{7,15}$/)]],
     birth_date: ['', [Validators.required, this.birthDateValidator]],
     gender: [''],
+    height_cm: [null, [Validators.min(50), Validators.max(250)]],
     neighborhood: ['', [Validators.required]]
   });
 
@@ -250,6 +249,7 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
         phone: c.phone,
         birth_date: c.birthDate,
         gender: c.gender ?? '',
+        height_cm: c.heightCm ?? null,
         neighborhood: c.neighborhood
       },
       { emitEvent: false }
@@ -309,6 +309,9 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
     }
     if (current.identity.gender !== original.identity.gender) {
       profileChanges.gender = current.identity.gender || null;
+    }
+    if (current.identity.height_cm !== original.identity.height_cm) {
+      profileChanges.height_cm = current.identity.height_cm ?? null;
     }
     if (Object.keys(profileChanges).length > 0) {
       payload.profile = profileChanges;

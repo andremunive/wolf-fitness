@@ -1,0 +1,290 @@
+<div class="rm-backdrop" role="dialog" aria-modal="true" aria-labelledby="rm-title" (click)="close()">
+  <div class="rm-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="rm-header">
+      <div class="rm-header__avatar" aria-hidden="true">{{ initials }}</div>
+      <div class="rm-header__info">
+        <h2 id="rm-title" class="rm-header__title">Registrar medida</h2>
+        <p class="rm-header__subtitle">{{ client.fullName }}</p>
+      </div>
+      <button
+        type="button"
+        class="rm-header__close"
+        (click)="close()"
+        aria-label="Cerrar modal de medidas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Body ── -->
+    <div class="rm-body">
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+
+        <!-- 1. Fecha -->
+        <div class="rm-field-group">
+          <label class="rm-label" for="measured_at">Fecha de la medición</label>
+          <div class="rm-input-wrap">
+            <input
+              id="measured_at"
+              type="date"
+              class="rm-input"
+              [class.rm-input--error]="form.get('measured_at')?.invalid && form.get('measured_at')?.touched"
+              formControlName="measured_at"
+              [max]="todayIso"
+            />
+          </div>
+          <p
+            *ngIf="form.get('measured_at')?.hasError('futureDate') && form.get('measured_at')?.touched"
+            class="rm-error-msg"
+            role="alert"
+          >La fecha no puede ser futura.</p>
+        </div>
+
+        <!-- 2. Toggles de bloque -->
+        <div class="rm-section">
+          <p class="rm-section__title">¿Qué vas a registrar?</p>
+          <div class="rm-toggles">
+            <button
+              type="button"
+              class="rm-toggle"
+              [class.rm-toggle--active]="includeBodyMeasurements"
+              (click)="form.get('includeBodyMeasurements')?.setValue(!includeBodyMeasurements)"
+              [attr.aria-pressed]="includeBodyMeasurements"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+              </svg>
+              Medidas corporales
+            </button>
+            <button
+              type="button"
+              class="rm-toggle"
+              [class.rm-toggle--active]="includeBodyFat"
+              [disabled]="!client.gender"
+              [attr.title]="!client.gender ? 'El cliente no tiene género registrado' : null"
+              (click)="form.get('includeBodyFat')?.setValue(!includeBodyFat)"
+              [attr.aria-pressed]="includeBodyFat"
+              [attr.aria-disabled]="!client.gender"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+              </svg>
+              % Grasa
+            </button>
+          </div>
+          <p
+            *ngIf="form.hasError('noBlockActive')"
+            class="rm-error-msg"
+            role="alert"
+          >Activa al menos un bloque de medición.</p>
+        </div>
+
+        <!-- 3. Peso — siempre visible -->
+        <div class="rm-field-group rm-field-group--inline">
+          <label class="rm-label" for="weight_kg">Peso (kg) <span class="rm-required" aria-hidden="true">*</span></label>
+          <div class="rm-input-wrap rm-input-wrap--with-tooltip">
+            <input
+              id="weight_kg"
+              type="number"
+              class="rm-input"
+              [class.rm-input--error]="form.get('weight_kg')?.invalid && form.get('weight_kg')?.touched"
+              formControlName="weight_kg"
+              min="0.1"
+              max="300"
+              step="0.01"
+              placeholder="ej. 70.5"
+              (focus)="onFieldFocus('weight_kg')"
+            />
+            <app-last-value-tooltip
+              *ngIf="activeTooltipField === 'weight_kg'"
+              [value]="getLastValue('weight_kg')"
+              [unit]="fieldUnits['weight_kg']"
+              (dismissed)="dismissTooltip()"
+            ></app-last-value-tooltip>
+          </div>
+          <p
+            *ngIf="form.get('weight_kg')?.invalid && form.get('weight_kg')?.touched"
+            class="rm-error-msg"
+            role="alert"
+          >Ingresa un peso válido (0.1 – 300 kg).</p>
+        </div>
+
+        <!-- 4. Bloque medidas corporales -->
+        <div class="rm-block" *ngIf="includeBodyMeasurements">
+          <h3 class="rm-block__title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M4 6h16M4 10h16M4 14h16M4 18h16"/>
+            </svg>
+            Medidas corporales (cm)
+          </h3>
+          <div class="rm-grid">
+            <ng-container *ngFor="let field of circumferenceFields; let i = index; trackBy: trackByField">
+              <div class="rm-field-group">
+                <label class="rm-label" [for]="'circ_' + field">
+                  {{ fieldLabels[field] }}
+                  <span class="rm-required" aria-hidden="true">*</span>
+                </label>
+                <div class="rm-input-wrap rm-input-wrap--with-tooltip">
+                  <input
+                    [id]="'circ_' + field"
+                    type="number"
+                    class="rm-input"
+                    [class.rm-input--error]="form.get(field)?.invalid && form.get(field)?.touched"
+                    [formControlName]="field"
+                    min="0.1"
+                    step="0.1"
+                    placeholder="ej. 38.0"
+                    (focus)="onFieldFocus(field)"
+                  />
+                  <app-last-value-tooltip
+                    *ngIf="activeTooltipField === field"
+                    [value]="getLastValue(field)"
+                    [unit]="fieldUnits[field]"
+                    [alignRight]="i % 2 === 1"
+                    (dismissed)="dismissTooltip()"
+                  ></app-last-value-tooltip>
+                </div>
+                <p
+                  *ngIf="form.get(field)?.invalid && form.get(field)?.touched"
+                  class="rm-error-msg"
+                  role="alert"
+                >Valor requerido y mayor a 0.</p>
+              </div>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- No-gender warning — shown instead of the fat block when gender is missing -->
+        <div class="rm-no-gender-notice" *ngIf="!client.gender" role="note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>Este cliente no tiene género registrado. Edita su perfil para poder calcular el porcentaje de grasa.</span>
+        </div>
+
+        <!-- 5. Bloque % grasa -->
+        <div class="rm-block" *ngIf="includeBodyFat && client.gender">
+          <h3 class="rm-block__title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>
+            </svg>
+            Pliegues cutáneos (mm)
+          </h3>
+          <div class="rm-grid">
+            <ng-container *ngFor="let field of skinfoldFields; let i = index; trackBy: trackByField">
+              <div class="rm-field-group">
+                <label class="rm-label" [for]="'skin_' + field">
+                  {{ fieldLabels[field] }}
+                  <span class="rm-required" aria-hidden="true">*</span>
+                </label>
+                <div class="rm-input-wrap rm-input-wrap--with-tooltip">
+                  <input
+                    [id]="'skin_' + field"
+                    type="number"
+                    class="rm-input"
+                    [class.rm-input--error]="form.get(field)?.invalid && form.get(field)?.touched"
+                    [formControlName]="field"
+                    min="0.1"
+                    max="80"
+                    step="0.1"
+                    placeholder="ej. 12.5"
+                    (focus)="onFieldFocus(field)"
+                  />
+                  <app-last-value-tooltip
+                    *ngIf="activeTooltipField === field"
+                    [value]="getLastValue(field)"
+                    [unit]="fieldUnits[field]"
+                    [alignRight]="i % 2 === 1"
+                    (dismissed)="dismissTooltip()"
+                  ></app-last-value-tooltip>
+                </div>
+                <p
+                  *ngIf="form.get(field)?.invalid && form.get(field)?.touched"
+                  class="rm-error-msg"
+                  role="alert"
+                >Valor requerido (0.1 – 80 mm).</p>
+              </div>
+            </ng-container>
+          </div>
+
+          <!-- % Grasa calculado -->
+          <div
+            class="rm-fat-result"
+            aria-label="Porcentaje de grasa calculado automáticamente"
+          >
+            <div class="rm-fat-result__label">% Grasa (Jackson-Pollock 7)</div>
+            <div
+              class="rm-fat-result__value"
+              [class.rm-fat-result__value--ready]="calculatedBodyFat !== null"
+              role="status"
+            >
+              <ng-container *ngIf="calculatedBodyFat !== null; else fatPending">
+                {{ calculatedBodyFat | number:'1.1-1' }}%
+                <span class="rm-fat-result__hint">(calculado)</span>
+              </ng-container>
+              <ng-template #fatPending>
+                <span class="rm-fat-result__pending">Completa los 7 pliegues</span>
+              </ng-template>
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Notas -->
+        <div class="rm-field-group">
+          <label class="rm-label" for="rm_notes">Notas <span class="rm-optional">(opcional)</span></label>
+          <textarea
+            id="rm_notes"
+            class="rm-textarea"
+            formControlName="notes"
+            maxlength="500"
+            rows="3"
+            placeholder="Observaciones adicionales..."
+          ></textarea>
+          <p class="rm-char-count">
+            {{ form.get('notes')?.value?.length ?? 0 }}/500
+          </p>
+        </div>
+
+        <!-- Error de guardado -->
+        <div *ngIf="saveError" class="rm-save-error" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          {{ saveError }}
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="rm-footer">
+      <button
+        type="button"
+        class="rm-btn rm-btn--secondary"
+        (click)="close()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="rm-btn rm-btn--primary"
+        [disabled]="form.invalid || isSaving"
+        (click)="save()"
+      >
+        <span *ngIf="isSaving" class="rm-btn__spinner" aria-hidden="true"></span>
+        {{ isSaving ? 'Guardando…' : 'Guardar medida' }}
+      </button>
+    </div>
+
+  </div>
+</div>

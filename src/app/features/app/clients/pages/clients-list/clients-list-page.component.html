@@ -123,6 +123,7 @@
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
             (registerPaymentRequested)="onRegisterPaymentRequested($event)"
+            (measurementsRequested)="onMeasurementsRequested($event)"
           ></app-client-card>
         </div>
 
@@ -134,6 +135,7 @@
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
             (registerPaymentRequested)="onRegisterPaymentRequested($event)"
+            (measurementsRequested)="onMeasurementsRequested($event)"
           ></app-clients-table>
         </div>
 
@@ -237,3 +239,33 @@
     (dismissed)="dismissPaymentSuccessModal()"
   ></app-payment-success-modal>
 </ng-container>
+
+<!-- ===== HUB DE MEDIDAS ===== -->
+<app-measurements-hub-modal
+  *ngIf="measurementsHubClient"
+  [client]="measurementsHubClient"
+  (closed)="onMeasurementsHubClosed()"
+  (actionSelected)="onMeasurementsActionSelected($event)"
+></app-measurements-hub-modal>
+
+<!-- ===== MODAL REGISTRAR MEDIDA ===== -->
+<app-register-measurement-modal
+  *ngIf="measurementsAction === 'register' && measurementsRegisterClient"
+  [client]="measurementsRegisterClient"
+  (closed)="closeMeasurementsModal()"
+  (measurementRegistered)="onMeasurementRegistered($event)"
+></app-register-measurement-modal>
+
+<!-- ===== MODAL CONSULTAR MEDIDAS ===== -->
+<app-view-measurements-modal
+  *ngIf="measurementsAction === 'view' && measurementsBaseClient"
+  [client]="measurementsBaseClient"
+  (closed)="closeMeasurementsModal()"
+></app-view-measurements-modal>
+
+<!-- ===== MODAL COMPARAR MEDIDAS ===== -->
+<app-compare-measurements-modal
+  *ngIf="measurementsAction === 'compare' && measurementsBaseClient"
+  [client]="measurementsBaseClient"
+  (closed)="closeMeasurementsModal()"
+></app-compare-measurements-modal>

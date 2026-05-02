@@ -1,6 +1,11 @@
+import { Gender } from 'src/app/core/types/supabase';
+
 // Enums del dominio — alineados con los tipos Supabase.
 // El enum real en BD tiene 4 valores; suspended/overdue no se usan operativamente todavía.
 export type ClientStatus = 'active' | 'inactive' | 'suspended' | 'overdue';
+
+// Re-export so feature-level code can import Gender from one place.
+export type { Gender };
 export type ClientOrigin = 'referido' | 'publicidad' | 'llego_solo';
 
 /**
@@ -81,11 +86,14 @@ export interface Client {
 
 /**
  * Versión extendida del cliente para precarga en el formulario de edición.
+ * `gender` is NOT NULL in the `profiles` table — typed as Gender (not nullable).
  */
 export interface ClientDetailFull extends Client {
   birthDate: string;
   neighborhood: string;
-  gender: string | null;
+  gender: Gender;
+  /** Talla del cliente en centímetros. Null si aún no se ha registrado. */
+  heightCm: number | null;
   referredById: string | null;
   trainerId: string | null;
 }
@@ -114,6 +122,8 @@ export interface CreateClientPayload {
   phone: string;
   birth_date: string;
   gender?: string;
+  /** Talla en centímetros. Obligatoria en creación (validada en el wizard). */
+  height_cm: number;
   neighborhood: string;
   origin: ClientOrigin;
   referred_by?: string;
@@ -151,6 +161,8 @@ export interface UpdateClientPayload {
     birth_date?: string;
     neighborhood?: string;
     gender?: string | null;
+    /** Talla en centímetros. Null para borrar el valor. */
+    height_cm?: number | null;
   };
   /** Si cambió el plan, usar RPC — no el campo directo. UUID del nuevo plan. */
   new_plan_id?: string;
