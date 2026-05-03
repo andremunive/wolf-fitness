@@ -3,6 +3,7 @@ import { from, Observable } from 'rxjs';
 import { catchError, map } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
+import { ClosureStatus, PaymentMethod as DbPaymentMethod } from 'src/app/core/types/supabase';
 import {
   AddAdjustmentResult,
   CloseQuincenaResult,
@@ -14,6 +15,23 @@ import {
   ReopenQuincenaResult,
   TrainerClosureResult
 } from '../models/closure.model';
+
+export interface TrainerClosureHistoryRow {
+  closure_id: string;
+  trainer_id: string;
+  year: number;
+  month: number;
+  quincena: ClosureQuincena;
+  status: ClosureStatus;
+  base_cop: number;
+  bonus_q_cop: number;
+  adjustments_total_cop: number;
+  total_cop: number;
+  closed_at: string | null;
+  paid_at: string | null;
+  payment_date: string | null;
+  payment_method: DbPaymentMethod | null;
+}
 
 @Injectable({ providedIn: 'root' })
 export class ClosuresService {
@@ -181,6 +199,51 @@ export class ClosuresService {
       }),
       catchError((err) => {
         console.error('[ClosuresService] deleteClosureAdjustment error:', err);
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Lista los cierres persistidos (closed/paid) del trainer logueado para un año.
+   * RLS restringe automáticamente a sus propios registros — no hace falta filtrar
+   * por trainer_id si el caller es el mismo trainer, pero lo incluimos por
+   * claridad y para reutilizar el método si en el futuro un admin lo invoca.
+   */
+  getTrainerClosuresHistory(
+    trainerId: string,
+    year: number
+  ): Observable<TrainerClosureHistoryRow[]> {
+    return from(
+      this.supabase.client
+        .from('trainer_closures')
+        .select(
+          'id, trainer_id, year, month, quincena, status, base_cop, bonus_q_cop, adjustments_total_cop, total_cop, closed_at, paid_at, payment_date, payment_method'
+        )
+        .eq('trainer_id', trainerId)
+        .eq('year', year)
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return (data ?? []).map((row) => ({
+          closure_id: row.id,
+          trainer_id: row.trainer_id,
+          year: row.year,
+          month: row.month,
+          quincena: row.quincena as ClosureQuincena,
+          status: row.status as ClosureStatus,
+          base_cop: row.base_cop,
+          bonus_q_cop: row.bonus_q_cop,
+          adjustments_total_cop: row.adjustments_total_cop,
+          total_cop: row.total_cop,
+          closed_at: row.closed_at,
+          paid_at: row.paid_at,
+          payment_date: row.payment_date,
+          payment_method: row.payment_method as DbPaymentMethod | null
+        }));
+      }),
+      catchError((err) => {
+        console.error('[ClosuresService] getTrainerClosuresHistory error:', err);
         throw err;
       })
     );

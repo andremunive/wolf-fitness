@@ -261,7 +261,7 @@ export class ClosuresListPageComponent implements OnInit, OnDestroy {
       switchMap(({ q1, q2 }) => {
         const cards: CurrentMonthCard[] = [{ trainerName: '', q1, q2 }];
         const nextBlocked = this.isNextMonthBlocked(cards, month, this.currentMonthYear());
-        return this.loadTrainerHistory(profile.id, month.year).pipe(
+        return this.loadTrainerHistory(profile, month.year).pipe(
           map((historyRows) => ({
             loading: false,
             error: '',
@@ -401,13 +401,28 @@ export class ClosuresListPageComponent implements OnInit, OnDestroy {
   }
 
   /** Loads history rows for a trainer from the trainer_closures table. */
-  private loadTrainerHistory(trainerId: string, year: number): Observable<HistoryRow[]> {
-    // For trainer: fetch via PostgREST (RLS ensures only own closures).
-    // We still use compute-trainer-closure per month to stay consistent,
-    // but for history we only need to aggregate closed/paid quincenas.
-    // Simpler: just return empty (the detail modal is accessible from current cards).
-    // The trainer sees history by navigating back months.
-    return of([]);
+  private loadTrainerHistory(profile: Profile, year: number): Observable<HistoryRow[]> {
+    return this.closuresService.getTrainerClosuresHistory(profile.id, year).pipe(
+      map((rows) =>
+        rows.map((r) => ({
+          closureId: r.closure_id,
+          trainerId: r.trainer_id,
+          trainerName: profile.full_name,
+          year: r.year,
+          month: r.month,
+          quincena: r.quincena,
+          baseCop: r.base_cop,
+          bonusQCop: r.bonus_q_cop,
+          adjustmentsTotalCop: r.adjustments_total_cop,
+          totalCop: r.total_cop,
+          status: r.status,
+          closedAt: r.closed_at,
+          paidAt: r.paid_at,
+          paymentDate: r.payment_date
+        }))
+      ),
+      catchError(() => of([] as HistoryRow[]))
+    );
   }
 
   private currentMonthYear(): MonthYear {
