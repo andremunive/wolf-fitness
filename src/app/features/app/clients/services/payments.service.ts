@@ -12,7 +12,8 @@ import {
   RegisterPaymentResponse,
   RegisterInstallmentPayload,
   RegisterInstallmentResponse,
-  EdgeFunctionError
+  EdgeFunctionError,
+  SendReceiptSuccess
 } from '../models/payment.model';
 
 /**
@@ -187,6 +188,40 @@ export class PaymentsService {
         if (error) return efError$(error);
         if (!data) {
           return throwError(() => ({ code: 'INTERNAL_ERROR', message: 'Empty response', details: {} }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) {
+          return throwError(() => err);
+        }
+        return efError$(err);
+      })
+    );
+  }
+
+  /**
+   * Calls send-payment-receipt to dispatch the email receipt for a paid payment.
+   *
+   * Must only be called when the payment has status = 'paid' (D2).
+   * The forceResend flag should only be true when the admin explicitly requests
+   * a re-send after the EF returned 'already_sent' (D3 / contract §6.3).
+   */
+  sendReceipt(paymentId: string, forceResend: boolean = false): Observable<SendReceiptSuccess> {
+    return from(
+      this.supabase.client.functions.invoke<SendReceiptSuccess>(
+        'send-payment-receipt',
+        { body: { payment_id: paymentId, force_resend: forceResend } }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) return efError$(error);
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Empty response from send-payment-receipt',
+            details: {}
+          }));
         }
         return [data];
       }),

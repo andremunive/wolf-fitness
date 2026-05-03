@@ -23,6 +23,7 @@ import { RegisterMeasurementModalComponent } from './measurements/components/reg
 import { ViewMeasurementsModalComponent } from './measurements/components/view-measurements-modal/view-measurements-modal.component';
 import { CompareMeasurementsModalComponent } from './measurements/components/compare-measurements-modal/compare-measurements-modal.component';
 import { LastValueTooltipComponent } from './measurements/components/last-value-tooltip/last-value-tooltip.component';
+import { MeasurementShareModalComponent } from './measurements/components/measurement-share-modal/measurement-share-modal.component';
 
 @NgModule({
   declarations: [
@@ -45,7 +46,8 @@ import { LastValueTooltipComponent } from './measurements/components/last-value-
     RegisterMeasurementModalComponent,
     ViewMeasurementsModalComponent,
     CompareMeasurementsModalComponent,
-    LastValueTooltipComponent
+    LastValueTooltipComponent,
+    MeasurementShareModalComponent
   ],
   imports: [
     SharedModule,

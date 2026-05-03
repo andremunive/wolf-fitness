@@ -448,6 +448,48 @@
   animation: spin 0.7s linear infinite;
 }
 
+// ─── Share footer (compare view only) ────────────────────────────────────────
+
+.cm-share-footer {
+  flex-shrink: 0;
+  padding: 12px 20px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-top: 1px solid #f3f4f6;
+}
+
+.cm-share-btn {
+  width: 100%;
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border: 1.5px solid #d1f0f3;
+  border-radius: 12px;
+  background: #f0fafb;
+  color: #228d9f;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+
+  svg {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+  }
+
+  &:hover {
+    background: #e0f2f4;
+    border-color: #228d9f;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+  }
+}
+
 // ─── Animations ───────────────────────────────────────────────────────────────
 
 @keyframes slideUp {

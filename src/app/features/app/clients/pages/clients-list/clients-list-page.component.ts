@@ -35,11 +35,12 @@ import { ToastService } from 'src/app/shared/services/toast.service';
 import { ClientFiltersValue } from '../../components/clients-filters/clients-filters.component';
 import { PaginationState } from '../../components/clients-pagination/clients-pagination.component';
 import { CreateClientResult } from '../../models/client.model';
-import { OpenPaymentInfo, mapPaymentErrorToMessage } from '../../models/payment.model';
+import { OpenPaymentInfo, mapPaymentErrorToMessage, mapReceiptErrorToMessage } from '../../models/payment.model';
 import { RegisterPaymentSuccess } from '../../components/register-payment-modal/register-payment-modal.component';
 import { RegisterInstallmentSuccess } from '../../components/register-installment-modal/register-installment-modal.component';
 import {
-  PaymentSuccessData
+  PaymentSuccessData,
+  ReceiptEmailStatus
 } from '../../components/payment-success-modal/payment-success-modal.component';
 
 interface PageState {
@@ -387,13 +388,79 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   onPaymentRegistered(result: RegisterPaymentSuccess): void {
     this.registerPaymentClient = null;
     this.paymentFlowClient = null;
+
+    const isPaid = result.response.status === 'paid';
+
+    // Build receiptStatus only for paid payments (D2).
+    const receiptStatus: ReceiptEmailStatus | undefined = isPaid
+      ? {
+          state: 'sending',
+          clientEmail: result.clientEmail,
+          paymentId: result.response.id
+        }
+      : undefined;
+
     this.paymentSuccessData = {
       type: 'payment',
       clientName: result.clientName,
-      paymentResponse: result.response
+      paymentResponse: result.response,
+      receiptStatus
     };
+
     this.refreshTrigger$.next();
     this.cdr.markForCheck();
+
+    // Fire the receipt EF only when the payment is fully paid (D2, D6).
+    if (isPaid) {
+      this.dispatchReceiptEmail(result.response.id);
+    }
+  }
+
+  /**
+   * Calls send-payment-receipt and updates paymentSuccessData with a new object
+   * reference so OnPush detection fires on the modal's @Input.
+   */
+  private dispatchReceiptEmail(paymentId: string): void {
+    this.paymentsService
+      .sendReceipt(paymentId, false)
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: (response) => {
+          if (!this.paymentSuccessData?.receiptStatus) return;
+          this.paymentSuccessData = {
+            ...this.paymentSuccessData,
+            receiptStatus: {
+              ...this.paymentSuccessData.receiptStatus,
+              state: response.status,
+              receiptEmailId: response.receipt_email_id ?? null,
+              errorMessage: undefined
+            }
+          };
+          this.cdr.markForCheck();
+        },
+        error: (err: unknown) => {
+          if (!this.paymentSuccessData?.receiptStatus) return;
+          const anyErr = err as { code?: string; message?: string; details?: Record<string, unknown> };
+          const code = anyErr?.code ?? 'INTERNAL_ERROR';
+          const errorMessage = mapReceiptErrorToMessage(code, anyErr?.message);
+
+          let sendAttempts = this.paymentSuccessData.receiptStatus.sendAttempts;
+          if (code === 'RESEND_ERROR' && typeof anyErr?.details?.['current_attempts'] === 'number') {
+            sendAttempts = anyErr.details['current_attempts'] as number;
+          }
+
+          this.paymentSuccessData = {
+            ...this.paymentSuccessData,
+            receiptStatus: {
+              ...this.paymentSuccessData.receiptStatus,
+              state: 'error',
+              errorMessage,
+              sendAttempts
+            }
+          };
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   // ─── Modal de abono ─────────────────────────────────────────────────────────

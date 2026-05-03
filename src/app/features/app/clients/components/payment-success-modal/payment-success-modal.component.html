@@ -37,6 +37,98 @@
 
     </div>
 
+    <!-- ── Receipt email section (only when status = 'paid') ── -->
+    <div
+      *ngIf="receiptStatus"
+      class="receipt-section"
+      role="region"
+      aria-label="Estado del correo de recibo"
+    >
+
+      <!-- SENDING -->
+      <div *ngIf="receiptStatus.state === 'sending'" class="receipt-row receipt-row--sending">
+        <span class="receipt-spinner" aria-hidden="true"></span>
+        <span class="receipt-text">Enviando correo a <strong>{{ receiptStatus.clientEmail }}</strong>...</span>
+      </div>
+
+      <!-- SENT -->
+      <div *ngIf="receiptStatus.state === 'sent'" class="receipt-row receipt-row--sent">
+        <svg class="receipt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5"/>
+        </svg>
+        <span class="receipt-text">Correo enviado a <strong>{{ receiptStatus.clientEmail }}</strong></span>
+      </div>
+
+      <!-- ALREADY SENT -->
+      <div *ngIf="receiptStatus.state === 'already_sent'" class="receipt-row receipt-row--already-sent">
+        <svg class="receipt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+        <span class="receipt-text">Correo ya fue enviado anteriormente</span>
+      </div>
+
+      <!-- ERROR -->
+      <div *ngIf="receiptStatus.state === 'error'" class="receipt-row receipt-row--error">
+        <svg class="receipt-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        <span class="receipt-text">Correo no enviado: {{ receiptStatus.errorMessage }}</span>
+      </div>
+
+      <!-- ACTION BUTTONS (only for already_sent and error states) -->
+
+      <!-- Reenviar: force_resend = true, for already_sent state -->
+      <button
+        *ngIf="receiptStatus.state === 'already_sent'"
+        type="button"
+        class="receipt-action-btn receipt-action-btn--secondary"
+        (click)="onForceResendReceipt()"
+        [disabled]="isResendingReceipt"
+        aria-label="Reenviar correo de recibo"
+      >
+        <ng-container *ngIf="!isResendingReceipt; else btnSpinner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+          </svg>
+          Reenviar
+        </ng-container>
+        <ng-template #btnSpinner>
+          <span class="receipt-spinner receipt-spinner--sm" aria-hidden="true"></span>
+          Enviando...
+        </ng-template>
+      </button>
+
+      <!-- Reintentar: force_resend = false, for error state -->
+      <button
+        *ngIf="receiptStatus.state === 'error'"
+        type="button"
+        class="receipt-action-btn receipt-action-btn--danger"
+        (click)="onRetryReceipt()"
+        [disabled]="isResendingReceipt"
+        aria-label="Reintentar envío del correo de recibo"
+      >
+        <ng-container *ngIf="!isResendingReceipt; else retrySpinner">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/>
+          </svg>
+          Reintentar
+        </ng-container>
+        <ng-template #retrySpinner>
+          <span class="receipt-spinner receipt-spinner--sm" aria-hidden="true"></span>
+          Enviando...
+        </ng-template>
+      </button>
+
+      <!-- High-attempts warning band (>= 3 attempts) -->
+      <div *ngIf="showHighAttemptsWarning" class="receipt-attempts-warning" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        Ya se han realizado {{ receiptStatus.sendAttempts }} envíos para este recibo
+      </div>
+
+    </div>
+
     <!-- ── CTA ── -->
     <button
       type="button"

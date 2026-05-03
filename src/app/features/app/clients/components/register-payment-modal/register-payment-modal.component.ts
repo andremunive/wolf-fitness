@@ -28,6 +28,7 @@ import { PaymentsService } from '../../services/payments.service';
 export interface RegisterPaymentSuccess {
   response: RegisterPaymentResponse;
   clientName: string;
+  clientEmail: string;
 }
 
 @Component({
@@ -269,7 +270,11 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
       )
       .subscribe({
         next: (response) => {
-          this.paymentRegistered.emit({ response, clientName: this.client.fullName });
+          this.paymentRegistered.emit({
+            response,
+            clientName: this.client.fullName,
+            clientEmail: this.client.email
+          });
         },
         error: (err: EdgeFunctionError | unknown) => {
           const efErr = err as EdgeFunctionError;

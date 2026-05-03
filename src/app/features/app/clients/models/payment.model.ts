@@ -87,6 +87,48 @@ export const PAYMENT_STATUS_LABELS: Record<PaymentStatus, string> = {
   voided: 'Anulado'
 };
 
+// ─── Receipt email DTOs (send-payment-receipt EF contract) ───────────────────
+
+export type SendReceiptStatus = 'sent' | 'already_sent';
+
+/** Successful response from send-payment-receipt. */
+export interface SendReceiptSuccess {
+  status: SendReceiptStatus;
+  /** Resend ID of the email. Present only when status = 'sent'. */
+  receipt_email_id?: string | null;
+}
+
+/** Structured error payload from send-payment-receipt. */
+export interface SendReceiptErrorPayload {
+  code: string;
+  message: string;
+  details: Record<string, unknown>;
+}
+
+/**
+ * Maps a send-receipt error code to a human-readable message for the admin.
+ * Pure function — has no side effects.
+ */
+export function mapReceiptErrorToMessage(
+  code: string,
+  fallbackMessage?: string
+): string {
+  switch (code) {
+    case 'RESEND_ERROR':
+    case 'RESEND_AUTH_ERROR':
+    case 'RESEND_RATE_LIMIT':
+      return 'Servicio de correo temporalmente no disponible';
+    case 'LOCK_CONTENTION':
+      return 'Otro proceso está enviando este recibo, espera unos segundos y reintenta';
+    case 'PAYMENT_NOT_FOUND_OR_NOT_PAID':
+      return 'El pago no está en estado válido para enviar recibo';
+    case 'INTERNAL_ERROR':
+    case 'CLIENT_PROFILE_NOT_FOUND':
+    default:
+      return fallbackMessage ?? 'Error inesperado al enviar correo';
+  }
+}
+
 // ─── Error code → human-readable message mapper ───────────────────────────────
 
 export function mapPaymentErrorToMessage(

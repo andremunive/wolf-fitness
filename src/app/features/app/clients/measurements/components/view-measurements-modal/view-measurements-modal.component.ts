@@ -16,6 +16,7 @@ import { ClientMeasurement } from 'src/app/core/types/supabase';
 import { MeasurementsService } from '../../services/measurements.service';
 import { formatDateOnly } from 'src/app/shared/utils/date.utils';
 import { FIELD_LABELS, FIELD_UNITS } from '../register-measurement-modal/register-measurement-modal.component';
+import { MeasurementShareData } from '../../models/measurement-share.model';
 
 type ViewMode = 'list' | 'detail';
 
@@ -42,6 +43,9 @@ export class ViewMeasurementsModalComponent implements OnInit, OnDestroy {
   totalCount = 0;
 
   selectedMeasurement: ClientMeasurement | null = null;
+
+  /** Non-null while the share modal is open. Controls *ngIf in the template. */
+  shareData: MeasurementShareData | null = null;
 
   readonly fieldLabels = FIELD_LABELS;
   readonly fieldUnits = FIELD_UNITS;
@@ -131,6 +135,25 @@ export class ViewMeasurementsModalComponent implements OnInit, OnDestroy {
   backToList(): void {
     this.viewMode = 'list';
     this.selectedMeasurement = null;
+    this.cdr.markForCheck();
+  }
+
+  // ─── Share flow ───────────────────────────────────────────────────────────────
+
+  openShare(): void {
+    if (!this.selectedMeasurement) return;
+    this.shareData = {
+      mode: 'single',
+      clientName: this.client.fullName,
+      clientEmail: this.client.email,
+      measurementDateLabel: this.formatDate(this.selectedMeasurement.measured_at),
+      payload: { mode: 'single', measurement_id: this.selectedMeasurement.id }
+    };
+    this.cdr.markForCheck();
+  }
+
+  closeShare(): void {
+    this.shareData = null;
     this.cdr.markForCheck();
   }
 

@@ -1,9 +1,83 @@
 import { Injectable } from '@angular/core';
-import { from, Observable } from 'rxjs';
-import { catchError, map } from 'rxjs/operators';
+import { from, Observable, throwError } from 'rxjs';
+import { catchError, map, switchMap } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
 import { ClientMeasurement, ClientMeasurementInsert } from 'src/app/core/types/supabase';
+import {
+  SendMeasurementsSharePayload,
+  SendShareSuccess,
+  ShareErrorPayload
+} from '../models/measurement-share.model';
+
+// ─── Edge Function error helpers (local copy — not extracted to core/) ────────
+
+/**
+ * Shape of the raw error body returned by all Edge Functions.
+ * { error: { code, message, details } }
+ */
+interface EfErrorBody {
+  error: ShareErrorPayload;
+}
+
+/**
+ * Asynchronous error extractor for Edge Function errors.
+ *
+ * Why async: FunctionsHttpError carries the raw fetch Response in `context`.
+ * Reading the body requires `await response.json()`, so this helper is a
+ * Promise that integrates into RxJS via `from(extractEfErrorAsync(...))`.
+ *
+ * Duplicated from PaymentsService intentionally — see CLAUDE.md §10.
+ */
+async function extractEfErrorAsync(rawError: unknown): Promise<ShareErrorPayload> {
+  if (rawError && typeof rawError === 'object') {
+    const anyErr = rawError as Record<string, unknown>;
+
+    // FunctionsHttpError: context is a native fetch Response object.
+    if (anyErr['context'] instanceof Response) {
+      try {
+        const body = await (anyErr['context'] as Response).clone().json() as EfErrorBody;
+        if (body?.error && typeof body.error === 'object') {
+          return body.error as ShareErrorPayload;
+        }
+      } catch {
+        // Body was not valid JSON — fall through.
+      }
+    }
+
+    // Older SDK versions: context was already a parsed object.
+    if (anyErr['context'] && typeof anyErr['context'] === 'object') {
+      const ctx = anyErr['context'] as Record<string, unknown>;
+      if (ctx['error'] && typeof ctx['error'] === 'object') {
+        return ctx['error'] as ShareErrorPayload;
+      }
+    }
+
+    // Sometimes the SDK surfaces the body directly on the error object.
+    if (anyErr['error'] && typeof anyErr['error'] === 'object') {
+      return anyErr['error'] as ShareErrorPayload;
+    }
+
+    // Last resort: try to parse the message field as JSON.
+    if (typeof anyErr['message'] === 'string') {
+      try {
+        const parsed = JSON.parse(anyErr['message']) as EfErrorBody;
+        if (parsed?.error) return parsed.error;
+      } catch {
+        // Not JSON — fall through.
+      }
+    }
+  }
+
+  return { code: 'INTERNAL_ERROR', message: 'Unknown error', details: {} };
+}
+
+/** Wraps extractEfErrorAsync in an Observable that immediately throws the structured error. */
+function efError$(rawError: unknown): Observable<never> {
+  return from(extractEfErrorAsync(rawError)).pipe(
+    switchMap((efErr) => throwError(() => efErr))
+  );
+}
 
 @Injectable({ providedIn: 'root' })
 export class MeasurementsService {
@@ -139,6 +213,41 @@ export class MeasurementsService {
       catchError((err) => {
         console.error('[MeasurementsService] register error:', err);
         throw err;
+      })
+    );
+  }
+
+  /**
+   * Calls send-measurements-share EF and returns an Observable that emits
+   * the success payload or throws a structured ShareErrorPayload.
+   *
+   * Stateless: each call always attempts to send the email. The UI must
+   * prevent double-invocation via the isSending guard in the modal component.
+   */
+  sendMeasurementsShare(payload: SendMeasurementsSharePayload): Observable<SendShareSuccess> {
+    return from(
+      this.supabase.client.functions.invoke<SendShareSuccess>(
+        'send-measurements-share',
+        { body: payload }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) return efError$(error);
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Empty response from send-measurements-share',
+            details: {}
+          }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        // If already a structured EF error, re-throw as-is.
+        if (err && typeof err === 'object' && 'code' in err) {
+          return throwError(() => err);
+        }
+        return efError$(err);
       })
     );
   }

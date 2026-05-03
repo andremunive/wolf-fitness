@@ -1,5 +1,5 @@
 // Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras medidas_08_fix_search_path.
+// Refleja el estado de la base tras add_receipt_tracking_to_payments + create_rpc_claim_receipt_send.
 // NO editar a mano. Regenerar cuando el esquema cambie.
 
 export type Json =
@@ -726,6 +726,10 @@ export type Database = {
           period_start: string
           plan_price_id: string
           plan_total_cop: number
+          receipt_email_id: string | null
+          receipt_last_error: string | null
+          receipt_send_attempts: number
+          receipt_sent_at: string | null
           reception_date: string
           reported_date: string
           status: Database["public"]["Enums"]["payment_status"]
@@ -748,6 +752,10 @@ export type Database = {
           period_start: string
           plan_price_id: string
           plan_total_cop: number
+          receipt_email_id?: string | null
+          receipt_last_error?: string | null
+          receipt_send_attempts?: number
+          receipt_sent_at?: string | null
           reception_date: string
           reported_date: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -770,6 +778,10 @@ export type Database = {
           period_start?: string
           plan_price_id?: string
           plan_total_cop?: number
+          receipt_email_id?: string | null
+          receipt_last_error?: string | null
+          receipt_send_attempts?: number
+          receipt_sent_at?: string | null
           reception_date?: string
           reported_date?: string
           status?: Database["public"]["Enums"]["payment_status"]
@@ -1430,6 +1442,10 @@ export type Database = {
           p_notes?: string
         }
         Returns: undefined
+      }
+      claim_receipt_send: {
+        Args: { p_force_resend?: boolean; p_payment_id: string }
+        Returns: Json
       }
       compute_trainer_month_payments: {
         Args: {

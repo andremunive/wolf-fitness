@@ -16,6 +16,7 @@ import { ClientMeasurement } from 'src/app/core/types/supabase';
 import { MeasurementsService } from '../../services/measurements.service';
 import { formatDateOnly } from 'src/app/shared/utils/date.utils';
 import { FIELD_LABELS } from '../register-measurement-modal/register-measurement-modal.component';
+import { MeasurementShareData } from '../../models/measurement-share.model';
 
 type CompareViewMode = 'list' | 'compare';
 
@@ -94,6 +95,9 @@ export class CompareMeasurementsModalComponent implements OnInit, OnDestroy {
   compareRows: CompareRow[] = [];
   olderMeasurement: ClientMeasurement | null = null;
   newerMeasurement: ClientMeasurement | null = null;
+
+  /** Non-null while the share modal is open. Controls *ngIf in the template. */
+  shareData: MeasurementShareData | null = null;
 
   constructor(
     private readonly measurementsService: MeasurementsService,
@@ -197,6 +201,35 @@ export class CompareMeasurementsModalComponent implements OnInit, OnDestroy {
           this.loadError = true;
         }
       });
+  }
+
+  // ─── Share flow ───────────────────────────────────────────────────────────────
+
+  openShare(): void {
+    if (!this.olderMeasurement || !this.newerMeasurement) return;
+
+    // older = measurement_id_a (the earlier date), newer = measurement_id_b.
+    // Delta in the email is calculated as B - A, so B should be the newer value
+    // to produce positive deltas for gains — consistent with the compare view.
+    const dateLabel = `${this.formatDate(this.olderMeasurement.measured_at)} → ${this.formatDate(this.newerMeasurement.measured_at)}`;
+
+    this.shareData = {
+      mode: 'compare',
+      clientName: this.client.fullName,
+      clientEmail: this.client.email,
+      measurementDateLabel: dateLabel,
+      payload: {
+        mode: 'compare',
+        measurement_id_a: this.olderMeasurement.id,
+        measurement_id_b: this.newerMeasurement.id
+      }
+    };
+    this.cdr.markForCheck();
+  }
+
+  closeShare(): void {
+    this.shareData = null;
+    this.cdr.markForCheck();
   }
 
   backToList(): void {
