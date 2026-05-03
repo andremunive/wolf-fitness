@@ -22,6 +22,7 @@ export class TrainerCardComponent {
   @Input() trainer!: Trainer;
   @Output() editRequested = new EventEmitter<Trainer>();
   @Output() toggleActiveRequested = new EventEmitter<{ trainer: Trainer; isActive: boolean }>();
+  @Output() resetPasswordRequested = new EventEmitter<Trainer>();
 
   get initials(): string {
     return this.trainer.fullName

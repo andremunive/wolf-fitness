@@ -119,6 +119,7 @@
             [trainer]="trainer"
             (editRequested)="onEditRequested($event)"
             (toggleActiveRequested)="onToggleActiveRequested($event)"
+            (resetPasswordRequested)="onResetPasswordRequested($event)"
           ></app-trainer-card>
         </div>
 
@@ -128,6 +129,7 @@
             [trainers]="state.trainers"
             (editRequested)="onEditRequested($event)"
             (toggleActiveRequested)="onToggleActiveRequested($event)"
+            (resetPasswordRequested)="onResetPasswordRequested($event)"
           ></app-trainers-table>
         </div>
 
@@ -168,6 +170,7 @@
 <app-trainer-created-modal
   *ngIf="wizardResult"
   [result]="wizardResult"
+  [mode]="wizardResultMode"
   (dismissed)="dismissSuccessModal()"
 ></app-trainer-created-modal>
 

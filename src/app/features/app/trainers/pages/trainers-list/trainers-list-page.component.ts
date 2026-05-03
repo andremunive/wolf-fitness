@@ -30,7 +30,12 @@ import { Trainer, TrainersPage } from '../../models/trainer.model';
 import { TrainersService } from '../../services/trainers.service';
 import { TrainersPaginationState } from '../../components/trainers-pagination/trainers-pagination.component';
 import { TrainerFiltersValue } from '../../components/trainers-filters/trainers-filters.component';
-import { CreateTrainerResult, TrainerDetailFull } from '../../models/trainer.model';
+import {
+  CreateTrainerResult,
+  ResetTrainerPasswordResult,
+  TrainerDetailFull
+} from '../../models/trainer.model';
+import { TrainerCreatedModalMode } from '../../components/trainer-created-modal/trainer-created-modal.component';
 
 interface PageState {
   page: number;
@@ -81,10 +86,12 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
   // ─── Modales ────────────────────────────────────────────────────────────────
 
   isWizardOpen = false;
-  wizardResult: CreateTrainerResult | null = null;
+  wizardResult: CreateTrainerResult | ResetTrainerPasswordResult | null = null;
+  wizardResultMode: TrainerCreatedModalMode = 'created';
 
   editingTrainer: TrainerDetailFull | null = null;
   isLoadingEditTrainer = false;
+  isResettingPassword = false;
 
   // ─── Stream principal de la vista ──────────────────────────────────────────
 
@@ -203,12 +210,14 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
   onTrainerCreated(result: CreateTrainerResult): void {
     this.isWizardOpen = false;
     this.wizardResult = result;
+    this.wizardResultMode = 'created';
     this.refreshTrigger$.next();
     this.cdr.markForCheck();
   }
 
   dismissSuccessModal(): void {
     this.wizardResult = null;
+    this.wizardResultMode = 'created';
     this.cdr.markForCheck();
   }
 
@@ -244,6 +253,40 @@ export class TrainersListPageComponent implements OnInit, OnDestroy {
 
   onTrainerUpdated(): void {
     this.refreshTrigger$.next();
+  }
+
+  // ─── Restablecer contraseña ─────────────────────────────────────────────────
+
+  onResetPasswordRequested(trainer: Trainer): void {
+    if (this.isResettingPassword) return;
+    this.isResettingPassword = true;
+    this.loader.show();
+    this.cdr.markForCheck();
+
+    this.trainersService
+      .resetTrainerPassword(trainer.id)
+      .pipe(
+        finalize(() => {
+          this.isResettingPassword = false;
+          this.loader.hide();
+          this.cdr.markForCheck();
+        }),
+        takeUntil(this.destroy$)
+      )
+      .subscribe({
+        next: (result) => {
+          this.wizardResult = result;
+          this.wizardResultMode = 'reset';
+          this.cdr.markForCheck();
+        },
+        error: (err) => {
+          console.error('[TrainersListPage] Error al restablecer contraseña:', err);
+          window.alert(
+            `No se pudo restablecer la contraseña de ${trainer.fullName}. ` +
+              `Intenta nuevamente; si el problema persiste, contacta a soporte.`
+          );
+        }
+      });
   }
 
   // ─── Activar / Desactivar ───────────────────────────────────────────────────

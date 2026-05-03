@@ -49,6 +49,7 @@ export class TrainersTableComponent {
   @Input() trainers: Trainer[] = [];
   @Output() editRequested = new EventEmitter<Trainer>();
   @Output() toggleActiveRequested = new EventEmitter<{ trainer: Trainer; isActive: boolean }>();
+  @Output() resetPasswordRequested = new EventEmitter<Trainer>();
 
   getQ1Badges(trainer: Trainer): QuincenaBadge[] {
     return toQuincenaBadges(trainer.quincenaCounts.q1);

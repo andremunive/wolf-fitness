@@ -6,6 +6,7 @@ import { SupabaseService } from 'src/app/core/services/supabase.service';
 import {
   CreateTrainerPayload,
   CreateTrainerResult,
+  ResetTrainerPasswordResult,
   Trainer,
   TrainerDetailFull,
   TrainerQuincenaCounts,
@@ -259,5 +260,23 @@ export class TrainersService {
       trainer_id: trainerId,
       profile: { is_active: isActive }
     });
+  }
+
+  resetTrainerPassword(trainerId: string): Observable<ResetTrainerPasswordResult> {
+    return from(
+      this.supabase.client.functions.invoke<ResetTrainerPasswordResult>('reset_trainer_password', {
+        body: { trainer_id: trainerId }
+      })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        if (!data) throw new Error('Respuesta vacía del servidor');
+        return data;
+      }),
+      catchError((err) => {
+        console.error('[TrainersService] resetTrainerPassword error:', err);
+        throw err;
+      })
+    );
   }
 }

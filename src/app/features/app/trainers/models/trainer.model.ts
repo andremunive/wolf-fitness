@@ -74,6 +74,12 @@ export interface CreateTrainerResult {
   temporary_password: string;
 }
 
+export interface ResetTrainerPasswordPayload {
+  trainer_id: string;
+}
+
+export type ResetTrainerPasswordResult = CreateTrainerResult;
+
 export interface UpdateTrainerPayload {
   trainer_id: string;
   profile?: {

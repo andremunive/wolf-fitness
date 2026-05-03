@@ -28,6 +28,7 @@ export class TrainerActionsMenuComponent {
 
   @Output() editRequested = new EventEmitter<Trainer>();
   @Output() toggleActiveRequested = new EventEmitter<{ trainer: Trainer; isActive: boolean }>();
+  @Output() resetPasswordRequested = new EventEmitter<Trainer>();
 
   isOpen = false;
   /** Fixed-position style for the dropdown so it escapes overflow:auto containers. */
@@ -79,6 +80,18 @@ export class TrainerActionsMenuComponent {
     );
     if (confirmed) {
       this.toggleActiveRequested.emit({ trainer: this.trainer, isActive: newActiveState });
+    }
+    this.close();
+  }
+
+  onResetPassword(): void {
+    const confirmed = window.confirm(
+      `¿Restablecer la contraseña de ${this.trainer.fullName}? ` +
+        `Se generará una nueva contraseña temporal y la actual dejará de funcionar. ` +
+        `El entrenador deberá cambiarla en su próximo inicio de sesión.`
+    );
+    if (confirmed) {
+      this.resetPasswordRequested.emit(this.trainer);
     }
     this.close();
   }

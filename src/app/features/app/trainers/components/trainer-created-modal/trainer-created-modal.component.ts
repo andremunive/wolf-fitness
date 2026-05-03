@@ -9,6 +9,8 @@ import {
 
 import { CreateTrainerResult } from '../../models/trainer.model';
 
+export type TrainerCreatedModalMode = 'created' | 'reset';
+
 @Component({
   selector: 'app-trainer-created-modal',
   templateUrl: './trainer-created-modal.component.html',
@@ -17,7 +19,18 @@ import { CreateTrainerResult } from '../../models/trainer.model';
 })
 export class TrainerCreatedModalComponent {
   @Input() result!: CreateTrainerResult;
+  @Input() mode: TrainerCreatedModalMode = 'created';
   @Output() dismissed = new EventEmitter<void>();
+
+  get title(): string {
+    return this.mode === 'reset' ? 'Contraseña restablecida' : 'Entrenador registrado';
+  }
+
+  get subtitle(): string {
+    return this.mode === 'reset'
+      ? 'Entrega esta nueva contraseña al entrenador. La anterior dejó de funcionar y deberá cambiarla en su próximo inicio de sesión.'
+      : 'Entrega esta contraseña temporal al entrenador. Deberá cambiarla en su primer inicio de sesión.';
+  }
 
   isCopied = false;
   copyError = false;
