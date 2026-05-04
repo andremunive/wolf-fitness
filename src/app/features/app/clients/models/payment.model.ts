@@ -185,6 +185,11 @@ export function mapPaymentErrorToMessage(
       const balance = formatCop(details['balance_cop']);
       return `El abono (${amount}) supera el saldo pendiente (${balance}).`;
     }
+    case 'DISCOUNT_EXCEEDS_PLAN_TOTAL': {
+      const discount = formatCop(details['discount_amount_cop']);
+      const total = formatCop(details['plan_total_cop']);
+      return `El descuento (${discount}) supera el total del plan (${total}).`;
+    }
     case 'INTERNAL_ERROR':
       return 'Ocurrió un error inesperado. Intenta de nuevo.';
     default:

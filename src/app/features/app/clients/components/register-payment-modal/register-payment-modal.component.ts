@@ -121,7 +121,10 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
 
   get discountAmountCop(): number {
     if (!this.selectedDiscount) return 0;
-    return Math.round(this.planTotalCop * (this.selectedDiscount.percentage / 100));
+    if (this.selectedDiscount.value_type === 'fixed') {
+      return this.selectedDiscount.amount_cop ?? 0;
+    }
+    return Math.round(this.planTotalCop * ((this.selectedDiscount.percentage ?? 0) / 100));
   }
 
   get totalToPayCop(): number {
@@ -287,6 +290,26 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
 
   close(): void {
     this.closed.emit();
+  }
+
+  promoDiscounts(discounts: Discount[]): Discount[] {
+    return discounts.filter((d) => d.type === 'promocion');
+  }
+
+  personalDiscounts(discounts: Discount[]): Discount[] {
+    return discounts.filter((d) => d.type === 'personal');
+  }
+
+  /** Formats the option label: "10%" or "$50.000". */
+  formatDiscountOption(d: Discount): string {
+    if (d.value_type === 'fixed') {
+      return new Intl.NumberFormat('es-CO', {
+        style: 'currency',
+        currency: 'COP',
+        maximumFractionDigits: 0
+      }).format(d.amount_cop ?? 0);
+    }
+    return `${d.percentage ?? 0}%`;
   }
 
   trackByDiscountId(_index: number, d: Discount): string {

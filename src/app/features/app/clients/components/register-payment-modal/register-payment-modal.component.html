@@ -28,7 +28,12 @@
       </div>
       <div class="pay-summary__row" *ngIf="selectedDiscount">
         <span class="pay-summary__label">
-          Descuento ({{ selectedDiscount.percentage }}% — {{ selectedDiscount.code }})
+          <ng-container *ngIf="selectedDiscount.value_type === 'percentage'">
+            Descuento ({{ selectedDiscount.percentage }}% — {{ selectedDiscount.code }})
+          </ng-container>
+          <ng-container *ngIf="selectedDiscount.value_type === 'fixed'">
+            Descuento ({{ formatCop(selectedDiscount.amount_cop ?? 0) }} — {{ selectedDiscount.code }})
+          </ng-container>
         </span>
         <span class="pay-summary__value pay-summary__value--discount">
           − {{ formatCop(discountAmountCop) }}
@@ -150,7 +155,7 @@
           </select>
         </div>
 
-        <!-- discount_code (dropdown of active discounts) -->
+        <!-- discount_code (dropdown of active discounts, grouped by type) -->
         <div class="form-field">
           <label class="form-field__label" for="pay-discount">
             Descuento <span class="form-field__optional">(opcional)</span>
@@ -163,10 +168,23 @@
               (change)="onDiscountCodeChange(discounts)"
             >
               <option value="">Sin descuento</option>
-              <option
-                *ngFor="let d of discounts; trackBy: trackByDiscountId"
-                [value]="d.code"
-              >{{ d.code }}<ng-container *ngIf="d.description"> — {{ d.description }}</ng-container> ({{ d.percentage }}%)</option>
+
+              <!-- Group: Promociones -->
+              <optgroup label="Promociones" *ngIf="promoDiscounts(discounts).length > 0">
+                <option
+                  *ngFor="let d of promoDiscounts(discounts); trackBy: trackByDiscountId"
+                  [value]="d.code"
+                >{{ d.code }} — {{ formatDiscountOption(d) }}</option>
+              </optgroup>
+
+              <!-- Group: Personales -->
+              <optgroup label="Personales" *ngIf="personalDiscounts(discounts).length > 0">
+                <option
+                  *ngFor="let d of personalDiscounts(discounts); trackBy: trackByDiscountId"
+                  [value]="d.code"
+                >{{ d.code }} — {{ formatDiscountOption(d) }}</option>
+              </optgroup>
+
             </select>
           </ng-container>
           <ng-template #loadingDiscounts>

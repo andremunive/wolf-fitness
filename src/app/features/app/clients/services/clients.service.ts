@@ -1,6 +1,6 @@
 import { Injectable } from '@angular/core';
-import { from, Observable } from 'rxjs';
-import { catchError, map, switchMap } from 'rxjs/operators';
+import { defer, from, Observable } from 'rxjs';
+import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
 import { Database, Gender } from 'src/app/core/types/supabase';
@@ -405,18 +405,33 @@ export class ClientsService {
       );
     }
 
+    // p_changed_by / p_assigned_by son columnas uuid de auditoría: pasar
+    // cadena vacía dispara `22P02 invalid input syntax for type uuid`. Resolvemos
+    // el id del usuario autenticado una sola vez y lo reutilizamos en ambas RPC.
+    const authedUserId$ = defer(() =>
+      from(this.supabase.auth.getSession())
+    ).pipe(
+      map(({ data }) => {
+        const id = data.session?.user.id;
+        if (!id) throw new Error('Sesión expirada. Vuelve a iniciar sesión.');
+        return id;
+      }),
+      shareReplay(1)
+    );
+
     // 2. Cambio de plan mediante RPC (el trigger sincroniza clients.plan_id).
-    // p_changed_by se declara como `string` en el tipo generado, pero el RPC
-    // usa auth.uid() internamente; pasamos una cadena vacía que la función ignora.
     if (new_plan_id) {
       steps.push(
-        from(
-          this.supabase.client.rpc('change_client_plan', {
-            p_client_id: client_id,
-            p_new_plan_id: new_plan_id,
-            p_changed_by: ''
-          })
-        ).pipe(
+        authedUserId$.pipe(
+          switchMap((userId) =>
+            from(
+              this.supabase.client.rpc('change_client_plan', {
+                p_client_id: client_id,
+                p_new_plan_id: new_plan_id,
+                p_changed_by: userId
+              })
+            )
+          ),
           map(({ error }) => {
             if (error) throw error;
           })
@@ -426,14 +441,18 @@ export class ClientsService {
 
     // 3. Cambio de trainer mediante RPC.
     if (new_trainer_id !== undefined && new_trainer_id !== null) {
+      const trainerId = new_trainer_id;
       steps.push(
-        from(
-          this.supabase.client.rpc('assign_trainer', {
-            p_client_id: client_id,
-            p_trainer_id: new_trainer_id,
-            p_assigned_by: ''
-          })
-        ).pipe(
+        authedUserId$.pipe(
+          switchMap((userId) =>
+            from(
+              this.supabase.client.rpc('assign_trainer', {
+                p_client_id: client_id,
+                p_trainer_id: trainerId,
+                p_assigned_by: userId
+              })
+            )
+          ),
           map(({ error }) => {
             if (error) throw error;
           })

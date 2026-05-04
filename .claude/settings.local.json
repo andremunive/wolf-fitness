@@ -22,7 +22,9 @@
       "Bash(node -e ' *)",
       "Bash(node -e \"const fs=require\\('fs'\\); const g=fs.readFileSync\\('c:/Users/USUARIO/Documents/Projects/WF/wolf-fitness-gym/src/app/core/types/supabase_generated.ts','utf-8'\\); console.log\\('Lines:',g.split\\('\\\\n'\\).length,'Chars:',g.length\\);\")",
       "Bash(node build_supabase_ts.js)",
-      "Bash(npx ng *)"
+      "Bash(npx ng *)",
+      "mcp__claude_ai_Supabase__list_projects",
+      "mcp__claude_ai_Supabase__list_tables"
     ]
   }
 }

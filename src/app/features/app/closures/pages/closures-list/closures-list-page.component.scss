@@ -189,3 +189,45 @@
   padding: 24px 0;
   text-align: center;
 }
+
+// ─── FAB Descuentos (solo admin) ──────────────────────────────────────────────
+
+.discounts-fab {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: 20px;
+  z-index: 20;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: #228d9f;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(34, 141, 159, 0.4);
+  transition: background 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    background: #1b7281;
+    box-shadow: 0 6px 18px rgba(34, 141, 159, 0.45);
+    transform: scale(1.06);
+  }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 3px;
+  }
+
+  &:active {
+    transform: scale(0.96);
+  }
+
+  &__icon {
+    font-size: 22px;
+    font-weight: 700;
+    line-height: 1;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+}

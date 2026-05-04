@@ -59,8 +59,18 @@ const CORS_HEADERS = {
 const RESEND_API_URL = "https://api.resend.com/emails";
 const FROM_EMAIL = "pagos@wolffitness.co";
 const SUBJECT = "Recibo de pago — Wolf Fitness";
-const LOGO_URL = "https://ndvssqfurxiuczvrjjgt.supabase.co/storage/v1/object/public/brand-assets/logo_completo.png";
+const STORAGE_BASE_URL = "https://ndvssqfurxiuczvrjjgt.supabase.co/storage/v1/object/public/brand-assets";
+const KETTLEBELL_URL = `${STORAGE_BASE_URL}/logo_sin_nombre.png`;
+const WORDMARK_URL = `${STORAGE_BASE_URL}/name.png`;
 const BRAND_COLOR = "#228d9f";
+const DARK_BG = "#0B0B0F";
+const DARK_BG_OUTER = "#1a1a1f";
+const LIGHT_BG = "#F7F7F5";
+const CARD_BORDER = "#E6E6E2";
+const DASHED_BORDER = "#D8D8D2";
+const CONTACT_EMAIL = "wolffitnessgimnasio@gmail.com";
+const CONTACT_PHONE_DISPLAY = "+57 318 936 7287";
+const CONTACT_PHONE_WHATSAPP = "573189367287";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -99,6 +109,12 @@ function formatDate(isoDate: string): string {
   });
 }
 
+/** Formato corto tipo "03·05·26" usado en la etiqueta del header del recibo */
+function formatDateShort(isoDate: string): string {
+  const [year, month, day] = isoDate.split("-");
+  return `${day}·${month}·${year.slice(-2)}`;
+}
+
 /** Traduce el método de pago al español */
 function translatePaymentMethod(method: string | null): string {
   const map: Record<string, string> = {
@@ -110,143 +126,304 @@ function translatePaymentMethod(method: string | null): string {
   return method ? (map[method] ?? method) : "—";
 }
 
+/** Toma el primer nombre del nombre completo para el saludo */
+function firstName(fullName: string): string {
+  const trimmed = fullName.trim();
+  const space = trimmed.indexOf(" ");
+  return space === -1 ? trimmed : trimmed.slice(0, space);
+}
+
+/** Genera un identificador legible del recibo a partir del UUID del pago */
+function receiptNumber(paymentId: string): string {
+  return paymentId.replace(/-/g, "").slice(-6).toUpperCase();
+}
+
+/** Deriva la etiqueta del plan a partir del valor total (mapeo conocido del negocio) */
+function derivePlanLabel(planTotalCop: number): string {
+  if (planTotalCop === 200000) return "Plan 6 días / semana";
+  if (planTotalCop === 150000) return "Plan 3 días / semana";
+  return "Mensualidad";
+}
+
+/** Escapa texto que se inserta en el HTML para evitar romper el markup */
+function escapeHtml(value: string): string {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // ─── HTML Email Builder ───────────────────────────────────────────────────────
 
 function buildReceiptHtml(
   clientFullName: string,
   p: PaymentData
 ): string {
-  const hasDiscount = p.discount_amount_cop > 0;
-  const discountRow = hasDiscount
+  const safeName = escapeHtml(firstName(clientFullName));
+  const planLabel = escapeHtml(derivePlanLabel(p.plan_total_cop));
+  const periodStart = formatDate(p.period_start);
+  const periodEnd = formatDate(p.period_end);
+  const receptionDate = formatDate(p.reception_date);
+  const receptionDateShort = formatDateShort(p.reception_date);
+  const receiptNo = receiptNumber(p.id);
+  const amountReceived = formatCOP(p.amount_received_cop);
+  const planTotal = formatCOP(p.plan_total_cop);
+  const balance = formatCOP(p.balance_cop);
+  const method = escapeHtml(translatePaymentMethod(p.payment_method));
+  const year = new Date().getFullYear();
+
+  const discountRow = p.discount_amount_cop > 0
     ? `<tr>
-        <td style="padding:6px 0;font-size:14px;color:#555555;">Descuento aplicado</td>
-        <td style="padding:6px 0;font-size:14px;color:#e53e3e;text-align:right;">
-          - ${formatCOP(p.discount_amount_cop)}
-          ${p.discount_percentage_applied != null ? ` (${p.discount_percentage_applied}%)` : ""}
-        </td>
-       </tr>`
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Descuento aplicado</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:#c53030;">
+                        - ${formatCOP(p.discount_amount_cop)}${p.discount_percentage_applied != null ? ` (${p.discount_percentage_applied}%)` : ""}
+                      </td>
+                    </tr>`
     : "";
 
-  return `<!DOCTYPE html>
-<html lang="es">
+  const balanceRow = p.balance_cop > 0
+    ? `<tr>
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Saldo pendiente</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:#c53030;">${balance}</td>
+                    </tr>`
+    : "";
+
+  return `<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>${SUBJECT}</title>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="x-apple-disable-message-reformatting" />
+<meta name="color-scheme" content="light" />
+<meta name="supported-color-schemes" content="light" />
+<title>${SUBJECT}</title>
+<!--[if mso]>
+<noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript>
+<![endif]-->
 </head>
-<body style="margin:0;padding:0;background-color:#f4f4f4;font-family:Arial,Helvetica,sans-serif;">
-  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color:#f4f4f4;">
-    <tr>
-      <td align="center" style="padding:24px 16px;">
+<body style="margin:0;padding:0;background-color:${DARK_BG_OUTER};font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%;">
 
-        <!-- Contenedor principal -->
-        <table border="0" cellpadding="0" cellspacing="0" width="600" style="max-width:600px;background-color:#ffffff;border-radius:8px;overflow:hidden;">
+<!-- Preheader (oculto, aparece como preview en bandeja) -->
+<div style="display:none;max-height:0;overflow:hidden;mso-hide:all;font-size:1px;line-height:1px;color:${DARK_BG_OUTER};">
+  Pago recibido — ${amountReceived}. Tu mensualidad en Wolf Fitness está activa hasta ${periodEnd}.
+</div>
 
-          <!-- Header con logo -->
-          <tr>
-            <td align="center" style="background-color:${BRAND_COLOR};padding:28px 24px;">
-              <img src="${LOGO_URL}" alt="Wolf Fitness" width="160" style="display:block;max-width:160px;height:auto;" />
-            </td>
-          </tr>
+<table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:${DARK_BG_OUTER};">
+  <tr>
+    <td align="center" style="padding:24px 12px;">
 
-          <!-- Título -->
-          <tr>
-            <td style="padding:28px 32px 8px 32px;">
-              <p style="margin:0;font-size:22px;font-weight:bold;color:#1a202c;">Recibo de pago</p>
-              <p style="margin:8px 0 0 0;font-size:15px;color:#555555;">Hola, <strong>${clientFullName}</strong>. Aquí está el comprobante de tu pago.</p>
-            </td>
-          </tr>
+      <table role="presentation" width="600" border="0" cellspacing="0" cellpadding="0" style="width:600px;max-width:600px;background-color:${LIGHT_BG};">
 
-          <!-- Separador -->
-          <tr>
-            <td style="padding:16px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr><td style="border-top:1px solid #e2e8f0;"></td></tr>
-              </table>
-            </td>
-          </tr>
+        <!-- HEADER OSCURO + LOGO -->
+        <tr>
+          <td align="center" bgcolor="${DARK_BG}" style="background-color:${DARK_BG};padding:28px 36px 36px 36px;">
 
-          <!-- Detalle del pago -->
-          <tr>
-            <td style="padding:0 32px 24px 32px;">
-              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td align="left" style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:3px;color:${BRAND_COLOR};font-weight:bold;">
+                  RECIBO &middot; #${receiptNo}
+                </td>
+                <td align="right" style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:3px;color:${BRAND_COLOR};font-weight:bold;">
+                  ${receptionDateShort}
+                </td>
+              </tr>
+            </table>
 
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Fecha de recepción</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1a202c;text-align:right;font-weight:bold;">${formatDate(p.reception_date)}</td>
-                </tr>
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="margin-top:18px;">
+              <tr>
+                <td align="center" style="padding-top:18px;">
+                  <img src="${KETTLEBELL_URL}" width="180" height="180" alt="Wolf Fitness" style="display:block;border:0;outline:none;text-decoration:none;width:180px;max-width:180px;height:auto;" />
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-top:18px;">
+                  <img src="${WORDMARK_URL}" width="260" height="auto" alt="WOLF FITNESS" style="display:block;border:0;outline:none;text-decoration:none;width:260px;max-width:260px;height:auto;" />
+                </td>
+              </tr>
+              <tr>
+                <td align="center" style="padding-top:18px;font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:6px;color:#888888;text-transform:uppercase;">
+                  Unleash &middot; Train &middot; Repeat
+                </td>
+              </tr>
+            </table>
 
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Período cubierto</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1a202c;text-align:right;font-weight:bold;">${formatDate(p.period_start)} — ${formatDate(p.period_end)}</td>
-                </tr>
+          </td>
+        </tr>
 
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Método de pago</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1a202c;text-align:right;font-weight:bold;">${translatePaymentMethod(p.payment_method)}</td>
-                </tr>
+        <!-- BANDA DE CONFIRMACIÓN TURQUESA -->
+        <tr>
+          <td bgcolor="${BRAND_COLOR}" style="background-color:${BRAND_COLOR};padding:20px 36px;">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td width="56" valign="middle" style="width:56px;">
+                  <table role="presentation" width="44" height="44" border="0" cellspacing="0" cellpadding="0" style="background-color:${LIGHT_BG};border-radius:22px;">
+                    <tr>
+                      <td align="center" valign="middle" height="44" style="height:44px;font-family:Helvetica,Arial,sans-serif;font-size:22px;font-weight:bold;color:${DARK_BG};line-height:44px;">
+                        &#10004;
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+                <td valign="middle" style="padding-left:16px;">
+                  <div style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:3px;color:${DARK_BG};font-weight:bold;text-transform:uppercase;">
+                    Pago confirmado
+                  </div>
+                  <div style="font-family:Impact,'Arial Black',Helvetica,sans-serif;font-size:32px;line-height:34px;color:${DARK_BG};letter-spacing:1px;margin-top:4px;text-transform:uppercase;">
+                    ${amountReceived}
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-                <!-- Separador interno -->
-                <tr>
-                  <td colspan="2" style="padding:10px 0;">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                      <tr><td style="border-top:1px dashed #e2e8f0;"></td></tr>
-                    </table>
-                  </td>
-                </tr>
+        <!-- SALUDO -->
+        <tr>
+          <td bgcolor="${LIGHT_BG}" style="background-color:${LIGHT_BG};padding:36px 36px 0 36px;">
+            <h1 style="margin:0;font-family:Impact,'Arial Black',Helvetica,sans-serif;font-weight:normal;font-size:36px;line-height:38px;letter-spacing:1px;color:${DARK_BG};text-transform:uppercase;">
+              ¡A entrenar, ${safeName}!
+            </h1>
+            <p style="margin:14px 0 28px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;line-height:22px;color:#3a3a42;">
+              Tu mensualidad quedó registrada. Aquí tienes el comprobante oficial — te recomendamos guardarlo.
+            </p>
+          </td>
+        </tr>
 
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Valor del plan</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1a202c;text-align:right;">${formatCOP(p.plan_total_cop)}</td>
-                </tr>
+        <!-- CARD DETALLE DEL PLAN -->
+        <tr>
+          <td bgcolor="${LIGHT_BG}" style="background-color:${LIGHT_BG};padding:0 36px;">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#FFFFFF;border:1px solid ${CARD_BORDER};border-radius:14px;">
 
-                ${discountRow}
+              <tr>
+                <td style="padding:24px 24px 18px 24px;border-bottom:2px solid ${DARK_BG};">
+                  <div style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:3px;color:${BRAND_COLOR};font-weight:bold;text-transform:uppercase;">
+                    Plan activo
+                  </div>
+                  <div style="font-family:Impact,'Arial Black',Helvetica,sans-serif;font-size:22px;line-height:24px;letter-spacing:1px;color:${DARK_BG};margin-top:4px;text-transform:uppercase;">
+                    ${planLabel}
+                  </div>
+                </td>
+              </tr>
 
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Valor pagado</td>
-                  <td style="padding:6px 0;font-size:14px;color:#1a202c;text-align:right;font-weight:bold;">${formatCOP(p.amount_received_cop)}</td>
-                </tr>
+              <tr>
+                <td style="padding:20px 24px;border-bottom:1px dashed ${DASHED_BORDER};">
+                  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td align="left" valign="middle" width="45%" style="width:45%;">
+                        <div style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:3px;color:#7a7a82;font-weight:bold;text-transform:uppercase;">
+                          Desde
+                        </div>
+                        <div style="font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;color:${DARK_BG};margin-top:4px;">
+                          ${periodStart}
+                        </div>
+                      </td>
+                      <td align="center" valign="middle" width="10%" style="width:10%;font-family:Helvetica,Arial,sans-serif;font-size:22px;color:${BRAND_COLOR};font-weight:bold;">
+                        &rarr;
+                      </td>
+                      <td align="right" valign="middle" width="45%" style="width:45%;">
+                        <div style="font-family:'Courier New',Courier,monospace;font-size:10px;letter-spacing:3px;color:#7a7a82;font-weight:bold;text-transform:uppercase;">
+                          Hasta
+                        </div>
+                        <div style="font-family:Helvetica,Arial,sans-serif;font-size:16px;font-weight:bold;color:${DARK_BG};margin-top:4px;">
+                          ${periodEnd}
+                        </div>
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-                ${p.balance_cop > 0 ? `
-                <tr>
-                  <td style="padding:6px 0;font-size:14px;color:#555555;">Saldo pendiente</td>
-                  <td style="padding:6px 0;font-size:14px;color:#e53e3e;text-align:right;font-weight:bold;">${formatCOP(p.balance_cop)}</td>
-                </tr>` : ""}
+              <tr>
+                <td style="padding:8px 24px 4px 24px;">
+                  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+                    <tr>
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Fecha de recepción</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:${DARK_BG_OUTER};">${receptionDate}</td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Método</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:${DARK_BG_OUTER};">${method}</td>
+                    </tr>
+                    <tr>
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Valor del plan</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;font-weight:600;color:${DARK_BG_OUTER};">${planTotal}</td>
+                    </tr>
+                    ${discountRow}
+                    <tr>
+                      <td align="left" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:14px;color:#6a6a72;">Valor pagado</td>
+                      <td align="right" style="padding:10px 0;font-family:Helvetica,Arial,sans-serif;font-size:15px;font-weight:bold;color:${DARK_BG};">${amountReceived}</td>
+                    </tr>
+                    ${balanceRow}
+                  </table>
+                </td>
+              </tr>
 
-                <!-- Separador -->
-                <tr>
-                  <td colspan="2" style="padding:10px 0;">
-                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
-                      <tr><td style="border-top:1px solid #e2e8f0;"></td></tr>
-                    </table>
-                  </td>
-                </tr>
+              <tr>
+                <td style="padding:0 24px 24px 24px;">
+                  <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#F4F4F0;border-radius:8px;">
+                    <tr>
+                      <td style="padding:10px 12px;font-family:'Courier New',Courier,monospace;font-size:11px;color:#5a5a62;word-break:break-all;">
+                        <span style="color:${BRAND_COLOR};font-weight:bold;letter-spacing:2px;">ID&nbsp;</span>${p.id}
+                      </td>
+                    </tr>
+                  </table>
+                </td>
+              </tr>
 
-                <!-- ID interno -->
-                <tr>
-                  <td style="padding:6px 0;font-size:12px;color:#a0aec0;">ID del pago</td>
-                  <td style="padding:6px 0;font-size:12px;color:#a0aec0;text-align:right;">${p.id}</td>
-                </tr>
+            </table>
+          </td>
+        </tr>
 
-              </table>
-            </td>
-          </tr>
+        <!-- QUOTE / mensaje motivacional -->
+        <tr>
+          <td bgcolor="${LIGHT_BG}" style="background-color:${LIGHT_BG};padding:28px 36px 32px 36px;">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0" style="background-color:#FFFFFF;border:1px solid ${CARD_BORDER};border-radius:10px;">
+              <tr>
+                <td width="6" bgcolor="${BRAND_COLOR}" style="background-color:${BRAND_COLOR};width:6px;border-top-left-radius:10px;border-bottom-left-radius:10px;">&nbsp;</td>
+                <td style="padding:16px 18px;">
+                  <div style="font-family:Georgia,'Times New Roman',serif;font-style:italic;font-size:15px;line-height:22px;color:${DARK_BG_OUTER};">
+                    "Cada repetición cuenta. Cada mes también."
+                  </div>
+                  <div style="font-family:'Courier New',Courier,monospace;font-size:11px;letter-spacing:1px;color:#7a7a82;margin-top:6px;">
+                    — Equipo Wolf Fitness
+                  </div>
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-          <!-- Footer -->
-          <tr>
-            <td style="background-color:#f7fafc;padding:20px 32px;border-top:1px solid #e2e8f0;">
-              <p style="margin:0;font-size:13px;color:#718096;text-align:center;">
-                Si tienes alguna duda, contáctanos al gimnasio.
-              </p>
-            </td>
-          </tr>
+        <!-- FOOTER NEGRO -->
+        <tr>
+          <td bgcolor="${DARK_BG}" style="background-color:${DARK_BG};padding:30px 36px;">
+            <table role="presentation" width="100%" border="0" cellspacing="0" cellpadding="0">
+              <tr>
+                <td style="font-family:Helvetica,Arial,sans-serif;font-size:13px;line-height:20px;color:#cccccc;padding-bottom:16px;">
+                  ¿Dudas con tu pago o tu plan?<br />
+                  Escríbenos a
+                  <a href="mailto:${CONTACT_EMAIL}" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600;">${CONTACT_EMAIL}</a>
+                  o por WhatsApp al
+                  <a href="https://wa.me/${CONTACT_PHONE_WHATSAPP}" style="color:${BRAND_COLOR};text-decoration:none;font-weight:600;">${CONTACT_PHONE_DISPLAY}</a>.
+                </td>
+              </tr>
+              <tr>
+                <td style="border-top:1px solid #2a2a30;padding-top:14px;font-family:'Courier New',Courier,monospace;font-size:11px;line-height:18px;color:#666666;">
+                  Wolf Fitness<br />
+                  © ${year} &middot; Este es un comprobante automático, no respondas a este correo.
+                </td>
+              </tr>
+            </table>
+          </td>
+        </tr>
 
-        </table>
-        <!-- Fin contenedor principal -->
+      </table>
 
-      </td>
-    </tr>
-  </table>
+    </td>
+  </tr>
+</table>
+
 </body>
 </html>`;
 }

@@ -1,6 +1,7 @@
 // Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras add_receipt_tracking_to_payments + create_rpc_claim_receipt_send.
+// Refleja el estado de la base tras discounts_v2_types_and_personal_closure + claim_receipt_send_add_discount_type_applied.
 // NO editar a mano. Regenerar cuando el esquema cambie.
+// IMPORTANTE: tras regenerar, re-agregar el bloque de aliases al final del archivo.
 
 export type Json =
   | string
@@ -441,34 +442,43 @@ export type Database = {
       }
       discounts: {
         Row: {
+          amount_cop: number | null
           code: string
           created_at: string
           created_by: string | null
           description: string | null
           id: string
           is_active: boolean
-          percentage: number
+          percentage: number | null
+          type: Database["public"]["Enums"]["discount_type"]
           updated_at: string
+          value_type: Database["public"]["Enums"]["discount_value_type"]
         }
         Insert: {
+          amount_cop?: number | null
           code: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
-          percentage: number
+          percentage?: number | null
+          type: Database["public"]["Enums"]["discount_type"]
           updated_at?: string
+          value_type: Database["public"]["Enums"]["discount_value_type"]
         }
         Update: {
+          amount_cop?: number | null
           code?: string
           created_at?: string
           created_by?: string | null
           description?: string | null
           id?: string
           is_active?: boolean
-          percentage?: number
+          percentage?: number | null
+          type?: Database["public"]["Enums"]["discount_type"]
           updated_at?: string
+          value_type?: Database["public"]["Enums"]["discount_value_type"]
         }
         Relationships: [
           {
@@ -719,6 +729,9 @@ export type Database = {
           discount_amount_cop: number
           discount_id: string | null
           discount_percentage_applied: number | null
+          discount_type_applied:
+            | Database["public"]["Enums"]["discount_type"]
+            | null
           id: string
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
@@ -745,6 +758,9 @@ export type Database = {
           discount_amount_cop?: number
           discount_id?: string | null
           discount_percentage_applied?: number | null
+          discount_type_applied?:
+            | Database["public"]["Enums"]["discount_type"]
+            | null
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
@@ -771,6 +787,9 @@ export type Database = {
           discount_amount_cop?: number
           discount_id?: string | null
           discount_percentage_applied?: number | null
+          discount_type_applied?:
+            | Database["public"]["Enums"]["discount_type"]
+            | null
           id?: string
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
@@ -1179,6 +1198,7 @@ export type Database = {
           payment_date: string | null
           payment_method: Database["public"]["Enums"]["payment_method"] | null
           payment_notes: string | null
+          personal_discounts_total_cop: number
           quincena: Database["public"]["Enums"]["closure_quincena"]
           reopened_at: string | null
           reopened_by: string | null
@@ -1206,6 +1226,7 @@ export type Database = {
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_notes?: string | null
+          personal_discounts_total_cop?: number
           quincena: Database["public"]["Enums"]["closure_quincena"]
           reopened_at?: string | null
           reopened_by?: string | null
@@ -1233,6 +1254,7 @@ export type Database = {
           payment_date?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"] | null
           payment_notes?: string | null
+          personal_discounts_total_cop?: number
           quincena?: Database["public"]["Enums"]["closure_quincena"]
           reopened_at?: string | null
           reopened_by?: string | null
@@ -1447,6 +1469,14 @@ export type Database = {
         Args: { p_force_resend?: boolean; p_payment_id: string }
         Returns: Json
       }
+      compute_personal_discounts_for_closure: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_trainer_id: string
+        }
+        Returns: number
+      }
       compute_trainer_month_payments: {
         Args: {
           p_month_end: string
@@ -1533,6 +1563,8 @@ export type Database = {
       client_status: "active" | "inactive" | "suspended" | "overdue"
       closure_quincena: "q1" | "q2"
       closure_status: "open" | "closed" | "paid"
+      discount_type: "promocion" | "personal"
+      discount_value_type: "percentage" | "fixed"
       document_type: "cc" | "ce" | "ti" | "pa" | "nit"
       gender: "male" | "female"
       payment_method: "cash" | "transfer" | "nequi" | "other"
@@ -1692,6 +1724,8 @@ export const Constants = {
       client_status: ["active", "inactive", "suspended", "overdue"],
       closure_quincena: ["q1", "q2"],
       closure_status: ["open", "closed", "paid"],
+      discount_type: ["promocion", "personal"],
+      discount_value_type: ["percentage", "fixed"],
       document_type: ["cc", "ce", "ti", "pa", "nit"],
       gender: ["male", "female"],
       payment_method: ["cash", "transfer", "nequi", "other"],
@@ -1790,6 +1824,8 @@ export type PaymentInstallmentUpdate = Database["public"]["Tables"]["payment_ins
 export type Discount = Database["public"]["Tables"]["discounts"]["Row"]
 export type DiscountInsert = Database["public"]["Tables"]["discounts"]["Insert"]
 export type DiscountUpdate = Database["public"]["Tables"]["discounts"]["Update"]
+export type DiscountType = Database["public"]["Enums"]["discount_type"]
+export type DiscountValueType = Database["public"]["Enums"]["discount_value_type"]
 
 // v_clients_with_payment_status
 export type ClientWithPaymentStatus = Database["public"]["Views"]["v_clients_with_payment_status"]["Row"]

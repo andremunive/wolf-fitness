@@ -242,7 +242,7 @@ export class PaymentsService {
     return from(
       this.supabase.client
         .from('discounts')
-        .select('id, code, description, percentage, is_active, created_by, created_at, updated_at')
+        .select('id, code, description, type, value_type, percentage, amount_cop, is_active, created_by, created_at, updated_at')
         .eq('is_active', true)
         .order('code', { ascending: true })
     ).pipe(

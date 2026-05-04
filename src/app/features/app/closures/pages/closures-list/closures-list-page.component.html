@@ -119,6 +119,17 @@
       ></app-closure-detail-modal>
     </ng-container>
 
+    <!-- ── FAB descuentos (solo admin) ── -->
+    <a
+      *ngIf="isAdmin"
+      routerLink="/app/descuentos"
+      class="discounts-fab"
+      aria-label="Ir a descuentos"
+      title="Descuentos"
+    >
+      <span class="discounts-fab__icon" aria-hidden="true">$</span>
+    </a>
+
   </ng-container>
 
 </div>
