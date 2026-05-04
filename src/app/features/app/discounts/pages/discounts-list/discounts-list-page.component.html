@@ -1,0 +1,168 @@
+<div class="disc-page">
+
+  <ng-container *ngIf="viewState$ | async as state">
+
+    <!-- ── Sticky header ── -->
+    <header class="disc-page__header">
+      <div class="disc-page__header-content">
+        <div class="disc-page__title-row">
+          <h1 class="disc-page__title">Descuentos</h1>
+          <button
+            type="button"
+            class="disc-page__add-btn"
+            (click)="openCreateModal()"
+            aria-label="Crear nuevo descuento"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Nuevo</span>
+          </button>
+        </div>
+
+        <!-- Filters -->
+        <div class="disc-page__filters">
+          <select
+            class="disc-filter-select"
+            [value]="currentTypeFilter"
+            (change)="onTypeFilterChange($any($event.target).value)"
+            aria-label="Filtrar por tipo"
+          >
+            <option
+              *ngFor="let opt of typeFilterOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+
+          <select
+            class="disc-filter-select"
+            [value]="currentStatusFilter"
+            (change)="onStatusFilterChange($any($event.target).value)"
+            aria-label="Filtrar por estado"
+          >
+            <option
+              *ngFor="let opt of statusFilterOptions; trackBy: trackByValue"
+              [value]="opt.value"
+            >{{ opt.label }}</option>
+          </select>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Error banner ── -->
+    <div *ngIf="state.error" class="disc-page__error-banner" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           style="width:18px;height:18px;flex-shrink:0;" aria-hidden="true">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="8" x2="12" y2="12"></line>
+        <line x1="12" y1="16" x2="12.01" y2="16"></line>
+      </svg>
+      <span>{{ state.error }}</span>
+      <button type="button" class="disc-page__retry-btn" (click)="onRetry()">Reintentar</button>
+    </div>
+
+    <!-- ── Main content ── -->
+    <main class="disc-page__main">
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="state.loading">
+        <div class="disc-skeleton" *ngFor="let i of [1,2,3,4]" aria-hidden="true">
+          <div class="skeleton skeleton--line-lg"></div>
+          <div class="skeleton skeleton--line-sm"></div>
+          <div class="skeleton skeleton--line-md"></div>
+        </div>
+      </ng-container>
+
+      <!-- List -->
+      <ng-container *ngIf="!state.loading && !state.error">
+        <ng-container *ngIf="applyStatusFilter(state.discounts) as filtered">
+
+          <!-- Empty state -->
+          <div *ngIf="filtered.length === 0" class="disc-empty">
+            <p class="disc-empty__text">
+              <ng-container *ngIf="state.discounts.length === 0">
+                No hay descuentos todavía.
+              </ng-container>
+              <ng-container *ngIf="state.discounts.length > 0">
+                Ningún descuento coincide con los filtros.
+              </ng-container>
+            </p>
+            <button
+              *ngIf="state.discounts.length === 0"
+              type="button"
+              class="disc-empty__cta"
+              (click)="openCreateModal()"
+            >Crear primer descuento</button>
+          </div>
+
+          <!-- Cards -->
+          <div
+            *ngFor="let d of filtered; trackBy: trackByDiscountId"
+            class="disc-card"
+            [class.disc-card--inactive]="!d.is_active"
+            (click)="openEditModal(d)"
+            role="button"
+            tabindex="0"
+            (keydown.enter)="openEditModal(d)"
+            (keydown.space)="openEditModal(d)"
+            [attr.aria-label]="'Editar descuento ' + d.code"
+          >
+            <!-- Card main row -->
+            <div class="disc-card__main">
+              <div class="disc-card__info">
+                <span class="disc-card__code">{{ d.code }}</span>
+                <span class="disc-card__value">{{ formatDiscountValue(d) }}</span>
+              </div>
+              <div class="disc-card__badges">
+                <span
+                  class="disc-badge"
+                  [class.disc-badge--promo]="d.type === 'promocion'"
+                  [class.disc-badge--personal]="d.type === 'personal'"
+                >{{ typeLabel(d.type) }}</span>
+                <span class="disc-badge disc-badge--inactive" *ngIf="!d.is_active">Inactivo</span>
+              </div>
+            </div>
+
+            <!-- Description -->
+            <p *ngIf="d.description" class="disc-card__desc">{{ d.description }}</p>
+
+            <!-- Toggle button -->
+            <div class="disc-card__actions">
+              <button
+                type="button"
+                class="disc-card__toggle"
+                [class.disc-card__toggle--active]="d.is_active"
+                (click)="onToggleActive(d, $event)"
+                [attr.aria-label]="d.is_active ? 'Desactivar ' + d.code : 'Activar ' + d.code"
+              >
+                {{ d.is_active ? 'Desactivar' : 'Activar' }}
+              </button>
+            </div>
+          </div>
+
+        </ng-container>
+      </ng-container>
+
+    </main>
+
+  </ng-container>
+
+  <!-- ── Form modal ── -->
+  <ng-container *ngIf="isFormModalOpen">
+    <app-discount-form-modal
+      [mode]="formModalMode"
+      [initialDiscount]="editingDiscount"
+      (closed)="closeFormModal()"
+      (saved)="onDiscountSaved($event)"
+    ></app-discount-form-modal>
+  </ng-container>
+
+  <!-- ── Toast ── -->
+  <div
+    *ngIf="toastMessage"
+    class="disc-toast"
+    role="status"
+    aria-live="polite"
+  >{{ toastMessage }}</div>
+
+</div>
