@@ -76,7 +76,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   readonly searchControl = new FormControl<string>('');
 
   private readonly filtersSubject = new BehaviorSubject<ClientFiltersValue>({
-    activeFilter: 'active'
+    activeFilter: 'active',
+    trainerId: null
   });
 
   private readonly pageSubject = new BehaviorSubject<PageState>({
@@ -161,6 +162,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
         .getClients({
           search,
           activeFilter: filters.activeFilter,
+          trainerId: filters.trainerId,
           page: pageState.page,
           pageSize: pageState.pageSize
         })
@@ -242,7 +244,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   }
 
   onFiltersClear(): void {
-    this.filtersSubject.next({ activeFilter: 'active' });
+    this.filtersSubject.next({ activeFilter: 'active', trainerId: null });
   }
 
   get currentFilters(): ClientFiltersValue {

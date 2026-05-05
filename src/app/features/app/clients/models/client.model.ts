@@ -105,6 +105,8 @@ export type ClientActiveFilter = 'all' | 'active' | 'inactive';
 export interface ClientsQueryParams {
   search?: string;
   activeFilter: ClientActiveFilter;
+  /** UUID de un trainer para mostrar solo sus clientes (asignación activa). */
+  trainerId?: string | null;
   page: number;
   pageSize: number;
 }

@@ -24,7 +24,8 @@
       "Bash(node build_supabase_ts.js)",
       "Bash(npx ng *)",
       "mcp__claude_ai_Supabase__list_projects",
-      "mcp__claude_ai_Supabase__list_tables"
+      "mcp__claude_ai_Supabase__list_tables",
+      "mcp__claude_ai_Supabase__get_logs"
     ]
   }
 }

@@ -43,6 +43,24 @@
       </div>
     </div>
 
+    <!-- Entrenador -->
+    <div class="filter-group">
+      <label class="filter-group__label" for="clients-filter-trainer">Por entrenador</label>
+      <select
+        id="clients-filter-trainer"
+        class="filter-group__select"
+        [value]="localFilters.trainerId ?? ''"
+        (change)="onTrainerChange($any($event.target).value)"
+        aria-label="Filtrar por entrenador"
+      >
+        <option value="">Todos los entrenadores</option>
+        <option
+          *ngFor="let trainer of (trainers$ | async); trackBy: trackByTrainerId"
+          [value]="trainer.id"
+        >{{ trainer.fullName }}</option>
+      </select>
+    </div>
+
     <!-- Limpiar filtros -->
     <div class="filter-group filter-group--actions" *ngIf="hasActiveFilters">
       <button

@@ -203,12 +203,12 @@ export class ClientsService {
   constructor(private readonly supabase: SupabaseService) {}
 
   getClients(params: ClientsQueryParams): Observable<ClientsPage> {
-    const { search, activeFilter, page, pageSize } = params;
+    const { search, activeFilter, trainerId, page, pageSize } = params;
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
 
     return from(
-      this.buildClientsQuery(search ?? '', activeFilter, rangeFrom, rangeTo)
+      this.buildClientsQuery(search ?? '', activeFilter, trainerId ?? null, rangeFrom, rangeTo)
     ).pipe(
       map(({ data, count, error }) => {
         if (error) throw error;
@@ -228,6 +228,7 @@ export class ClientsService {
   private async buildClientsQuery(
     search: string,
     activeFilter: 'all' | 'active' | 'inactive',
+    trainerId: string | null,
     rangeFrom: number,
     rangeTo: number
   ) {
@@ -241,6 +242,29 @@ export class ClientsService {
       query = query.eq('status', 'active');
     } else if (activeFilter === 'inactive') {
       query = query.eq('status', 'inactive');
+    }
+
+    // Filtro por entrenador: la vista expone `trainer_name` pero no `trainer_id`,
+    // así que pre-consultamos las asignaciones activas en `client_trainer_assignments`
+    // y aplicamos `.in('id', ...)` sobre la query principal. Si hay además filtro
+    // por search (que también produce su propia lista de IDs), intersectamos abajo.
+    let trainerClientIds: string[] | null = null;
+    if (trainerId) {
+      const { data: ctaData, error: ctaError } = await this.supabase.client
+        .from('client_trainer_assignments')
+        .select('client_id')
+        .eq('trainer_id', trainerId)
+        .is('ended_at', null);
+
+      if (ctaError) {
+        return { data: [], count: 0, error: ctaError };
+      }
+
+      trainerClientIds = (ctaData ?? []).map((r) => r.client_id);
+
+      if (trainerClientIds.length === 0) {
+        return { data: [], count: 0, error: null };
+      }
     }
 
     if (search.trim()) {
@@ -275,7 +299,18 @@ export class ClientsService {
         return { data: [], count: 0, error: null };
       }
 
-      query = query.in('id', matchingIds);
+      // Intersección con los IDs del filtro por entrenador (si aplica).
+      const finalIds = trainerClientIds
+        ? matchingIds.filter((id) => trainerClientIds!.includes(id))
+        : matchingIds;
+
+      if (finalIds.length === 0) {
+        return { data: [], count: 0, error: null };
+      }
+
+      query = query.in('id', finalIds);
+    } else if (trainerClientIds) {
+      query = query.in('id', trainerClientIds);
     }
 
     return query;

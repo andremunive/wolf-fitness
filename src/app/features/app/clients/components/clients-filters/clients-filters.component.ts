@@ -15,11 +15,15 @@ import {
   Output,
   SimpleChanges
 } from '@angular/core';
+import { Observable, shareReplay } from 'rxjs';
 
-import { ClientActiveFilter } from '../../models/client.model';
+import { ClientActiveFilter, TrainerOption } from '../../models/client.model';
+import { ClientsService } from '../../services/clients.service';
 
 export interface ClientFiltersValue {
   activeFilter: ClientActiveFilter;
+  /** null = todos los entrenadores. */
+  trainerId: string | null;
 }
 
 @Component({
@@ -50,7 +54,10 @@ export interface ClientFiltersValue {
   ]
 })
 export class ClientsFiltersComponent implements OnChanges {
-  @Input() currentFilters: ClientFiltersValue = { activeFilter: 'active' };
+  @Input() currentFilters: ClientFiltersValue = {
+    activeFilter: 'active',
+    trainerId: null
+  };
   @Output() filtersChange = new EventEmitter<ClientFiltersValue>();
   @Output() filtersClear = new EventEmitter<void>();
 
@@ -62,7 +69,13 @@ export class ClientsFiltersComponent implements OnChanges {
     { value: 'inactive', label: 'Inactivos' }
   ];
 
-  localFilters: ClientFiltersValue = { activeFilter: 'active' };
+  readonly trainers$: Observable<TrainerOption[]>;
+
+  localFilters: ClientFiltersValue = { activeFilter: 'active', trainerId: null };
+
+  constructor(private readonly clientsService: ClientsService) {
+    this.trainers$ = this.clientsService.getActiveTrainers().pipe(shareReplay(1));
+  }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentFilters']) {
@@ -71,8 +84,10 @@ export class ClientsFiltersComponent implements OnChanges {
   }
 
   get activeFilterCount(): number {
-    // Se considera filtro activo cuando no está en el default ('active').
-    return this.currentFilters.activeFilter !== 'active' ? 1 : 0;
+    let count = 0;
+    if (this.currentFilters.activeFilter !== 'active') count++;
+    if (this.currentFilters.trainerId) count++;
+    return count;
   }
 
   get hasActiveFilters(): boolean {
@@ -88,6 +103,12 @@ export class ClientsFiltersComponent implements OnChanges {
     this.filtersChange.emit({ ...this.localFilters });
   }
 
+  onTrainerChange(value: string): void {
+    const trainerId = value ? value : null;
+    this.localFilters = { ...this.localFilters, trainerId };
+    this.filtersChange.emit({ ...this.localFilters });
+  }
+
   clearFilters(): void {
     this.filtersClear.emit();
     this.isOpen = false;
@@ -99,5 +120,9 @@ export class ClientsFiltersComponent implements OnChanges {
 
   trackByValue(_index: number, item: { value: string; label: string }): string {
     return item.value;
+  }
+
+  trackByTrainerId(_index: number, trainer: TrainerOption): string {
+    return trainer.id;
   }
 }
