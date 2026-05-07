@@ -49,3 +49,4 @@ Thumbs.db
 .env.local
 .env.*.local
 src/assets/runtime-config.json
+.mcp.json

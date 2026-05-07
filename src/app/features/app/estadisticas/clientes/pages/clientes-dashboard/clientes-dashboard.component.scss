@@ -1,0 +1,949 @@
+:host {
+  display: block;
+
+  @media (min-width: 768px) {
+    height: 100%;
+  }
+}
+
+// ─── Page shell ────────────────────────────────────────────────────────────────
+
+.stats-page {
+  min-height: 100%;
+  background: #f7f8fa;
+  display: flex;
+  flex-direction: column;
+
+  @media (min-width: 768px) {
+    height: 100%;
+    min-height: 0;
+    overflow-y: auto;
+  }
+}
+
+// ─── Sticky header ─────────────────────────────────────────────────────────────
+
+.stats-page__header {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  background: #ffffff;
+  padding: 16px 16px 12px;
+  border-bottom: 1px solid #e5e7eb;
+
+  @media (min-width: 640px) {
+    padding: 20px 24px 14px;
+  }
+}
+
+.stats-page__header-content {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.stats-page__title-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 12px;
+
+  @media (min-width: 768px) {
+    margin-bottom: 0;
+  }
+}
+
+.stats-page__title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #111827;
+  line-height: 1.2;
+  margin: 0;
+  flex: 1;
+
+  @media (min-width: 640px) {
+    font-size: 26px;
+  }
+}
+
+// ─── Filter row ────────────────────────────────────────────────────────────────
+
+// Mobile: stacks below the title.
+// ≥768px: sits on the same row as the title (flex row via header-content).
+
+.stats-page__filter {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+
+  @media (min-width: 768px) {
+    // On desktop we pull this into the title row — done via the parent becoming
+    // a flex row with space-between at that breakpoint.
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
+  }
+}
+
+// Make header-content a flex column on mobile and flex row on desktop so the
+// filter can share the same line as the title at larger viewports.
+.stats-page__header-content {
+  @media (min-width: 768px) {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+// Remove the bottom margin on the title-row when they share a row on desktop.
+@media (min-width: 768px) {
+  .stats-page__title-row {
+    margin-bottom: 0;
+    flex: 1;
+  }
+}
+
+.stats-page__filter-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  white-space: nowrap;
+}
+
+.stats-page__filter-select {
+  width: 100%;
+  min-height: 44px; // táctil mínimo
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  font-size: 14px;
+  padding: 8px 12px;
+  color: #111827;
+  background-color: #ffffff;
+  appearance: auto;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:focus {
+    outline: none;
+    border-color: #228d9f;
+    box-shadow: 0 0 0 3px rgba(34, 141, 159, 0.2);
+  }
+
+  @media (min-width: 768px) {
+    width: auto;
+    min-width: 220px;
+  }
+}
+
+// ─── Main ──────────────────────────────────────────────────────────────────────
+
+.stats-page__main {
+  flex: 1;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1200px;
+  margin: 0 auto;
+  width: 100%;
+  box-sizing: border-box;
+
+  @media (min-width: 640px) {
+    padding: 20px 24px;
+  }
+}
+
+// ─── Sections ──────────────────────────────────────────────────────────────────
+
+.stats-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.stats-section__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #9ca3af;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin: 0;
+}
+
+// ─── Skeletons ─────────────────────────────────────────────────────────────────
+
+.skeleton {
+  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+
+  &--line-lg  { height: 16px; width: 80%; }
+  &--line-md  { height: 14px; width: 60%; }
+  &--line-sm  { height: 12px; width: 40%; }
+
+  // Full-size variant used inside skeleton-chart and skeleton-table wrappers.
+  &--block {
+    width: 100%;
+    height: 100%;
+    min-height: 100%;
+    border-radius: 4px;
+  }
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+// ─── Stats cards grid ──────────────────────────────────────────────────────────
+
+.stats-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+// ─── Stats card base ───────────────────────────────────────────────────────────
+
+.stats-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  // min-height normaliza las 6 cards normales para que cards con menos contenido
+  // (Pendientes, sin delta) no queden visualmente más cortas.
+  min-height: 112px;
+  box-sizing: border-box;
+}
+
+.stats-card__title {
+  font-size: 12px;
+  font-weight: 500;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin: 0;
+}
+
+.stats-card__total-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.stats-card__total {
+  font-size: 32px;
+  font-weight: 700;
+  color: #228d9f;
+  line-height: 1;
+
+  @media (min-width: 640px) {
+    font-size: 40px;
+  }
+}
+
+.stats-card__delta {
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 2px 6px;
+  border-radius: 4px;
+  white-space: nowrap;
+
+  // Default (zero state, overridden below)
+  color: #6b7280;
+  background-color: #f3f4f6;
+
+  &--up {
+    color: #16a34a;
+    background-color: #f0fdf4;
+  }
+
+  &--down {
+    color: #dc2626;
+    background-color: #fef2f2;
+  }
+
+  &--zero {
+    color: #6b7280;
+    background-color: #f3f4f6;
+  }
+}
+
+.stats-card__breakdown {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #6b7280;
+  flex-wrap: wrap;
+}
+
+.stats-card__breakdown-divider {
+  display: inline-block;
+  width: 1px;
+  height: 14px;
+  background-color: #d1d5db;
+  flex-shrink: 0;
+}
+
+.stats-card__error {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #dc2626;
+  padding: 8px 0;
+}
+
+.stats-card__error-icon {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+}
+
+// ─── FASE 3: variantes de color y texto secundario ─────────────────────────────
+
+/** Total en ámbar para Pendientes — estado, no conteo exitoso. */
+.stats-card__total--ambar {
+  color: #d97706;
+}
+
+/** Total placeholder para Q2 inactivo (em dash). */
+.stats-card__total--placeholder {
+  color: #9ca3af;
+}
+
+/**
+ * Delta invertido para "Perdidos este mes":
+ * más perdidos (↑) = peor = rojo; menos perdidos (↓) = mejor = verde.
+ */
+.stats-card__delta--up-bad {
+  color: #dc2626;
+  background-color: #fef2f2;
+}
+
+.stats-card__delta--down-good {
+  color: #16a34a;
+  background-color: #f0fdf4;
+}
+
+/** Texto secundario de contexto: "en curso", "La quincena aún no ha comenzado". */
+.stats-card__legend {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0;
+  padding-top: 2px;
+  line-height: 1.3;
+}
+
+// ─── FASE 4: Card highlight — Total activos hoy ────────────────────────────────
+
+/**
+ * La highlight card ocupa el ancho completo de la grilla en todos los breakpoints.
+ * En mobile es natural (grid es 1 col); en desktop el span explícito garantiza
+ * que salte a la siguiente fila si los ítems anteriores no la ocupan.
+ */
+.stats-card--highlight {
+  grid-column: 1 / -1; // ancho completo en cualquier número de columnas
+  padding: 20px;
+  min-height: 0; // la highlight tiene más contenido; no necesita min-height forzado
+  gap: 12px;
+}
+
+/** Fila superior: tag izquierda + fecha derecha. */
+.stats-card--highlight__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.stats-card--highlight__tag {
+  font-size: 11px;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.stats-card--highlight__date {
+  font-size: 12px;
+  font-weight: 400;
+  color: #6b7280;
+}
+
+/**
+ * Número total más grande que las otras cards.
+ * 40px en mobile, 48px en desktop.
+ */
+.stats-card__total--highlight {
+  font-size: 40px;
+
+  @media (min-width: 640px) {
+    font-size: 48px;
+  }
+}
+
+/** Divisor horizontal sutil entre breakdown y subdivisión A/B. */
+.stats-card--highlight__divider {
+  border-top: 1px solid #e5e7eb;
+  margin: 0; // el gap del flex parent ya aporta el spacing (12px arriba y abajo)
+}
+
+/**
+ * Subdivisión A/B: dos líneas de texto secundario que desglosan el total.
+ */
+.stats-card--highlight__sub {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+
+  p {
+    font-size: 13px;
+    color: #6b7280;
+    line-height: 1.6;
+    margin: 0;
+
+    strong {
+      font-weight: 600;
+      color: #374151;
+    }
+  }
+}
+
+// ─── Skeleton highlight ────────────────────────────────────────────────────────
+
+/** Skeleton de la highlight card: misma lógica de span completo. */
+.skeleton-card--highlight {
+  grid-column: 1 / -1;
+  padding: 20px;
+  gap: 14px;
+}
+
+// ─── Skeleton grid (cards) ─────────────────────────────────────────────────────
+
+.skeleton-grid {
+  display: grid;
+  gap: 10px;
+
+  // Base (shared with closures pattern)
+  grid-template-columns: 1fr;
+
+  @media (min-width: 480px) {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.skeleton-grid--cards {
+  grid-template-columns: 1fr;
+
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (min-width: 768px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+.skeleton-card {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 112px;
+  box-sizing: border-box;
+}
+
+// ─── Skeleton charts ───────────────────────────────────────────────────────────
+
+.skeleton-chart {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+}
+
+.skeleton-chart--lg {
+  height: 220px;
+
+  @media (min-width: 768px) {
+    height: 280px;
+  }
+}
+
+.skeleton-chart--md {
+  height: 160px;
+
+  @media (min-width: 768px) {
+    height: 200px;
+  }
+}
+
+// ─── Stats — pills (compartido por Tendencia y Distribución) ──────────────────
+
+/**
+ * Contenedor de pills: en mobile hace scroll horizontal cuando las pills no
+ * caben en una sola línea.  En desktop caben sin scroll.
+ * Usado en las secciones Tendencia y Distribución.
+ */
+.stats-pills {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 8px;
+  overflow-x: auto;
+  // Oculta la barra de scroll en WebKit/Gecko sin quitar funcionalidad.
+  scrollbar-width: none;
+  &::-webkit-scrollbar { display: none; }
+  // Padding lateral mínimo para que el último pill no quede pegado al borde.
+  padding-bottom: 2px;
+
+  @media (min-width: 640px) {
+    flex-wrap: wrap;
+    overflow-x: visible;
+  }
+}
+
+.stats-pill {
+  flex-shrink: 0;
+  min-height: 36px; // área táctil mobile
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: none;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  background-color: #f3f4f6;
+  color: #374151;
+  transition: background-color 0.15s ease;
+  line-height: 1;
+  white-space: nowrap;
+
+  &:hover:not(.stats-pill--active) {
+    background-color: #e5e7eb;
+  }
+
+  &--active {
+    background-color: #228d9f;
+    color: #ffffff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+  }
+}
+
+// Pills más pequeñas para el toggle de plan dentro de la sección Distribución.
+.stats-pill--sm {
+  min-height: 32px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+// ─── Tendencia — gráfica ───────────────────────────────────────────────────────
+
+/**
+ * Wrapper externo con scroll horizontal en mobile.
+ * Tiene borde/fondo para que parezca una "card" consistente con el resto.
+ */
+.tendencia-chart-wrapper {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+/**
+ * Elemento intermedio que fuerza el ancho mínimo dinámico pasado por binding.
+ * Cuando la ventana es 1 ó 2 meses el min-width cede a 100% (el binding lo decide).
+ */
+.tendencia-chart-scroll {
+  // min-width se aplica via [style.min-width] binding en el template.
+}
+
+/**
+ * Canvas wrapper: altura fija en mobile, mayor en desktop.
+ * Chart.js necesita un contenedor con height explícita cuando
+ * maintainAspectRatio=false.
+ */
+.tendencia-chart-canvas {
+  position: relative;
+  height: 260px;
+  min-height: 260px;
+
+  @media (min-width: 768px) {
+    height: 320px;
+    min-height: 320px;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+// ─── Tendencia — estados de texto ─────────────────────────────────────────────
+
+.tendencia-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.tendencia-footnote {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+// ─── Distribución — header con pills de ventana y toggle de plan ──────────────
+
+/**
+ * En mobile: pills de ventana arriba, toggle de plan debajo (column).
+ * En desktop (≥640px): ambos en la misma fila con space-between (row).
+ */
+.distribucion-header {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+
+  @media (min-width: 640px) {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+  }
+}
+
+.distribucion-header__ventana {
+  flex: 1;
+  min-width: 0; // permite que las pills hagan scroll si es necesario
+}
+
+.distribucion-header__plan {
+  flex-shrink: 0;
+}
+
+// ─── Distribución — gráfica ────────────────────────────────────────────────────
+
+/**
+ * Mismo aspecto de card que la sección Tendencia.
+ * overflow-x: auto permite scroll horizontal en mobile cuando hay muchas barras.
+ */
+.distribucion-chart-wrapper {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  box-sizing: border-box;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #d1d5db transparent;
+}
+
+.distribucion-chart-scroll {
+  // min-width se aplica via [style.min-width] binding en el template.
+}
+
+/**
+ * Canvas wrapper: altura fija en mobile (260px), mayor en desktop (320px).
+ * Chart.js requiere un contenedor con height explícita cuando
+ * maintainAspectRatio = false.
+ */
+.distribucion-chart-canvas {
+  position: relative;
+  height: 260px;
+  min-height: 260px;
+
+  @media (min-width: 768px) {
+    height: 320px;
+    min-height: 320px;
+  }
+
+  canvas {
+    width: 100% !important;
+    height: 100% !important;
+  }
+}
+
+// ─── Distribución — estados de texto ──────────────────────────────────────────
+
+.distribucion-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
+
+.distribucion-footnote {
+  font-size: 11px;
+  color: #9ca3af;
+  margin: 4px 0 0;
+  line-height: 1.4;
+}
+
+// ─── DETALLE — grid de 3 columnas (cohorte) ───────────────────────────────────
+
+/**
+ * Variante de 3 columnas para las cards de cohorte.
+ * Mobile: 1 col. Tablet (≥480px): 3 col directamente (cards compactas caben).
+ */
+.stats-cards-grid--3col {
+  @media (min-width: 480px) {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+// ─── DETALLE — card compacta ──────────────────────────────────────────────────
+
+/**
+ * Modificador compacto para las cards de cohorte.
+ * Reduce padding y min-height respecto a .stats-card base.
+ */
+.stats-card--compact {
+  padding: 12px;
+  min-height: 96px;
+}
+
+.skeleton-card--compact {
+  padding: 12px;
+  min-height: 96px;
+}
+
+// ─── DETALLE — colores de retención ──────────────────────────────────────────
+
+.stats-card__total--verde {
+  color: #16a34a;
+}
+
+.stats-card__total--rojo {
+  color: #dc2626;
+}
+
+// (--ambar ya está definido arriba como stats-card__total--ambar)
+
+// ─── DETALLE — sección en riesgo ─────────────────────────────────────────────
+
+.riesgo-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.riesgo-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.riesgo-header__title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.riesgo-header__badge {
+  background-color: #f3f4f6;
+  color: #374151;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 2px 8px;
+  border-radius: 999px;
+  line-height: 1.4;
+}
+
+.riesgo-empty {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 32px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
+
+// ─── DETALLE — chip de estado ──────────────────────────────────────────────────
+
+.riesgo-chip {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 1.6;
+  white-space: nowrap;
+}
+
+.riesgo-chip--pendiente {
+  background-color: #fef3c7;
+  color: #92400e;
+}
+
+.riesgo-chip--por-vencer {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+// ─── DETALLE — tabla desktop ──────────────────────────────────────────────────
+
+.risk-table-desktop {
+  display: none; // oculta en mobile — visible desde ≥768px
+
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #ffffff;
+
+  thead tr {
+    background: #f9fafb;
+  }
+
+  th {
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #6b7280;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    text-align: left;
+    border-bottom: 1px solid #e5e7eb;
+  }
+
+  td {
+    padding: 12px 16px;
+    font-size: 14px;
+    color: #374151;
+    border-bottom: 1px solid #f3f4f6;
+  }
+
+  tbody tr:last-child td {
+    border-bottom: none;
+  }
+
+  tbody tr:hover {
+    background: #f9fafb;
+  }
+
+  @media (min-width: 768px) {
+    display: table;
+  }
+}
+
+// ─── DETALLE — cards mobile ───────────────────────────────────────────────────
+
+.risk-cards-mobile {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  @media (min-width: 768px) {
+    display: none; // oculta en desktop — la tabla toma el relevo
+  }
+}
+
+.risk-card-mobile {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 12px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  box-sizing: border-box;
+}
+
+.risk-card-mobile__top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.risk-card-mobile__name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #111827;
+}
+
+.risk-card-mobile__sub {
+  font-size: 13px;
+  color: #6b7280;
+  margin: 0;
+}
+
+.risk-card-mobile__vence {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  margin: 0;
+}
+
+.risk-card-mobile__pago {
+  font-size: 12px;
+  color: #9ca3af;
+  margin: 0;
+}
+
+// ─── DETALLE — mensaje de error ────────────────────────────────────────────────
+
+.detalle-message {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 24px 16px;
+  font-size: 14px;
+  color: #6b7280;
+  text-align: center;
+}
+
+// ─── Skeleton table ────────────────────────────────────────────────────────────
+
+.skeleton-table {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.skeleton-table__row {
+  display: grid;
+  grid-template-columns: 2fr 1fr 1fr;
+  gap: 12px;
+  align-items: center;
+}

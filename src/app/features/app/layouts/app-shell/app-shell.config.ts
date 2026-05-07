@@ -75,5 +75,20 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         allowedRoles: ['admin']
       }
     ]
+  },
+  {
+    id: 'estadisticas',
+    label: 'Estadísticas',
+    description: 'Métricas e indicadores del gimnasio.',
+    triggerIcon: 'chart',
+    allowedRoles: ['admin', 'trainer'],
+    items: [
+      {
+        label: 'Clientes',
+        description: 'Métricas de clientes activos, retención y comportamiento de pago.',
+        iconKey: 'chart',
+        routerLink: '/app/estadisticas/clientes'
+      }
+    ]
   }
 ];

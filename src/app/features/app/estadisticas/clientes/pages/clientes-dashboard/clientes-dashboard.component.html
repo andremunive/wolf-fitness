@@ -1,0 +1,686 @@
+<div class="stats-page">
+
+  <!-- ── Sticky header con título y filtro ── -->
+  <header class="stats-page__header">
+    <div class="stats-page__header-content">
+      <div class="stats-page__title-row">
+        <h1 class="stats-page__title">Estadísticas — Clientes</h1>
+      </div>
+
+      <!-- Filtro de entrenador -->
+      <div class="stats-page__filter">
+        <label for="entrenador-filter" class="stats-page__filter-label">Entrenador</label>
+        <select
+          id="entrenador-filter"
+          class="stats-page__filter-select"
+          [value]="(selectedEntrenador$ | async) ?? 'todos'"
+          (change)="onEntrenadorChange($any($event.target).value)"
+        >
+          <option value="todos">Todos los entrenadores</option>
+          <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById" [value]="t.id">
+            {{ t.fullName }}
+          </option>
+        </select>
+      </div>
+    </div>
+  </header>
+
+  <main class="stats-page__main">
+
+    <!-- ── Cards row — Resumen ── -->
+    <section class="stats-section">
+      <h2 class="stats-section__title">Resumen</h2>
+
+      <ng-container *ngIf="(resumen$ | async) as state">
+
+        <!-- LOADING: todos los skeletons mientras cualquier EF esté pendiente -->
+        <div *ngIf="state.loading" class="stats-cards-grid">
+          <!-- 1 skeleton highlight (ancho completo) -->
+          <div class="skeleton-card skeleton-card--highlight" aria-hidden="true">
+            <div class="skeleton skeleton--line-sm" style="width:40%"></div>
+            <div class="skeleton skeleton--line-lg" style="width:30%; height: 48px; margin-top: 4px;"></div>
+            <div class="skeleton skeleton--line-md"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+          </div>
+          <!-- 6 skeletons normales -->
+          <div *ngFor="let i of [1,2,3,4,5,6]; trackBy: trackByIndex" class="skeleton-card" aria-hidden="true">
+            <div class="skeleton skeleton--line-sm"></div>
+            <div class="skeleton skeleton--line-lg"></div>
+            <div class="skeleton skeleton--line-md"></div>
+          </div>
+        </div>
+
+        <!-- LOADED: grilla de 7 cards -->
+        <div *ngIf="!state.loading" class="stats-cards-grid">
+
+          <!-- ══ FASE 4: Card TOTAL ACTIVOS HOY (ancho completo, primera) ══ -->
+
+          <!-- Error state para la highlight card -->
+          <div *ngIf="state.cardsError" class="stats-card stats-card--highlight" role="status">
+            <p class="stats-card__title">Total activos hoy</p>
+            <div class="stats-card__error" aria-live="polite">
+              <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
+              </svg>
+              <span>No se pudo cargar</span>
+            </div>
+          </div>
+
+          <!-- Éxito: highlight card -->
+          <ng-container *ngIf="!state.cardsError && state.cards as c">
+            <div class="stats-card stats-card--highlight" role="region" aria-label="Total activos hoy">
+
+              <!-- Header: tag + fecha -->
+              <div class="stats-card--highlight__header">
+                <span class="stats-card--highlight__tag">Total activos hoy</span>
+                <span class="stats-card--highlight__date">{{ todayFormatted }}</span>
+              </div>
+
+              <!-- Total grande + delta -->
+              <div class="stats-card__total-row">
+                <span class="stats-card__total stats-card__total--highlight">
+                  {{ c.total_activos_hoy.total }}
+                </span>
+                <span
+                  class="stats-card__delta"
+                  [class.stats-card__delta--up]="c.total_activos_hoy.delta > 0"
+                  [class.stats-card__delta--down]="c.total_activos_hoy.delta < 0"
+                  [class.stats-card__delta--zero]="c.total_activos_hoy.delta === 0"
+                  [attr.aria-label]="'Variación total activos: ' + c.total_activos_hoy.delta"
+                >
+                  <ng-container *ngIf="c.total_activos_hoy.delta > 0">&#8593;{{ c.total_activos_hoy.delta }}</ng-container>
+                  <ng-container *ngIf="c.total_activos_hoy.delta < 0">&#8595;{{ c.total_activos_hoy.delta * -1 }}</ng-container>
+                  <ng-container *ngIf="c.total_activos_hoy.delta === 0">=</ng-container>
+                  {{ deltaLabelMonth }}
+                </span>
+              </div>
+
+              <!-- Breakdown 6d / 3d -->
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ c.total_activos_hoy.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ c.total_activos_hoy.plan_3d }}</span>
+              </div>
+
+              <!-- Divisor horizontal -->
+              <div class="stats-card--highlight__divider" aria-hidden="true"></div>
+
+              <!-- Subdivisión A / B -->
+              <div class="stats-card--highlight__sub">
+                <p>Pagaron este mes: <strong>{{ c.tipo_a.total }}</strong></p>
+                <p>Vigentes mes anterior: <strong>{{ c.tipo_b.total }}</strong></p>
+              </div>
+
+            </div>
+          </ng-container>
+
+          <!-- ══ FASE 2: Cards Tipo A y Tipo B ══ -->
+
+          <!-- Error: Cards A y B -->
+          <ng-container *ngIf="state.cardsError">
+            <div class="stats-card" role="status">
+              <p class="stats-card__title">Pagaron este mes</p>
+              <div class="stats-card__error" aria-live="polite">
+                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
+                </svg>
+                <span>No se pudo cargar</span>
+              </div>
+            </div>
+            <div class="stats-card" role="status">
+              <p class="stats-card__title">Vigentes de mes anterior</p>
+              <div class="stats-card__error" aria-live="polite">
+                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
+                </svg>
+                <span>No se pudo cargar</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Éxito: Cards A y B -->
+          <ng-container *ngIf="!state.cardsError && state.cards as c">
+
+            <!-- Card A: Pagaron este mes -->
+            <div class="stats-card" role="region" aria-label="Pagaron este mes">
+              <p class="stats-card__title">Pagaron este mes</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ c.tipo_a.total }}</span>
+                <span
+                  class="stats-card__delta"
+                  [class.stats-card__delta--up]="c.tipo_a.delta > 0"
+                  [class.stats-card__delta--down]="c.tipo_a.delta < 0"
+                  [class.stats-card__delta--zero]="c.tipo_a.delta === 0"
+                  [attr.aria-label]="'Variación: ' + c.tipo_a.delta"
+                >
+                  <ng-container *ngIf="c.tipo_a.delta > 0">&#8593;{{ c.tipo_a.delta }}</ng-container>
+                  <ng-container *ngIf="c.tipo_a.delta < 0">&#8595;{{ c.tipo_a.delta * -1 }}</ng-container>
+                  <ng-container *ngIf="c.tipo_a.delta === 0">=</ng-container>
+                  {{ deltaLabelMonth }}
+                </span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ c.tipo_a.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ c.tipo_a.plan_3d }}</span>
+              </div>
+            </div>
+
+            <!-- Card B: Vigentes de mes anterior -->
+            <div class="stats-card" role="region" aria-label="Vigentes de mes anterior">
+              <p class="stats-card__title">Vigentes de mes anterior</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ c.tipo_b.total }}</span>
+                <span
+                  class="stats-card__delta"
+                  [class.stats-card__delta--up]="c.tipo_b.delta > 0"
+                  [class.stats-card__delta--down]="c.tipo_b.delta < 0"
+                  [class.stats-card__delta--zero]="c.tipo_b.delta === 0"
+                  [attr.aria-label]="'Variación: ' + c.tipo_b.delta"
+                >
+                  <ng-container *ngIf="c.tipo_b.delta > 0">&#8593;{{ c.tipo_b.delta }}</ng-container>
+                  <ng-container *ngIf="c.tipo_b.delta < 0">&#8595;{{ c.tipo_b.delta * -1 }}</ng-container>
+                  <ng-container *ngIf="c.tipo_b.delta === 0">=</ng-container>
+                  {{ deltaLabelMonth }}
+                </span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ c.tipo_b.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ c.tipo_b.plan_3d }}</span>
+              </div>
+            </div>
+
+          </ng-container>
+
+          <!-- ══ FASE 3: Cards Q1, Q2, Pendientes, Perdidos ══ -->
+
+          <!-- Error: 4 cards quincenales -->
+          <ng-container *ngIf="state.quincenalError">
+            <div *ngFor="let i of [1,2,3,4]; trackBy: trackByIndex" class="stats-card" role="status">
+              <ng-container [ngSwitch]="i">
+                <p *ngSwitchCase="1" class="stats-card__title">Pagaron Q1</p>
+                <p *ngSwitchCase="2" class="stats-card__title">Pagaron Q2</p>
+                <p *ngSwitchCase="3" class="stats-card__title">Pendientes de pago</p>
+                <p *ngSwitchCase="4" class="stats-card__title">Perdidos este mes</p>
+              </ng-container>
+              <div class="stats-card__error" aria-live="polite">
+                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
+                </svg>
+                <span>No se pudo cargar</span>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- Éxito: 4 cards quincenales -->
+          <ng-container *ngIf="!state.quincenalError && state.quincenal as q">
+
+            <!-- Card Q1: Pagaron Q1 -->
+            <div class="stats-card" role="region" aria-label="Pagaron primera quincena">
+              <p class="stats-card__title">Pagaron Q1</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ q.q1.total }}</span>
+                <span
+                  class="stats-card__delta"
+                  [class.stats-card__delta--up]="(q.q1.delta ?? 0) > 0"
+                  [class.stats-card__delta--down]="(q.q1.delta ?? 0) < 0"
+                  [class.stats-card__delta--zero]="(q.q1.delta ?? 0) === 0"
+                  [attr.aria-label]="'Variación Q1: ' + (q.q1.delta ?? 0)"
+                >
+                  <ng-container *ngIf="(q.q1.delta ?? 0) > 0">&#8593;{{ q.q1.delta }}</ng-container>
+                  <ng-container *ngIf="(q.q1.delta ?? 0) < 0">&#8595;{{ (q.q1.delta ?? 0) * -1 }}</ng-container>
+                  <ng-container *ngIf="(q.q1.delta ?? 0) === 0">=</ng-container>
+                  <ng-container *ngIf="q.q1.comparativa === 'completa'">{{ deltaLabelQ1Completa }} &#10003;</ng-container>
+                  <ng-container *ngIf="q.q1.comparativa === 'parcial'">{{ deltaLabelQ1Parcial }} ~</ng-container>
+                </span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ q.q1.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ q.q1.plan_3d }}</span>
+              </div>
+            </div>
+
+            <!-- Card Q2: Pagaron Q2 -->
+            <div class="stats-card" role="region" aria-label="Pagaron segunda quincena">
+              <p class="stats-card__title">Pagaron Q2</p>
+
+              <!-- Caso A: Q2 aún no ha comenzado (delta es null) -->
+              <ng-container *ngIf="q.q2.delta === null; else q2Active">
+                <div class="stats-card__total-row">
+                  <span
+                    class="stats-card__total stats-card__total--placeholder"
+                    title="La quincena aún no ha comenzado"
+                    aria-label="Segunda quincena sin datos"
+                  >&mdash;</span>
+                </div>
+                <p class="stats-card__legend">La quincena aún no ha comenzado</p>
+              </ng-container>
+
+              <!-- Caso B: Q2 en curso -->
+              <ng-template #q2Active>
+                <div class="stats-card__total-row">
+                  <span class="stats-card__total">{{ q.q2.total }}</span>
+                  <span
+                    class="stats-card__delta"
+                    [class.stats-card__delta--up]="(q.q2.delta ?? 0) > 0"
+                    [class.stats-card__delta--down]="(q.q2.delta ?? 0) < 0"
+                    [class.stats-card__delta--zero]="(q.q2.delta ?? 0) === 0"
+                    [attr.aria-label]="'Variación Q2: ' + (q.q2.delta ?? 0)"
+                  >
+                    <ng-container *ngIf="(q.q2.delta ?? 0) > 0">&#8593;{{ q.q2.delta }}</ng-container>
+                    <ng-container *ngIf="(q.q2.delta ?? 0) < 0">&#8595;{{ (q.q2.delta ?? 0) * -1 }}</ng-container>
+                    <ng-container *ngIf="(q.q2.delta ?? 0) === 0">=</ng-container>
+                    {{ deltaLabelQ2 }} ~
+                  </span>
+                </div>
+                <p class="stats-card__legend">en curso</p>
+                <div class="stats-card__breakdown">
+                  <span>6 días: {{ q.q2.plan_6d }}</span>
+                  <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                  <span>3 días: {{ q.q2.plan_3d }}</span>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- Card Pendientes: Pendientes de pago -->
+            <div class="stats-card" role="region" aria-label="Pendientes de pago">
+              <p class="stats-card__title">Pendientes de pago</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total stats-card__total--ambar">{{ q.pendientes.total }}</span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ q.pendientes.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ q.pendientes.plan_3d }}</span>
+              </div>
+            </div>
+
+            <!-- Card Perdidos: Perdidos este mes (lógica de color INVERTIDA) -->
+            <div class="stats-card" role="region" aria-label="Perdidos este mes">
+              <p class="stats-card__title">Perdidos este mes</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ q.perdidos.total }}</span>
+                <span
+                  class="stats-card__delta"
+                  [ngClass]="perdidosDeltaClass(q.perdidos.delta)"
+                  [attr.aria-label]="'Variación perdidos: ' + q.perdidos.delta"
+                >
+                  <ng-container *ngIf="q.perdidos.delta > 0">&#8593;{{ q.perdidos.delta }}</ng-container>
+                  <ng-container *ngIf="q.perdidos.delta < 0">&#8595;{{ q.perdidos.delta * -1 }}</ng-container>
+                  <ng-container *ngIf="q.perdidos.delta === 0">=</ng-container>
+                  {{ deltaLabelMonth }}
+                </span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ q.perdidos.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ q.perdidos.plan_3d }}</span>
+              </div>
+            </div>
+
+          </ng-container>
+
+        </div><!-- /.stats-cards-grid (loaded) -->
+
+      </ng-container>
+
+    </section>
+
+    <!-- ── Tendencia ── -->
+    <section class="stats-section">
+      <h2 class="stats-section__title">Tendencia</h2>
+
+      <!-- Selector de ventana temporal (pills) -->
+      <div class="stats-pills" role="group" aria-label="Ventana temporal">
+        <button
+          *ngFor="let v of ventanas; trackBy: trackByVentana"
+          type="button"
+          class="stats-pill"
+          [class.stats-pill--active]="(ventanaTendencia$ | async) === v"
+          (click)="onVentanaChange(v)"
+          [attr.aria-pressed]="(ventanaTendencia$ | async) === v"
+        >
+          {{ ventanaLabels[v] }}
+        </button>
+      </div>
+
+      <!-- Loading: skeleton mientras tendencia$ no haya emitido -->
+      <ng-container *ngIf="(tendencia$ | async) as tstate; else tendenciaLoading">
+
+        <!-- Error -->
+        <div *ngIf="tstate.error" class="tendencia-message" role="alert">
+          No se pudo cargar la tendencia.
+        </div>
+
+        <!-- Datos insuficientes -->
+        <ng-container *ngIf="!tstate.error && tstate.data !== null">
+          <div *ngIf="hasInsufficientData(tstate.data)" class="tendencia-message">
+            No hay suficientes datos para mostrar tendencia.
+          </div>
+
+          <!-- Gráfica -->
+          <ng-container *ngIf="!hasInsufficientData(tstate.data)">
+            <div class="tendencia-chart-wrapper">
+              <div
+                class="tendencia-chart-scroll"
+                [style.min-width]="tstate.data.length > 3 ? tstate.data.length * 88 + 'px' : '100%'"
+              >
+                <div class="tendencia-chart-canvas">
+                  <canvas
+                    baseChart
+                    [type]="'bar'"
+                    [data]="buildChartData(tstate.data)"
+                    [options]="chartOptions"
+                    aria-label="Gráfica de tendencia de clientes por mes"
+                    role="img"
+                  ></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nota pie: mes en curso -->
+            <p *ngIf="hasMesActual(tstate.data)" class="tendencia-footnote">
+              * Mes en curso — corte al día de hoy
+            </p>
+          </ng-container>
+        </ng-container>
+
+      </ng-container>
+
+      <!-- Skeleton mientras el observable no ha emitido -->
+      <ng-template #tendenciaLoading>
+        <div class="skeleton-chart skeleton-chart--lg" aria-hidden="true">
+          <div class="skeleton skeleton--block"></div>
+        </div>
+      </ng-template>
+
+    </section>
+
+    <!-- ── Distribución — barras por quincena ── -->
+    <section class="stats-section">
+      <h2 class="stats-section__title">Distribución</h2>
+
+      <!-- Header: pills de ventana (izq) + toggle de plan (der) -->
+      <div class="distribucion-header">
+
+        <!-- Pills de ventana quincenal -->
+        <div class="distribucion-header__ventana">
+          <div class="stats-pills" role="group" aria-label="Ventana de distribución">
+            <button
+              *ngFor="let v of ventanasQuincenal; trackBy: trackByVentanaQ"
+              type="button"
+              class="stats-pill"
+              [class.stats-pill--active]="(ventanaQuincenal$ | async) === v"
+              (click)="onVentanaQuincenalChange(v)"
+              [attr.aria-pressed]="(ventanaQuincenal$ | async) === v"
+            >
+              {{ ventanaQuincenalLabels[v] }}
+            </button>
+          </div>
+        </div>
+
+        <!-- Toggle de plan -->
+        <div class="distribucion-header__plan">
+          <div class="stats-pills" role="group" aria-label="Filtro de plan">
+            <button
+              *ngFor="let p of planes; trackBy: trackByPlan"
+              type="button"
+              class="stats-pill stats-pill--sm"
+              [class.stats-pill--active]="planFilter === p"
+              (click)="setPlanFilter(p)"
+              [attr.aria-pressed]="planFilter === p"
+            >
+              {{ planLabels[p] }}
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Estado: loading / error / vacío / gráfica -->
+      <ng-container *ngIf="(quincenalTendencia$ | async) as qstate; else distribucionLoading">
+
+        <!-- Error -->
+        <div *ngIf="qstate.error" class="distribucion-message" role="alert">
+          No se pudo cargar la distribución.
+        </div>
+
+        <ng-container *ngIf="!qstate.error && qstate.data !== null">
+
+          <!-- Sin datos suficientes -->
+          <div *ngIf="hasNoQuincenalData(qstate.data)" class="distribucion-message">
+            No hay suficientes datos para mostrar la distribución.
+          </div>
+
+          <!-- Gráfica -->
+          <ng-container *ngIf="!hasNoQuincenalData(qstate.data)">
+            <div class="distribucion-chart-wrapper">
+              <div
+                class="distribucion-chart-scroll"
+                [style.min-width]="quincenalMinWidth(qstate.data)"
+              >
+                <div class="distribucion-chart-canvas">
+                  <canvas
+                    baseChart
+                    [type]="'bar'"
+                    [data]="buildQuincenalChartData(qstate.data, planFilter)"
+                    [options]="chartOptionsQuincenal"
+                    aria-label="Gráfica de distribución quincenal de clientes"
+                    role="img"
+                  ></canvas>
+                </div>
+              </div>
+            </div>
+
+            <!-- Nota: quincena en curso -->
+            <p *ngIf="hasParcialBars(qstate.data)" class="distribucion-footnote">
+              * Quincena en curso — corte al día de hoy
+            </p>
+          </ng-container>
+
+        </ng-container>
+
+      </ng-container>
+
+      <!-- Skeleton mientras el observable no ha emitido -->
+      <ng-template #distribucionLoading>
+        <div class="skeleton-chart skeleton-chart--md" aria-hidden="true">
+          <div class="skeleton skeleton--block"></div>
+        </div>
+      </ng-template>
+
+    </section>
+
+    <!-- ── Detalle — cohorte + clientes en riesgo ── -->
+    <section class="stats-section">
+      <h2 class="stats-section__title">Detalle</h2>
+
+      <ng-container *ngIf="(detalle$ | async) as dstate; else detalleLoading">
+
+        <!-- Error -->
+        <div *ngIf="dstate.error" class="detalle-message" role="alert">
+          No se pudo cargar el detalle.
+        </div>
+
+        <ng-container *ngIf="!dstate.error && dstate.data as d">
+
+          <!-- ── SUBSECCIÓN A: cards de cohorte ── -->
+          <div class="stats-cards-grid stats-cards-grid--3col">
+
+            <!-- Card Retención -->
+            <div class="stats-card stats-card--compact" role="region" aria-label="Retención este mes">
+              <p class="stats-card__title">Retención este mes</p>
+
+              <!-- Sin base de comparación -->
+              <ng-container *ngIf="d.retencion.tasa === null; else retencionConDatos">
+                <div class="stats-card__total-row">
+                  <span class="stats-card__total stats-card__total--placeholder">Sin datos</span>
+                </div>
+                <p class="stats-card__legend">No hubo activos el mes anterior</p>
+              </ng-container>
+
+              <!-- Con porcentaje -->
+              <ng-template #retencionConDatos>
+                <div class="stats-card__total-row">
+                  <span
+                    class="stats-card__total"
+                    [class.stats-card__total--verde]="retencionColor(d.retencion.tasa) === 'verde'"
+                    [class.stats-card__total--ambar]="retencionColor(d.retencion.tasa) === 'ambar'"
+                    [class.stats-card__total--rojo]="retencionColor(d.retencion.tasa) === 'rojo'"
+                  >{{ d.retencion.tasa!.toFixed(1) }}%</span>
+                </div>
+                <p class="stats-card__legend">{{ d.retencion.repitieron_este_mes }} de {{ d.retencion.activos_mes_anterior }} repitieron</p>
+              </ng-template>
+            </div>
+
+            <!-- Card Nuevos -->
+            <div class="stats-card stats-card--compact" role="region" aria-label="Nuevos este mes">
+              <p class="stats-card__title">Nuevos este mes</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ d.nuevos.total }}</span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ d.nuevos.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ d.nuevos.plan_3d }}</span>
+              </div>
+            </div>
+
+            <!-- Card Recuperados -->
+            <div class="stats-card stats-card--compact" role="region" aria-label="Recuperados este mes">
+              <p class="stats-card__title">Recuperados este mes</p>
+              <div class="stats-card__total-row">
+                <span class="stats-card__total">{{ d.recuperados.total }}</span>
+              </div>
+              <div class="stats-card__breakdown">
+                <span>6 días: {{ d.recuperados.plan_6d }}</span>
+                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
+                <span>3 días: {{ d.recuperados.plan_3d }}</span>
+              </div>
+            </div>
+
+          </div><!-- /.stats-cards-grid--3col -->
+
+          <!-- ── SUBSECCIÓN B: tabla clientes en riesgo ── -->
+          <div class="riesgo-section">
+
+            <!-- Header con badge contador -->
+            <div class="riesgo-header">
+              <h3 class="riesgo-header__title">Clientes en riesgo</h3>
+              <span
+                *ngIf="d.en_riesgo.length > 0"
+                class="riesgo-header__badge"
+                [attr.aria-label]="d.en_riesgo.length + ' clientes en riesgo'"
+              >{{ d.en_riesgo.length }}</span>
+            </div>
+
+            <!-- Estado vacío -->
+            <div *ngIf="d.en_riesgo.length === 0" class="riesgo-empty" role="status">
+              🎉 Sin clientes en riesgo
+            </div>
+
+            <!-- ── Desktop: tabla ── -->
+            <table
+              *ngIf="d.en_riesgo.length > 0"
+              class="risk-table-desktop"
+              aria-label="Clientes en riesgo"
+            >
+              <thead>
+                <tr>
+                  <th scope="col">Cliente</th>
+                  <th scope="col">Entrenador</th>
+                  <th scope="col">Plan</th>
+                  <th scope="col">Último pago</th>
+                  <th scope="col">Vence el</th>
+                  <th scope="col">Estado</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let entry of d.en_riesgo; trackBy: trackByClienteId"
+                >
+                  <td>{{ entry.nombre }}</td>
+                  <td>{{ entry.entrenador || '—' }}</td>
+                  <td>{{ planLabel(entry.plan) }}</td>
+                  <td>{{ formatDateDmy(entry.ultimo_pago) }}</td>
+                  <td>{{ formatDateDmy(entry.vence_el) }}</td>
+                  <td>
+                    <span
+                      class="riesgo-chip"
+                      [class.riesgo-chip--pendiente]="entry.estado === 'pendiente'"
+                      [class.riesgo-chip--por-vencer]="entry.estado === 'por_vencer'"
+                    >
+                      {{ entry.estado === 'pendiente' ? 'Pendiente' : 'Por vencer' }}
+                    </span>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- ── Mobile: lista de cards ── -->
+            <div
+              *ngIf="d.en_riesgo.length > 0"
+              class="risk-cards-mobile"
+              role="list"
+            >
+              <div
+                *ngFor="let entry of d.en_riesgo; trackBy: trackByClienteId"
+                class="risk-card-mobile"
+                role="listitem"
+              >
+                <div class="risk-card-mobile__top">
+                  <span class="risk-card-mobile__name">{{ entry.nombre }}</span>
+                  <span
+                    class="riesgo-chip"
+                    [class.riesgo-chip--pendiente]="entry.estado === 'pendiente'"
+                    [class.riesgo-chip--por-vencer]="entry.estado === 'por_vencer'"
+                  >
+                    {{ entry.estado === 'pendiente' ? 'Pendiente' : 'Por vencer' }}
+                  </span>
+                </div>
+                <p class="risk-card-mobile__sub">
+                  {{ entry.entrenador || '—' }} · {{ planLabel(entry.plan) }}
+                </p>
+                <p class="risk-card-mobile__vence">
+                  Vence el {{ formatDateDmy(entry.vence_el) }}
+                </p>
+                <p class="risk-card-mobile__pago">
+                  Último pago: {{ formatDateDmy(entry.ultimo_pago) }}
+                </p>
+              </div>
+            </div>
+
+          </div><!-- /.riesgo-section -->
+
+        </ng-container>
+
+      </ng-container>
+
+      <!-- Skeleton mientras detalle$ no ha emitido -->
+      <ng-template #detalleLoading>
+        <!-- 3 skeleton-cards compactas -->
+        <div class="stats-cards-grid stats-cards-grid--3col">
+          <div *ngFor="let i of [1,2,3]; trackBy: trackByIndex" class="skeleton-card skeleton-card--compact" aria-hidden="true">
+            <div class="skeleton skeleton--line-sm" style="width:55%"></div>
+            <div class="skeleton skeleton--line-lg" style="width:35%; height:28px; margin-top:2px;"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+          </div>
+        </div>
+        <!-- Skeleton tabla -->
+        <div class="skeleton-table" aria-hidden="true">
+          <div *ngFor="let i of [1,2,3,4,5]; trackBy: trackByIndex" class="skeleton-table__row">
+            <div class="skeleton skeleton--line-md"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+          </div>
+        </div>
+      </ng-template>
+
+    </section>
+
+  </main>
+
+</div>

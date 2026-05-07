@@ -55,6 +55,12 @@ const routes: Routes = [
         loadChildren: () =>
           import('./discounts/discounts.module').then((m) => m.DiscountsModule),
         canActivate: [roleGuard(['admin'])]
+      },
+      {
+        path: 'estadisticas',
+        loadChildren: () =>
+          import('./estadisticas/estadisticas.module').then((m) => m.EstadisticasModule),
+        canActivate: [roleGuard(['admin', 'trainer'])]
       }
     ]
   }
