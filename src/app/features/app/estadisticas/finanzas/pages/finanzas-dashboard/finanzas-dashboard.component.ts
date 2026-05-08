@@ -5,13 +5,36 @@ import {
   OnDestroy,
   OnInit
 } from '@angular/core';
-import { BehaviorSubject, Observable, Subject, combineLatest, of } from 'rxjs';
-import { catchError, map, shareReplay, startWith, switchMap, takeUntil } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  Observable,
+  Subject,
+  combineLatest,
+  of
+} from 'rxjs';
+import {
+  catchError,
+  map,
+  shareReplay,
+  startWith,
+  switchMap,
+  takeUntil
+} from 'rxjs/operators';
+
 import { ChartConfiguration, ChartData } from 'chart.js';
 
-import { formatAmountCop, formatAmountShort, getCategoryColor } from 'src/app/features/app/expense-records/models/expense-record.model';
-import { FinanzasService, MesPeriodo } from '../../services/finanzas.service';
 import {
+  formatAmountCop,
+  formatAmountShort,
+  PAYMENT_METHOD_LABELS
+} from 'src/app/features/app/expense-records/models/expense-record.model';
+import {
+  FinanzasService,
+  MesPeriodo
+} from '../../services/finanzas.service';
+import {
+  ComposicionCategoriaRow,
+  ComposicionProveedorRow,
   DetalleMetodoPago,
   FinanzasCajaResponse,
   FinanzasComposicionResponse,
@@ -22,27 +45,13 @@ import {
   VentanaTendenciaFin
 } from '../../models/finanzas.model';
 
-// ─── Tipos de estado de carga ─────────────────────────────────────────────────
+// ─── Estado de carga ──────────────────────────────────────────────────────────
 
 interface StateLoading {
   status: 'loading';
   data: null;
   error: null;
 }
-
-interface CajaStateLoaded {
-  status: 'loaded';
-  data: FinanzasCajaResponse;
-  error: null;
-}
-
-interface CajaStateError {
-  status: 'error';
-  data: null;
-  error: unknown;
-}
-
-type CajaState = StateLoading | CajaStateLoaded | CajaStateError;
 
 interface ResumenStateLoaded {
   status: 'loaded';
@@ -62,9 +71,63 @@ interface ResumenStatePreApp {
   error: null;
 }
 
-type ResumenState = StateLoading | ResumenStateLoaded | ResumenStateError | ResumenStatePreApp;
+type ResumenState =
+  | StateLoading
+  | ResumenStateLoaded
+  | ResumenStateError
+  | ResumenStatePreApp;
 
-// ─── Tipos de estado de Composición ───────────────────────────────────────────
+interface TendenciaStateLoaded {
+  status: 'loaded';
+  data: FinanzasTendenciaResponse;
+  error: null;
+}
+
+interface TendenciaStateError {
+  status: 'error';
+  data: null;
+  error: unknown;
+}
+
+type TendenciaState = StateLoading | TendenciaStateLoaded | TendenciaStateError;
+
+interface CajaStateLoaded {
+  status: 'loaded';
+  data: FinanzasCajaResponse;
+  error: null;
+}
+
+interface CajaStateError {
+  status: 'error';
+  data: null;
+  error: unknown;
+}
+
+type CajaState = StateLoading | CajaStateLoaded | CajaStateError;
+
+interface DetalleStateLoaded {
+  status: 'loaded';
+  data: FinanzasDetalleResponse;
+  error: null;
+}
+
+interface DetalleStateError {
+  status: 'error';
+  data: null;
+  error: unknown;
+}
+
+interface DetalleStatePreApp {
+  status: 'pre-app';
+  data: null;
+  error: null;
+}
+
+type DetalleState =
+  | StateLoading
+  | DetalleStateLoaded
+  | DetalleStateError
+  | DetalleStatePreApp;
 
 interface ComposicionStateLoaded {
   status: 'loaded';
@@ -90,82 +153,216 @@ type ComposicionState =
   | ComposicionStateError
   | ComposicionStatePreApp;
 
-// ─── Tipos de estado de Detalle ───────────────────────────────────────────────
+// ─── Vista (toggle local en sección 05) ──────────────────────────────────────
 
-interface DetalleStateLoaded {
-  status: 'loaded';
-  data: FinanzasDetalleResponse;
-  error: null;
+export type VistaComposicion = 'categoria' | 'proveedor';
+
+// ─── Filas de listas con barras de progreso (sección 04 y 05) ────────────────
+
+export interface MetodoPagoRow {
+  metodo: MetodoPago;
+  label: string;
+  total_cop: number;
+  cantidad_pagos: number;
+  porcentaje: number;
+  color: string;
+  /** Ancho de la barra como % del total general (mismo valor que porcentaje). */
+  widthPct: number;
 }
 
-interface DetalleStateError {
-  status: 'error';
-  data: null;
-  error: unknown;
+export interface ComposicionRow {
+  id: string;
+  nombre: string;
+  emoji?: string;
+  total_cop: number;
+  porcentaje: number;
+  cantidad: number;
+  color: string;
+  /** Ancho de la barra como % del total general (mismo valor que porcentaje). */
+  widthPct: number;
 }
 
-interface DetalleStatePreApp {
-  status: 'pre-app';
-  data: null;
-  error: null;
+// ─── Quincena VM (sección 04) ────────────────────────────────────────────────
+
+export interface QuincenaRow {
+  key: 'q1' | 'q2';
+  label: string;
+  total_cop: number;
+  cantidad_pagos: number;
+  estado: 'completa' | 'parcial' | 'no_iniciada';
+  /** "Completa" | "En curso" | "Aún no iniciada" */
+  estadoLabel: string;
+  /** Variante visual para el badge: 'success' | 'warn' | 'muted'. */
+  estadoVariant: 'success' | 'warn' | 'muted';
+  /** Ancho de la barra 0-100 sobre el max(q1, q2). */
+  widthPct: number;
+  /** Color de la barra según estado. */
+  barColor: string;
 }
 
-type DetalleState = StateLoading | DetalleStateLoaded | DetalleStateError | DetalleStatePreApp;
+// ─── Card view model ─────────────────────────────────────────────────────────
 
-// ─── Toggle de vista de Composición ───────────────────────────────────────────
+export type CardKey = 'ingresos' | 'egresos' | 'nomina' | 'caja';
+export type CardStatus = 'loading' | 'loaded' | 'error' | 'pre-app';
 
-type VistaComposicion = 'categoria' | 'proveedor';
-
-// ─── Tipos de estado de Tendencia ─────────────────────────────────────────────
-
-interface TendenciaStateLoaded {
-  status: 'loaded';
-  data: FinanzasTendenciaResponse;
-  error: null;
+export interface CardVM {
+  key: CardKey;
+  label: string;
+  color: string;
+  status: CardStatus;
+  value: number;
+  /** null = no delta to show (caja, pre-app, or first month). */
+  delta: number | null;
+  /** Si true, delta>0 = mal (rojo), <0 = bien (verde). Aplica a egresos/nómina. */
+  deltaInverted: boolean;
+  /** Texto secundario debajo del valor: "X pagos recibidos", "Capital del gimnasio". */
+  secondaryText: string;
+  /** Caption alternativo al delta pill (caja → "Desde 30/04/2026"). */
+  caption: string | null;
+  /** Geometría del sparkline o null si no hay datos suficientes. */
+  sparkline: SparklineGeometry | null;
+  /** Sufijo único del id del gradient SVG, para que múltiples sparklines no colisionen. */
+  gradId: string;
 }
 
-interface TendenciaStateError {
-  status: 'error';
-  data: null;
-  error: unknown;
+// ─── Sparkline path geometry ──────────────────────────────────────────────────
+
+interface SparklineGeometry {
+  /** Path "d" para la línea (M + L). */
+  linePath: string;
+  /** Path "d" para el área debajo de la línea (line + Z hacia el baseline). */
+  areaPath: string;
+  /** Coordenadas del último punto, para dibujar el dot destacado. */
+  lastX: number;
+  lastY: number;
+  /** Dimensiones efectivas del viewBox. */
+  width: number;
+  height: number;
 }
 
-interface TendenciaStateEmpty {
-  status: 'empty';
-  data: null;
-  error: null;
+// ─── Health gauge geometry ────────────────────────────────────────────────────
+
+interface GaugeGeometry {
+  /** Path del arco completo (track). */
+  trackD: string;
+  /** Path del arco de progreso. */
+  barD: string;
+  color: string;
+  grade: 'EXCELENTE' | 'BUENO' | 'REGULAR' | 'CRÍTICO';
+  description: string;
+  pctLabel: string;
+  cx: number;
+  cy: number;
+  r: number;
+  /** Ancho del SVG (igual a `size`). */
+  width: number;
+  /** Alto del SVG, igual a `size/2 + 12` para acomodar el stroke del arco. */
+  height: number;
+  /** viewBox precalculado: "0 0 W H". */
+  viewBox: string;
 }
 
-type TendenciaState = StateLoading | TendenciaStateLoaded | TendenciaStateError | TendenciaStateEmpty;
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
-/**
- * Primer mes con datos reales en la aplicación (abril 2026).
- * Hardcoded como constante operativa — no es un detalle de UI movible.
- */
-const APP_START_YEAR  = 2026;
+const APP_START_YEAR = 2026;
 const APP_START_MONTH = 4;
 
-/** Etiquetas cortas de mes para el label de delta ("vs abr"). */
-const MESES_CORTOS = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+const MESES_CORTOS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+];
 
-// ─── Constantes de color para la gráfica de tendencia ────────────────────────
+/** Ventana fija usada por la sparkline del hero. */
+const SPARKLINE_WINDOW = 6;
 
-/** Verde — ingresos (dinero que entra). */
-const COLOR_INGRESOS = '#10b981';
-/** Rojo suave — egresos totales (dinero que sale). */
-const COLOR_EGRESOS  = '#f87171';
-/** Teal de marca — utilidad (resultado neto). */
-const COLOR_UTILIDAD = '#228d9f';
-
-/** Ventanas temporales disponibles, en el orden que se muestran en las pills. */
 const VENTANAS_TENDENCIA: VentanaTendenciaFin[] = [1, 2, 6];
-
-/** Labels legibles para cada ventana. */
 const VENTANA_TENDENCIA_LABELS: Record<VentanaTendenciaFin, string> = {
   1: 'Mes anterior',
   2: 'Últimos 2 meses',
   6: 'Últimos 6 meses'
 };
+
+/** Mapea la ventana en N cantidad de puntos a tomar de la cola del array (current incluido). */
+const VENTANA_PUNTOS: Record<VentanaTendenciaFin, number> = {
+  1: 2,
+  2: 3,
+  6: 7
+};
+
+const COLOR_INGRESOS  = '#10b981';
+const COLOR_EGRESOS   = '#dc2626';
+const COLOR_UTILIDAD  = '#228d9f';
+
+/** Colores deterministas por método de pago (sección 04). */
+const METODO_COLORS: Record<MetodoPago, string> = {
+  transfer: '#228d9f',
+  cash:     '#10b981',
+  nequi:    '#8b5cf6',
+  other:    '#9ca3af'
+};
+
+/** Color usado por la fila de nómina en la sección 05. */
+const COLOR_NOMINA = '#6366f1';
+
+/** Paleta determinista para composición (categorías o proveedores). */
+const COMPOSICION_COLORS = [
+  '#228d9f',
+  '#10b981',
+  '#8b5cf6',
+  '#f59e0b',
+  '#ec4899',
+  '#06b6d4',
+  '#f97316',
+  '#0ea5e9',
+  '#84cc16',
+  '#a855f7'
+];
+
+const MESES_COMPLETOS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
+
+// ─── Helpers de estructura para variación / leyenda / quincena ───────────────
+
+export interface VariacionUtilidad {
+  /** % de variación; null cuando el primer punto fue 0. */
+  pct: number | null;
+  arrow: '↑' | '↓' | '→';
+  /** "↑ 1,600%" | "N/A" */
+  display: string;
+  /** "fv2-var--up" | "fv2-var--down" | "fv2-var--flat" | "fv2-var--null" */
+  cssClass: string;
+  /** Mes inicial en el rango analizado: "enero 2026". */
+  mesInicialLabel: string;
+}
+
+export interface SeriesLegendRow {
+  key: 'ingresos' | 'egresos' | 'utilidad';
+  label: string;
+  color: string;
+  minLabel: string;
+  maxLabel: string;
+  /** ancho relativo de la barra 0-100 sobre el max global de las 3 series. */
+  widthPct: number;
+}
+
+export interface QuincenaCierreInfo {
+  /** "15 mayo" | "31 mayo" — la fecha relativa al período actual (real-time). */
+  cierreLabel: string;
+  /** "Q1 Mayo 2026" | "Q2 Mayo 2026" — viene de cajaState$.caja_menor. */
+  badgeLabel: string;
+  daysRemaining: number;
+  /** "en 5 días" | "hoy" | "mañana" — texto del badge de countdown. */
+  countdownLabel: string;
+  /** Variante visual: 'default' (≥4 días), 'warn' (≤3), 'danger' (≤1). */
+  countdownVariant: 'default' | 'warn' | 'danger';
+}
+
+/** Dimensiones del SVG sparkline (viewBox). */
+const SPARKLINE_VB_WIDTH = 320;
+const SPARKLINE_VB_HEIGHT = 60;
+const SPARKLINE_PADDING_Y = 6;
 
 @Component({
   selector: 'app-finanzas-dashboard',
@@ -176,47 +373,10 @@ const VENTANA_TENDENCIA_LABELS: Record<VentanaTendenciaFin, string> = {
 export class FinanzasDashboardComponent implements OnInit, OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
-  // ─── Caja ──────────────────────────────────────────────────────────────────
+  // ─── Resumen ──────────────────────────────────────────────────────────────
 
-  /** Disparador de (re)carga de Caja. Emitir void en el BehaviorSubject reinicia el switchMap. */
-  private readonly retryCaja$ = new BehaviorSubject<void>(undefined);
-
-  /**
-   * Estado de carga de la sección Caja.
-   * - Arranca en `loading` gracias a startWith.
-   * - Cualquier nueva emisión de retryCaja$ cancela la llamada en vuelo (switchMap).
-   * - shareReplay(1) para que el async pipe no re-ejecute al suscribirse.
-   */
-  readonly cajaState$: Observable<CajaState> = this.retryCaja$.pipe(
-    switchMap(() =>
-      this.svc.getCaja().pipe(
-        map((data): CajaState => ({ status: 'loaded', data, error: null })),
-        catchError((err): Observable<CajaState> => of({ status: 'error', data: null, error: err })),
-        startWith<CajaState>({ status: 'loading', data: null, error: null })
-      )
-    ),
-    shareReplay(1)
-  );
-
-  // ─── Resumen ────────────────────────────────────────────────────────────────
-
-  /** Disparador de retry manual para la sección Resumen. */
   private readonly retryResumen$ = new BehaviorSubject<void>(undefined);
 
-  /**
-   * Estado de carga de la sección Resumen.
-   *
-   * Patrón elegido: combineLatest([mesPeriodo$, retryResumen$]).
-   * Razón: getResumen() ya reacciona internamente a mesPeriodo$ vía switchMap,
-   * pero si la suscripción del componente solo escucha retryResumen$, el cambio
-   * de mes haría que el switchMap interno cancele y re-ejecute sin que el
-   * startWith del inner pipe vuelva a emitir 'loading'. Al combinar ambas fuentes
-   * aquí, cada cambio de mes O cada retry:
-   *   1. Dispara el switchMap externo (cancela la llamada en vuelo).
-   *   2. El inner pipe arranca con startWith('loading') — skeleton visible.
-   *   3. getResumen() lee el período actual del BehaviorSubject directamente,
-   *      así que no hay doble suscripción a mesPeriodo$.
-   */
   readonly resumenState$: Observable<ResumenState> = combineLatest([
     this.svc.mesPeriodo$,
     this.retryResumen$
@@ -227,52 +387,23 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
       }
       return this.svc.getResumen(period.year, period.month).pipe(
         map((data): ResumenState => ({ status: 'loaded', data, error: null })),
-        catchError((err): Observable<ResumenState> => of({ status: 'error', data: null, error: err })),
+        catchError((err): Observable<ResumenState> =>
+          of({ status: 'error', data: null, error: err })
+        ),
         startWith<ResumenState>({ status: 'loading', data: null, error: null })
       );
     }),
     shareReplay(1)
   );
 
-  // ─── Tendencia ─────────────────────────────────────────────────────────────
+  // ─── Tendencia (sparkline) ────────────────────────────────────────────────
 
-  /** Constantes de ventana y labels expuestos al template. */
-  readonly ventanasTendencia: VentanaTendenciaFin[] = VENTANAS_TENDENCIA;
-  readonly ventanaTendenciaLabels: Record<VentanaTendenciaFin, string> = VENTANA_TENDENCIA_LABELS;
-
-  /** Ventana temporal activa — proxy del servicio para los bindings del template. */
-  readonly ventanaTendencia$: Observable<VentanaTendenciaFin> = this.svc.ventanaTendencia$;
-
-  /**
-   * Disparador de retry manual para la sección Tendencia.
-   * combineLatest lo combina con ventanaTendencia$ para que cualquier cambio
-   * de ventana o un retry explícito relance la llamada a la EF.
-   */
   private readonly retryTendencia$ = new BehaviorSubject<void>(undefined);
 
-  /**
-   * Estado de la sección Tendencia.
-   *
-   * Patrón análogo a resumenState$: combineLatest([ventanaTendencia$, retryTendencia$])
-   * para que cada cambio de ventana o retry dispare el switchMap externo,
-   * garantizando que startWith('loading') se emita en cada transición.
-   *
-   * empty → todos los puntos tienen ingresos=0 y egresos=0 (sin datos reales).
-   */
-  readonly tendenciaState$: Observable<TendenciaState> = combineLatest([
-    this.svc.ventanaTendencia$,
-    this.retryTendencia$
-  ]).pipe(
-    switchMap(([meses_atras]) =>
-      this.svc.getTendencia(meses_atras).pipe(
-        map((data): TendenciaState => {
-          const allZero = data.every(
-            p => p.ingresos_cop === 0 && p.egresos_totales_cop === 0
-          );
-          return allZero
-            ? { status: 'empty', data: null, error: null }
-            : { status: 'loaded', data, error: null };
-        }),
+  readonly tendenciaState$: Observable<TendenciaState> = this.retryTendencia$.pipe(
+    switchMap(() =>
+      this.svc.getTendencia(SPARKLINE_WINDOW).pipe(
+        map((data): TendenciaState => ({ status: 'loaded', data, error: null })),
         catchError((err): Observable<TendenciaState> =>
           of({ status: 'error', data: null, error: err })
         ),
@@ -282,26 +413,50 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     shareReplay(1)
   );
 
-  // ─── Composición ───────────────────────────────────────────────────────────
+  // ─── Caja (saldo consolidado, no depende del período) ────────────────────
 
-  /** Color fijo indigo-500 para la fila de nómina (no pasa por la paleta determinista). */
-  private static readonly COLOR_NOMINA = '#6366f1';
+  private readonly retryCaja$ = new BehaviorSubject<void>(undefined);
 
-  readonly vistasComposicion: VistaComposicion[] = ['categoria', 'proveedor'];
-  readonly vistaComposicionLabels: Record<VistaComposicion, string> = {
-    categoria: 'Por categoría',
-    proveedor: 'Por proveedor'
-  };
+  readonly cajaState$: Observable<CajaState> = this.retryCaja$.pipe(
+    switchMap(() =>
+      this.svc.getCaja().pipe(
+        map((data): CajaState => ({ status: 'loaded', data, error: null })),
+        catchError((err): Observable<CajaState> =>
+          of({ status: 'error', data: null, error: err })
+        ),
+        startWith<CajaState>({ status: 'loading', data: null, error: null })
+      )
+    ),
+    shareReplay(1)
+  );
 
-  vistaComposicion: VistaComposicion = 'categoria';
+  // ─── Detalle de ingresos (sección 04) ────────────────────────────────────
+
+  private readonly retryDetalle$ = new BehaviorSubject<void>(undefined);
+
+  readonly detalleState$: Observable<DetalleState> = combineLatest([
+    this.svc.mesPeriodo$,
+    this.retryDetalle$
+  ]).pipe(
+    switchMap(([period]) => {
+      if (this.isPreAppPeriod(period)) {
+        return of<DetalleState>({ status: 'pre-app', data: null, error: null });
+      }
+      return this.svc.getDetalle(period.year, period.month).pipe(
+        map((data): DetalleState => ({ status: 'loaded', data, error: null })),
+        catchError((err): Observable<DetalleState> =>
+          of({ status: 'error', data: null, error: err })
+        ),
+        startWith<DetalleState>({ status: 'loading', data: null, error: null })
+      );
+    }),
+    shareReplay(1)
+  );
+
+  // ─── Composición de egresos (sección 05) ─────────────────────────────────
 
   private readonly retryComposicion$ = new BehaviorSubject<void>(undefined);
 
-  /**
-   * Patrón análogo a resumenState$: combineLatest([mesPeriodo$, retryComposicion$])
-   * para que cada cambio de mes O cada retry dispare el switchMap externo,
-   * garantizando que startWith('loading') se emita en cada transición.
-   */
   readonly composicionState$: Observable<ComposicionState> = combineLatest([
     this.svc.mesPeriodo$,
     this.retryComposicion$
@@ -321,29 +476,29 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     shareReplay(1)
   );
 
-  /**
-   * Cache del último array de filas activo.
-   * El tooltip de la dona accede al porcentaje por índice sin necesidad de
-   * incluirlo en el dataset de Chart.js (que solo acepta `number[]`).
-   */
-  private _composicionLastRows: Array<{ porcentaje: number }> = [];
+  // ─── Ventana de tendencia (sólo afecta a la sección 02) ──────────────────
 
-  // ─── UI state ──────────────────────────────────────────────────────────────
+  readonly ventanasTendencia: VentanaTendenciaFin[] = VENTANAS_TENDENCIA;
+  readonly ventanaTendenciaLabels: Record<VentanaTendenciaFin, string> =
+    VENTANA_TENDENCIA_LABELS;
+  readonly ventanaTendencia$: Observable<VentanaTendenciaFin> =
+    this.svc.ventanaTendencia$;
 
-  /** Observable del estado de visibilidad de montos. Expuesto al template vía async pipe. */
-  readonly cajaVisible$: Observable<boolean> = this.svc.cajaVisible$;
+  // ─── Visibilidad de montos ────────────────────────────────────────────────
 
-  /** Label visible en el selector de período: "Mayo 2026". */
+  readonly montosVisibles$: Observable<boolean> = this.svc.montosVisibles$;
+
+  // ─── Período (snapshot sincrónico para template) ──────────────────────────
+
+  protected periodo: MesPeriodo = {
+    year: new Date().getFullYear(),
+    month: new Date().getMonth() + 1
+  };
   periodoLabel = '';
-  /** Bloquea el botón ▶ cuando el período mostrado ya es el mes real actual. */
   isAtCurrentMonth = true;
-  /** Bloquea el botón ◀ cuando el período mostrado ya es el primer mes con datos (abril 2026). */
   isAtAppStartMonth = false;
 
-  /** Snapshot del período activo, actualizado por la suscripción en ngOnInit. */
-  protected periodo: MesPeriodo = { year: new Date().getFullYear(), month: new Date().getMonth() + 1 };
-
-  private readonly currentYear  = new Date().getFullYear();
+  private readonly currentYear = new Date().getFullYear();
   private readonly currentMonth = new Date().getMonth() + 1;
 
   constructor(
@@ -353,10 +508,12 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
 
   ngOnInit(): void {
     this.svc.mesPeriodo$.pipe(takeUntil(this.destroy$)).subscribe((p) => {
-      this.periodo            = p;
-      this.periodoLabel       = this.svc.getPeriodoLabel(p.year, p.month);
-      this.isAtCurrentMonth   = p.year === this.currentYear && p.month === this.currentMonth;
-      this.isAtAppStartMonth  = p.year === APP_START_YEAR && p.month === APP_START_MONTH;
+      this.periodo = p;
+      this.periodoLabel = this.svc.getPeriodoLabel(p.year, p.month);
+      this.isAtCurrentMonth =
+        p.year === this.currentYear && p.month === this.currentMonth;
+      this.isAtAppStartMonth =
+        p.year === APP_START_YEAR && p.month === APP_START_MONTH;
       this.cdr.markForCheck();
     });
   }
@@ -366,305 +523,57 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     this.destroy$.complete();
   }
 
-  // ─── Período ─────────────────────────────────────────────────────────────
+  // ─── Período ──────────────────────────────────────────────────────────────
 
   onPrevMonth(): void {
     if (this.isAtAppStartMonth) return;
     const { year, month } = this.periodo;
-    if (month === 1) {
-      this.svc.setPeriodo(year - 1, 12);
-    } else {
-      this.svc.setPeriodo(year, month - 1);
-    }
+    this.svc.setPeriodo(
+      month === 1 ? year - 1 : year,
+      month === 1 ? 12 : month - 1
+    );
   }
 
   onNextMonth(): void {
-    if (this.isAtCurrentMonth) {
-      return;
-    }
+    if (this.isAtCurrentMonth) return;
     const { year, month } = this.periodo;
-    if (month === 12) {
-      this.svc.setPeriodo(year + 1, 1);
-    } else {
-      this.svc.setPeriodo(year, month + 1);
-    }
+    this.svc.setPeriodo(
+      month === 12 ? year + 1 : year,
+      month === 12 ? 1 : month + 1
+    );
   }
 
-  // ─── Caja ────────────────────────────────────────────────────────────────
+  // ─── Toggle montos ────────────────────────────────────────────────────────
 
-  retryCaja(): void {
-    this.retryCaja$.next();
+  onToggleMontos(): void {
+    this.svc.toggleMontosVisibles();
   }
 
-  onToggleCaja(): void {
-    this.svc.toggleCajaVisible();
-  }
-
-  // ─── Resumen ─────────────────────────────────────────────────────────────
+  // ─── Retry ────────────────────────────────────────────────────────────────
 
   retryResumen(): void {
     this.retryResumen$.next();
   }
 
-  /**
-   * Devuelve true para cualquier período anterior a abril 2026 (inicio de la app).
-   * Se usa para evitar llamar a la EF con datos que no existen.
-   */
-  isPreAppPeriod(period: MesPeriodo): boolean {
-    return period.year < APP_START_YEAR ||
-      (period.year === APP_START_YEAR && period.month < APP_START_MONTH);
-  }
-
-  /**
-   * Etiqueta corta del mes anterior al período activo ("abr", "mar", etc.).
-   * Se llama desde el template con el período resuelto del async pipe, no
-   * con this.periodo, para mantener coherencia OnPush sin snapshot manual.
-   */
-  prevMonthLabel(period: MesPeriodo): string {
-    // month es 1-indexed; MESES_CORTOS es 0-indexed.
-    // mes anterior: si month=1 → dic (índice 11); si month>1 → month-2.
-    const prevIndex = period.month === 1 ? 11 : period.month - 2;
-    return MESES_CORTOS[prevIndex];
-  }
-
-  // ─── Delta classes ────────────────────────────────────────────────────────
-
-  /**
-   * Clases de delta para métricas directas (ingresos, utilidad):
-   * subir es bueno (verde), bajar es malo (rojo).
-   */
-  ingresosDeltaClass(delta: number): string {
-    if (delta > 0) return 'stats-card__delta--up';
-    if (delta < 0) return 'stats-card__delta--down';
-    return 'stats-card__delta--zero';
-  }
-
-  /**
-   * Clases de delta para métricas invertidas (egresos, nómina):
-   * subir es malo (rojo), bajar es bueno (verde).
-   * Reutiliza las clases --up-bad y --down-good definidas en el SCSS de Clientes.
-   */
-  egresosDeltaClass(delta: number): string {
-    if (delta > 0) return 'stats-card__delta--up-bad';
-    if (delta < 0) return 'stats-card__delta--down-good';
-    return 'stats-card__delta--zero';
-  }
-
-  // ─── Tendencia ───────────────────────────────────────────────────────────
-
   retryTendencia(): void {
     this.retryTendencia$.next();
   }
 
-  onVentanaTendenciaChange(n: VentanaTendenciaFin): void {
-    this.svc.setVentanaTendencia(n);
+  retryCaja(): void {
+    this.retryCaja$.next();
   }
 
-  trackByVentanaTendencia(_i: number, v: VentanaTendenciaFin): VentanaTendenciaFin {
-    return v;
+  retryDetalle(): void {
+    this.retryDetalle$.next();
   }
-
-  /**
-   * Construye el ChartData de Chart.js para la gráfica de tendencia.
-   * Tres datasets: Ingresos / Egresos totales / Utilidad.
-   * El mes actual se renderiza con opacidad 0.6 + asterisco en su label
-   * para indicar que los datos son parciales.
-   */
-  buildTendenciaChartData(puntos: FinanzasTendenciaResponse): ChartData<'bar'> {
-    const labels = puntos.map(p => p.es_mes_actual ? `${p.label} *` : p.label);
-
-    const bgIngresos = puntos.map(p =>
-      p.es_mes_actual ? this.withAlpha(COLOR_INGRESOS, 0.6) : COLOR_INGRESOS
-    );
-    const bgEgresos = puntos.map(p =>
-      p.es_mes_actual ? this.withAlpha(COLOR_EGRESOS, 0.6) : COLOR_EGRESOS
-    );
-    const bgUtilidad = puntos.map(p =>
-      p.es_mes_actual ? this.withAlpha(COLOR_UTILIDAD, 0.6) : COLOR_UTILIDAD
-    );
-
-    return {
-      labels,
-      datasets: [
-        { label: 'Ingresos',        data: puntos.map(p => p.ingresos_cop),        backgroundColor: bgIngresos },
-        { label: 'Egresos totales', data: puntos.map(p => p.egresos_totales_cop), backgroundColor: bgEgresos  },
-        { label: 'Utilidad',        data: puntos.map(p => p.utilidad_cop),        backgroundColor: bgUtilidad }
-      ]
-    };
-  }
-
-  /** Opciones estáticas de Chart.js. Tooltip muestra monto completo; eje Y usa formato corto. */
-  readonly tendenciaChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: {
-        mode: 'index',
-        intersect: false,
-        callbacks: {
-          label: (ctx) => {
-            const value = ctx.parsed.y as number;
-            return `${ctx.dataset.label}: ${formatAmountCop(value)}`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: {
-        // utilidad puede ser negativa → permitir < 0
-        beginAtZero: false,
-        ticks: {
-          callback: (value) => formatAmountShort(value as number)
-        }
-      }
-    }
-  };
-
-  /** True si algún punto de la serie corresponde al mes en curso (para mostrar la nota al pie). */
-  hasMesActual(puntos: FinanzasTendenciaResponse): boolean {
-    return puntos.some(p => p.es_mes_actual);
-  }
-
-  /** Convierte un color hex a rgba con el alpha dado. Usado para opacar el mes actual. */
-  private withAlpha(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
-  }
-
-  // ─── Detalle ───────────────────────────────────────────────────────────────
-
-  /** Emojis visuales por método de pago. Estáticos — no necesitan ser reactivos. */
-  private static readonly METODO_EMOJIS: Record<MetodoPago, string> = {
-    cash:     '💵',
-    nequi:    '📱',
-    transfer: '🏦',
-    other:    '🔹'
-  };
-
-  /** Devuelve el emoji visual del método de pago. */
-  metodoEmoji(metodo: MetodoPago): string {
-    return FinanzasDashboardComponent.METODO_EMOJIS[metodo] ?? '🔹';
-  }
-
-  private readonly retryDetalle$ = new BehaviorSubject<void>(undefined);
-
-  /**
-   * Estado de la sección Detalle.
-   * Patrón análogo a composicionState$: combineLatest([mesPeriodo$, retryDetalle$])
-   * garantiza que startWith('loading') se emita en cada cambio de período o retry.
-   */
-  readonly detalleState$: Observable<DetalleState> = combineLatest([
-    this.svc.mesPeriodo$,
-    this.retryDetalle$
-  ]).pipe(
-    switchMap(([period]) => {
-      if (this.isPreAppPeriod(period)) {
-        return of<DetalleState>({ status: 'pre-app', data: null, error: null });
-      }
-      return this.svc.getDetalle(period.year, period.month).pipe(
-        map((data): DetalleState => ({ status: 'loaded', data, error: null })),
-        catchError((err): Observable<DetalleState> => of({ status: 'error', data: null, error: err })),
-        startWith<DetalleState>({ status: 'loading', data: null, error: null })
-      );
-    }),
-    shareReplay(1)
-  );
-
-  retryDetalle(): void { this.retryDetalle$.next(); }
-
-  trackByMetodo(_i: number, m: DetalleMetodoPago): MetodoPago { return m.metodo; }
-
-  /**
-   * Cache de las quincenas activas para que el tooltip de la gráfica
-   * pueda leer estado y cantidad de pagos por índice sin necesitar el dataset.
-   * Se actualiza cada vez que el template llama a `quincenasForChart()`.
-   */
-  private _detalleQuincenas: FinanzasDetalleResponse['quincenas'] | null = null;
-
-  /**
-   * Memoiza las quincenas para que el tooltip pueda leerlas por índice.
-   * Se llama en el template antes de pasarlas al canvas.
-   */
-  quincenasForChart(
-    q: FinanzasDetalleResponse['quincenas']
-  ): FinanzasDetalleResponse['quincenas'] {
-    this._detalleQuincenas = q;
-    return q;
-  }
-
-  /**
-   * Construye el ChartData de Chart.js para las 2 barras de quincena.
-   * Q2 en estado 'no_iniciada' usa null para que Chart.js deje la barra vacía.
-   * Color con opacidad 0.5 cuando la quincena está 'parcial' (en curso).
-   */
-  buildQuincenasChartData(q: FinanzasDetalleResponse['quincenas']): ChartData<'bar'> {
-    const q2Value: number | null = q.q2.estado === 'no_iniciada' ? null : q.q2.total_cop;
-
-    const colorQ1 = q.q1.estado === 'parcial'
-      ? this.withAlpha(COLOR_UTILIDAD, 0.5)
-      : COLOR_UTILIDAD;
-    const colorQ2 = q.q2.estado === 'parcial'
-      ? this.withAlpha(COLOR_UTILIDAD, 0.5)
-      : COLOR_UTILIDAD;
-
-    return {
-      labels: ['Q1 (1–15)', 'Q2 (16–fin)'],
-      datasets: [{
-        label: 'Ingresos',
-        data: [q.q1.total_cop, q2Value],
-        backgroundColor: [colorQ1, colorQ2],
-        borderRadius: 6,
-        maxBarThickness: 80
-      }]
-    };
-  }
-
-  readonly quincenasChartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          label: (ctx) => {
-            const value = ctx.parsed.y as number | null;
-            const idx   = ctx.dataIndex;
-            const q     = idx === 0
-              ? this._detalleQuincenas?.q1
-              : this._detalleQuincenas?.q2;
-            if (!q) return '';
-            if (q.estado === 'no_iniciada') return 'Aún no iniciada';
-            const estadoLabel = q.estado === 'parcial' ? 'En curso' : 'Completa';
-            const valStr      = value !== null ? formatAmountCop(value) : '$0';
-            const pagosLabel  = q.cantidad_pagos === 1
-              ? '1 pago'
-              : `${q.cantidad_pagos} pagos`;
-            return `${valStr} — ${pagosLabel} — ${estadoLabel}`;
-          }
-        }
-      }
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: {
-        beginAtZero: true,
-        ticks: {
-          precision: 0,
-          callback: (value) => formatAmountShort(value as number)
-        }
-      }
-    }
-  };
-
-  // ─── Composición — métodos públicos ──────────────────────────────────────
 
   retryComposicion(): void {
     this.retryComposicion$.next();
   }
+
+  // ─── Vista de composición (sección 05) ───────────────────────────────────
+
+  vistaComposicion: VistaComposicion = 'categoria';
 
   onVistaComposicionChange(v: VistaComposicion): void {
     this.vistaComposicion = v;
@@ -675,77 +584,895 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     return v;
   }
 
-  trackByComposicionRow(_i: number, r: { id: string }): string {
-    return r.id;
+  readonly vistasComposicion: VistaComposicion[] = ['categoria', 'proveedor'];
+  readonly vistaComposicionLabels: Record<VistaComposicion, string> = {
+    categoria: 'Por categoría',
+    proveedor: 'Por proveedor'
+  };
+
+  // ─── Ventana de tendencia ────────────────────────────────────────────────
+
+  onVentanaTendenciaChange(n: VentanaTendenciaFin): void {
+    this.svc.setVentanaTendencia(n);
+  }
+
+  trackByVentana(_i: number, v: VentanaTendenciaFin): VentanaTendenciaFin {
+    return v;
+  }
+
+  // ─── Período helpers ──────────────────────────────────────────────────────
+
+  isPreAppPeriod(period: MesPeriodo): boolean {
+    return (
+      period.year < APP_START_YEAR ||
+      (period.year === APP_START_YEAR && period.month < APP_START_MONTH)
+    );
+  }
+
+  prevMonthLabel(period: MesPeriodo): string {
+    const idx = period.month === 1 ? 11 : period.month - 2;
+    return MESES_CORTOS[idx];
+  }
+
+  // ─── Formatters ───────────────────────────────────────────────────────────
+
+  formatCop(amount: number): string {
+    return formatAmountCop(amount);
+  }
+
+  formatShort(amount: number): string {
+    return formatAmountShort(amount);
+  }
+
+  formatVisible(amount: number, visible: boolean | null): string {
+    return visible ? formatAmountCop(amount) : '••••••';
+  }
+
+  formatVisibleShort(amount: number, visible: boolean | null): string {
+    return visible ? formatAmountShort(amount) : '$••••';
+  }
+
+  /** Texto de la fórmula P&L en el hero. */
+  formulaText(resumen: FinanzasResumenResponse, visible: boolean | null): string {
+    const ing = this.formatVisibleShort(resumen.ingresos.total_cop, visible);
+    const ops = this.formatVisibleShort(resumen.egresos_operativos.total_cop, visible);
+    const nom = this.formatVisibleShort(resumen.nomina.total_cop, visible);
+    return `+ Ingresos ${ing} · − Operativos ${ops} · − Nómina ${nom}`;
+  }
+
+  // ─── Delta pill ───────────────────────────────────────────────────────────
+
+  deltaPillClass(deltaCop: number): string {
+    if (deltaCop > 0) return 'fv2-pill fv2-pill--up';
+    if (deltaCop < 0) return 'fv2-pill fv2-pill--down';
+    return 'fv2-pill fv2-pill--flat';
+  }
+
+  deltaPillArrow(deltaCop: number): string {
+    if (deltaCop > 0) return '↑';
+    if (deltaCop < 0) return '↓';
+    return '→';
+  }
+
+  // ─── Sparkline geometry ───────────────────────────────────────────────────
+
+  /**
+   * Construye paths SVG de línea + área para una sparkline.
+   * El color y el id del gradient se aplican en el template — esta función
+   * sólo calcula geometría. Devuelve null si la serie es insuficiente (<2 pts).
+   */
+  buildSparkline(
+    values: number[],
+    width = 80,
+    height = 40
+  ): SparklineGeometry | null {
+    if (!values || values.length < 2) return null;
+
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 0);
+    const range = max - min || 1;
+
+    const pad = SPARKLINE_PADDING_Y;
+    const innerH = height - pad * 2;
+    const stepX = width / (values.length - 1);
+
+    const coords = values.map((v, i) => {
+      const x = i * stepX;
+      const y = pad + innerH - ((v - min) / range) * innerH;
+      return { x, y };
+    });
+
+    const linePath = coords
+      .map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(2)},${c.y.toFixed(2)}`)
+      .join(' ');
+
+    const first = coords[0];
+    const last = coords[coords.length - 1];
+    const areaPath =
+      `${linePath} L${last.x.toFixed(2)},${height} L${first.x.toFixed(2)},${height} Z`;
+
+    return {
+      linePath,
+      areaPath,
+      lastX: last.x,
+      lastY: last.y,
+      width,
+      height
+    };
+  }
+
+  /** Sparkline grande del hero — usa la serie de utilidad. */
+  buildHeroSparkline(puntos: FinanzasTendenciaResponse): SparklineGeometry | null {
+    return this.buildSparkline(
+      puntos.map((p) => p.utilidad_cop),
+      SPARKLINE_VB_WIDTH,
+      SPARKLINE_VB_HEIGHT
+    );
+  }
+
+  // ─── Cards de "Indicadores del período" ──────────────────────────────────
+
+  /**
+   * Construye los 4 cards de la sección de indicadores a partir de los
+   * tres streams de datos. Cada card lleva su propio status para que el
+   * template pueda renderizar skeleton/error/loaded de forma independiente.
+   */
+  buildCards(
+    rs: ResumenState | null,
+    ts: TendenciaState | null,
+    cs: CajaState | null
+  ): CardVM[] {
+    const baseCards: CardVM[] = [
+      this.makeIngresosCard(rs, ts),
+      this.makeEgresosCard(rs, ts),
+      this.makeNominaCard(rs, ts),
+      this.makeCajaCard(cs, ts)
+    ];
+    return baseCards;
+  }
+
+  private makeIngresosCard(
+    rs: ResumenState | null,
+    ts: TendenciaState | null
+  ): CardVM {
+    const status = this.deriveResumenCardStatus(rs);
+    const value = rs?.status === 'loaded' ? rs.data!.ingresos.total_cop : 0;
+    const delta = rs?.status === 'loaded' ? rs.data!.ingresos.delta_cop : null;
+    const cantidadPagos = rs?.status === 'loaded' ? rs.data!.ingresos.cantidad_pagos ?? 0 : 0;
+    const sparkVals = ts?.status === 'loaded'
+      ? ts.data!.map((p) => p.ingresos_cop)
+      : [];
+
+    return {
+      key: 'ingresos',
+      label: 'Ingresos',
+      color: '#10b981',
+      status,
+      value,
+      delta,
+      deltaInverted: false,
+      secondaryText: `${cantidadPagos} pagos recibidos`,
+      caption: null,
+      sparkline: this.buildSparkline(sparkVals),
+      gradId: 'fv2-card-spark-ingresos'
+    };
+  }
+
+  private makeEgresosCard(
+    rs: ResumenState | null,
+    ts: TendenciaState | null
+  ): CardVM {
+    const status = this.deriveResumenCardStatus(rs);
+    const value = rs?.status === 'loaded' ? rs.data!.egresos_operativos.total_cop : 0;
+    const delta = rs?.status === 'loaded' ? rs.data!.egresos_operativos.delta_cop : null;
+    const cantidad = rs?.status === 'loaded' ? rs.data!.egresos_operativos.cantidad_registros ?? 0 : 0;
+    const sparkVals = ts?.status === 'loaded'
+      ? ts.data!.map((p) => p.egresos_operativos_cop)
+      : [];
+
+    return {
+      key: 'egresos',
+      label: 'Egresos operativos',
+      color: '#dc2626',
+      status,
+      value,
+      delta,
+      deltaInverted: true,
+      secondaryText: `${cantidad} registros`,
+      caption: null,
+      sparkline: this.buildSparkline(sparkVals),
+      gradId: 'fv2-card-spark-egresos'
+    };
+  }
+
+  private makeNominaCard(
+    rs: ResumenState | null,
+    ts: TendenciaState | null
+  ): CardVM {
+    const status = this.deriveResumenCardStatus(rs);
+    const value = rs?.status === 'loaded' ? rs.data!.nomina.total_cop : 0;
+    const delta = rs?.status === 'loaded' ? rs.data!.nomina.delta_cop : null;
+    const cierres = rs?.status === 'loaded' ? rs.data!.nomina.cantidad_cierres ?? 0 : 0;
+
+    // tendenciaState$ no expone nomina_cop directamente — derivar punto a punto.
+    const sparkVals = ts?.status === 'loaded'
+      ? ts.data!.map((p) =>
+          Math.max(0, p.egresos_totales_cop - p.egresos_operativos_cop)
+        )
+      : [];
+
+    return {
+      key: 'nomina',
+      label: 'Nómina pagada',
+      color: '#6366f1',
+      status,
+      value,
+      delta,
+      deltaInverted: true,
+      secondaryText: `${cierres} quincenas cerradas`,
+      caption: null,
+      sparkline: this.buildSparkline(sparkVals),
+      gradId: 'fv2-card-spark-nomina'
+    };
+  }
+
+  private makeCajaCard(
+    cs: CajaState | null,
+    ts: TendenciaState | null
+  ): CardVM {
+    const status: CardStatus = !cs || cs.status === 'loading'
+      ? 'loading'
+      : cs.status === 'error'
+        ? 'error'
+        : 'loaded';
+
+    const value = cs?.status === 'loaded' ? cs.data!.caja_consolidada.saldo_cop : 0;
+    const semillaFecha = cs?.status === 'loaded' ? cs.data!.caja_consolidada.semilla_fecha : null;
+
+    const sparkVals = this.computeSaldoSeries(ts, cs);
+
+    return {
+      key: 'caja',
+      label: 'Caja consolidada',
+      color: '#228d9f',
+      status,
+      value,
+      delta: null,
+      deltaInverted: false,
+      secondaryText: 'Capital del gimnasio',
+      caption: semillaFecha ? `Desde ${this.formatDateDmy(semillaFecha)}` : null,
+      sparkline: this.buildSparkline(sparkVals),
+      gradId: 'fv2-card-spark-caja'
+    };
+  }
+
+  private deriveResumenCardStatus(rs: ResumenState | null): CardStatus {
+    if (!rs || rs.status === 'loading') return 'loading';
+    if (rs.status === 'error') return 'error';
+    if (rs.status === 'pre-app') return 'pre-app';
+    return 'loaded';
+  }
+
+  /** Convierte ISO YYYY-MM-DD → DD/MM/YYYY. */
+  formatDateDmy(iso: string): string {
+    const parts = iso.split('-');
+    if (parts.length !== 3) return iso;
+    const [yyyy, mm, dd] = parts;
+    return `${dd}/${mm}/${yyyy}`;
+  }
+
+  trackByCardKey(_i: number, c: CardVM): CardKey {
+    return c.key;
+  }
+
+  // ─── Saldo acumulado (compartido por card 4 y por la sección 03) ─────────
+
+  /**
+   * Calcula el saldo acumulado punto a punto desde la semilla.
+   * Si tendencia o caja no están listos, devuelve [].
+   */
+  computeSaldoSeries(
+    ts: TendenciaState | null,
+    cs: CajaState | null
+  ): number[] {
+    if (!ts || ts.status !== 'loaded' || !cs || cs.status !== 'loaded') return [];
+    const tendencia = ts.data!;
+    const semilla = cs.data!.caja_consolidada.semilla_cop;
+    if (tendencia.length === 0) return [semilla];
+
+    const saldos: number[] = [semilla];
+    for (let i = 1; i < tendencia.length; i++) {
+      const prev = saldos[i - 1];
+      saldos.push(prev + tendencia[i].ingresos_cop - tendencia[i].egresos_totales_cop);
+    }
+    return saldos;
+  }
+
+  // ─── Sección 02 — Tendencia ──────────────────────────────────────────────
+
+  /**
+   * Slice de la tendencia según la ventana seleccionada.
+   * El backend en v2 entrega siempre 6 meses; aquí cortamos la cola.
+   */
+  windowedPuntos(
+    puntos: FinanzasTendenciaResponse,
+    ventana: VentanaTendenciaFin | null
+  ): FinanzasTendenciaResponse {
+    const v = ventana ?? 6;
+    const n = VENTANA_PUNTOS[v];
+    return puntos.length > n ? puntos.slice(-n) : puntos;
   }
 
   /**
-   * Devuelve el color de fondo (hex) para una fila de composición.
-   * La nómina usa indigo fijo; el resto pasa por la paleta determinista.
-   * Se usa el color `border` (más saturado) en lugar de `bg` (pastel)
-   * porque en una dona y en barras de progreso el pastel queda demasiado lavado.
+   * Calcula la variación de utilidad entre primer y último punto.
+   * Si la utilidad inicial es 0, no hay base de comparación → null.
    */
-  getRowColor(id: string): string {
-    if (id === 'nomina') return FinanzasDashboardComponent.COLOR_NOMINA;
-    return getCategoryColor(id).border;
+  buildVariacion(puntos: FinanzasTendenciaResponse): VariacionUtilidad {
+    if (!puntos || puntos.length < 2) {
+      return {
+        pct: null,
+        arrow: '→',
+        display: 'N/A',
+        cssClass: 'fv2-var--null',
+        mesInicialLabel: ''
+      };
+    }
+    const prev = puntos[0].utilidad_cop;
+    const curr = puntos[puntos.length - 1].utilidad_cop;
+
+    const mesInicialLabel = this.parseMesLabel(puntos[0].mes);
+
+    if (prev === 0) {
+      return {
+        pct: null,
+        arrow: '→',
+        display: 'N/A',
+        cssClass: 'fv2-var--null',
+        mesInicialLabel
+      };
+    }
+
+    const pct = ((curr - prev) / Math.abs(prev)) * 100;
+    const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
+    const cssClass = pct > 0 ? 'fv2-var--up' : pct < 0 ? 'fv2-var--down' : 'fv2-var--flat';
+    const abs = Math.abs(pct);
+    const formatted = Number.isInteger(abs)
+      ? abs.toLocaleString('es-CO', { maximumFractionDigits: 0 })
+      : abs.toLocaleString('es-CO', { maximumFractionDigits: 1 });
+
+    return {
+      pct,
+      arrow,
+      display: `${arrow} ${formatted}%`,
+      cssClass,
+      mesInicialLabel
+    };
   }
 
   /**
-   * Normaliza las filas de la vista activa a un shape común para el template.
-   * Memoiza el resultado en `_composicionLastRows` para que el tooltip de la
-   * dona pueda leer el porcentaje por índice sin que esté en el dataset.
+   * Mini leyenda con barras min→max relativas al máximo global de las 3 series.
+   * Las barras visualizan el techo de cada serie en la ventana.
    */
-  composicionRows(data: FinanzasComposicionResponse): Array<{
-    id: string;
-    nombre: string;
-    emoji?: string;
-    total_cop: number;
-    porcentaje: number;
-    cantidad: number;
-  }> {
+  buildSeriesLegend(puntos: FinanzasTendenciaResponse): SeriesLegendRow[] {
+    if (!puntos || puntos.length === 0) return [];
+
+    const ingresosVals = puntos.map((p) => p.ingresos_cop);
+    const egresosVals  = puntos.map((p) => p.egresos_totales_cop);
+    const utilidadVals = puntos.map((p) => p.utilidad_cop);
+
+    const ingMin = Math.min(...ingresosVals);
+    const ingMax = Math.max(...ingresosVals);
+    const egrMin = Math.min(...egresosVals);
+    const egrMax = Math.max(...egresosVals);
+    const utiMin = Math.min(...utilidadVals);
+    const utiMax = Math.max(...utilidadVals);
+
+    const globalMax = Math.max(ingMax, egrMax, utiMax) || 1;
+
+    return [
+      {
+        key: 'ingresos',
+        label: 'Ingresos',
+        color: COLOR_INGRESOS,
+        minLabel: formatAmountShort(ingMin),
+        maxLabel: formatAmountShort(ingMax),
+        widthPct: (ingMax / globalMax) * 100
+      },
+      {
+        key: 'egresos',
+        label: 'Egresos totales',
+        color: COLOR_EGRESOS,
+        minLabel: formatAmountShort(egrMin),
+        maxLabel: formatAmountShort(egrMax),
+        widthPct: (egrMax / globalMax) * 100
+      },
+      {
+        key: 'utilidad',
+        label: 'Utilidad',
+        color: COLOR_UTILIDAD,
+        minLabel: formatAmountShort(utiMin),
+        maxLabel: formatAmountShort(utiMax),
+        widthPct: (Math.max(utiMax, 0) / globalMax) * 100
+      }
+    ];
+  }
+
+  /**
+   * Construye el ChartData para la gráfica de barras agrupadas.
+   * Mes actual: opacidad 0.65 + asterisco en label.
+   */
+  buildChartData(puntos: FinanzasTendenciaResponse): ChartData<'bar'> {
+    const labels = puntos.map((p) => (p.es_mes_actual ? `${p.label} *` : p.label));
+
+    const bgFor = (color: string, esActual: boolean): string =>
+      esActual ? this.withAlpha(color, 0.65) : color;
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Ingresos',
+          data: puntos.map((p) => p.ingresos_cop),
+          backgroundColor: puntos.map((p) => bgFor(COLOR_INGRESOS, p.es_mes_actual)),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        },
+        {
+          label: 'Egresos totales',
+          data: puntos.map((p) => p.egresos_totales_cop),
+          backgroundColor: puntos.map((p) => bgFor(COLOR_EGRESOS, p.es_mes_actual)),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        },
+        {
+          label: 'Utilidad',
+          data: puntos.map((p) => Math.max(p.utilidad_cop, 0)),
+          backgroundColor: puntos.map((p) => bgFor(COLOR_UTILIDAD, p.es_mes_actual)),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        }
+      ]
+    };
+  }
+
+  /** Opciones de Chart.js — minimalistas para el estilo del v2 dashboard. */
+  readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: (ctx) => {
+            const v = ctx.parsed.y ?? 0;
+            return `${ctx.dataset.label}: ${formatAmountCop(v)}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 11 }
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 11 },
+          callback: (value) =>
+            typeof value === 'number' ? formatAmountShort(value) : `${value}`
+        }
+      }
+    }
+  };
+
+  /** Convierte un hex color a rgba con alpha. */
+  private withAlpha(hex: string, alpha: number): string {
+    const m = hex.replace('#', '');
+    const r = parseInt(m.slice(0, 2), 16);
+    const g = parseInt(m.slice(2, 4), 16);
+    const b = parseInt(m.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  /** Convierte "2026-04" en "abril 2026". */
+  private parseMesLabel(mes: string): string {
+    const parts = mes.split('-');
+    if (parts.length !== 2) return mes;
+    const [y, m] = parts.map(Number);
+    if (!m || m < 1 || m > 12) return mes;
+    return `${MESES_COMPLETOS[m - 1]} ${y}`;
+  }
+
+  // ─── Sección 03 — Estado de caja: alerta de cierre de quincena ───────────
+
+  /**
+   * Calcula la información del cierre de quincena en curso.
+   * - Si hoy ≤ 15: cierra el día 15 del mes actual.
+   * - Si hoy > 15: cierra el último día del mes actual.
+   * El resultado es independiente del período seleccionado en el filtro
+   * (siempre se calcula contra "hoy" real).
+   */
+  buildQuincenaCierre(cs: CajaState | null): QuincenaCierreInfo | null {
+    if (!cs || cs.status !== 'loaded') return null;
+
+    const now = new Date();
+    const today = now.getDate();
+    const isQ1 = today <= 15;
+
+    // Día de cierre y nombre del mes actual.
+    const cierreDia = isQ1 ? 15 : new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const mesNombre = MESES_COMPLETOS[now.getMonth()];
+
+    const target = new Date(now.getFullYear(), now.getMonth(), cierreDia, 23, 59, 59);
+    const diffMs = target.getTime() - now.getTime();
+    const daysRemaining = Math.max(0, Math.ceil(diffMs / 86_400_000));
+
+    let countdownLabel: string;
+    if (daysRemaining === 0) countdownLabel = 'hoy';
+    else if (daysRemaining === 1) countdownLabel = 'en 1 día';
+    else countdownLabel = `en ${daysRemaining} días`;
+
+    let countdownVariant: QuincenaCierreInfo['countdownVariant'] = 'default';
+    if (daysRemaining <= 1) countdownVariant = 'danger';
+    else if (daysRemaining <= 3) countdownVariant = 'warn';
+
+    return {
+      cierreLabel: `${cierreDia} ${mesNombre}`,
+      badgeLabel: cs.data!.caja_menor.quincena_label,
+      daysRemaining,
+      countdownLabel,
+      countdownVariant
+    };
+  }
+
+  // ─── Health gauge ─────────────────────────────────────────────────────────
+
+  /** Tamaño del SVG del gauge según el viewport (responsive vía CSS — radio fijo). */
+  readonly gaugeSize = 160; // base desktop; el SCSS escala en móvil
+
+  /**
+   * Construye la geometría del gauge semicircular (arc 180°).
+   * El radio default es 60px (size=160 → r=60, stroke margin=20).
+   */
+  buildGauge(resumen: FinanzasResumenResponse): GaugeGeometry {
+    const ingresos = resumen.ingresos.total_cop;
+    const utilidad = resumen.utilidad.total_cop;
+
+    // Margen utilidad / ingresos. Si ingresos = 0, ratio = 0.
+    const rawRatio = ingresos === 0 ? 0 : utilidad / ingresos;
+    const ratio = Math.min(Math.max(rawRatio, 0), 1);
+    const pct = Math.round(ratio * 100);
+
+    let color: string;
+    let grade: GaugeGeometry['grade'];
+    let description: string;
+
+    if (pct === 100) {
+      color = '#10b981';
+      grade = 'EXCELENTE';
+      description =
+        'Sin egresos registrados, todo el ingreso es utilidad. Recordá registrar tus gastos antes del cierre.';
+    } else if (pct >= 80) {
+      color = '#10b981';
+      grade = 'EXCELENTE';
+      description =
+        'Excelente margen. El gym retiene la mayoría de sus ingresos.';
+    } else if (pct >= 60) {
+      color = '#f59e0b';
+      grade = 'BUENO';
+      description =
+        'Buen margen. Hay oportunidad de optimizar algunos gastos.';
+    } else if (pct >= 40) {
+      color = '#f97316';
+      grade = 'REGULAR';
+      description = 'Margen ajustado. Revisar composición de egresos.';
+    } else {
+      color = '#dc2626';
+      grade = 'CRÍTICO';
+      description =
+        'Margen crítico. Los egresos consumen más del 60% de los ingresos.';
+    }
+
+    const size = this.gaugeSize;
+    const stroke = 12;
+    const r = size / 2 - stroke - 8;
+    const cx = size / 2;
+    const cy = size / 2 + 4; // ligeramente desplazado para centrar el arco
+
+    // Arco semicircular: 180° → desde 180° (izquierda) hasta 360° (derecha).
+    const startA = Math.PI;
+    const endA = Math.PI * 2;
+    const valA = startA + (endA - startA) * ratio;
+
+    const width = size;
+    const height = size / 2 + 12;
+
+    return {
+      trackD: this.arcPath(cx, cy, r, startA, endA),
+      barD: this.arcPath(cx, cy, r, startA, valA),
+      color,
+      grade,
+      description,
+      pctLabel: pct.toString(),
+      cx,
+      cy,
+      r,
+      width,
+      height,
+      viewBox: `0 0 ${width} ${height}`
+    };
+  }
+
+  private arcPath(
+    cx: number,
+    cy: number,
+    r: number,
+    a1: number,
+    a2: number
+  ): string {
+    const safeA2 = a2 <= a1 ? a1 + 0.001 : a2;
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(safeA2);
+    const y2 = cy + r * Math.sin(safeA2);
+    const large = safeA2 - a1 > Math.PI ? 1 : 0;
+    return `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 04 — Detalle de ingresos
+  // ═══════════════════════════════════════════════════════════════════════
+
+  // ─── Métodos de pago ──────────────────────────────────────────────────────
+
+  /** Filas de la lista de métodos (sólo los que tienen total > 0). */
+  buildMetodoRows(detalle: FinanzasDetalleResponse): MetodoPagoRow[] {
+    if (!detalle.tiene_datos) return [];
+    return detalle.por_metodo
+      .filter((m) => m.total_cop > 0)
+      .map((m) => ({
+        metodo: m.metodo,
+        label: PAYMENT_METHOD_LABELS[m.metodo] ?? m.label,
+        total_cop: m.total_cop,
+        cantidad_pagos: m.cantidad_pagos,
+        porcentaje: m.porcentaje,
+        color: METODO_COLORS[m.metodo],
+        widthPct: m.porcentaje
+      }))
+      .sort((a, b) => b.total_cop - a.total_cop);
+  }
+
+  /** ChartData para la dona de métodos de pago. */
+  buildMetodoChartData(detalle: FinanzasDetalleResponse): ChartData<'doughnut'> {
+    if (!detalle.tiene_datos || detalle.por_metodo.every((m) => m.total_cop === 0)) {
+      return {
+        labels: ['Sin datos'],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ['#e5e7eb'],
+            borderWidth: 0
+          }
+        ]
+      };
+    }
+
+    const filtered = detalle.por_metodo.filter((m) => m.total_cop > 0);
+    return {
+      labels: filtered.map(
+        (m) => PAYMENT_METHOD_LABELS[m.metodo] ?? m.label
+      ),
+      datasets: [
+        {
+          data: filtered.map((m) => m.total_cop),
+          backgroundColor: filtered.map((m) => METODO_COLORS[m.metodo]),
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }
+      ]
+    };
+  }
+
+  readonly metodoChartOptions: ChartConfiguration<'doughnut'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    cutout: '65%',
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const value = (ctx.parsed as unknown as number) ?? 0;
+            const total = ctx.dataset.data.reduce(
+              (a: number, b: unknown) => a + ((b as number) ?? 0),
+              0
+            );
+            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
+            return `${ctx.label}: ${formatAmountCop(value)} (${pct}%)`;
+          }
+        }
+      }
+    }
+  };
+
+  // ─── Quincenas ────────────────────────────────────────────────────────────
+
+  buildQuincenaRows(detalle: FinanzasDetalleResponse): QuincenaRow[] {
+    const q1 = detalle.quincenas.q1;
+    const q2 = detalle.quincenas.q2;
+    const max = Math.max(q1.total_cop, q2.total_cop, 1);
+
+    const mapEstado = (
+      e: 'completa' | 'parcial' | 'no_iniciada'
+    ): { label: string; variant: 'success' | 'warn' | 'muted'; color: string } => {
+      if (e === 'completa') return { label: 'Completa', variant: 'success', color: '#228d9f' };
+      if (e === 'parcial')  return { label: 'En curso', variant: 'warn',    color: '#f59e0b' };
+      return { label: 'Aún no iniciada', variant: 'muted', color: '#e5e7eb' };
+    };
+
+    const e1 = mapEstado(q1.estado);
+    const e2 = mapEstado(q2.estado);
+
+    return [
+      {
+        key: 'q1',
+        label: 'Q1 (1–15)',
+        total_cop: q1.total_cop,
+        cantidad_pagos: q1.cantidad_pagos,
+        estado: q1.estado,
+        estadoLabel: e1.label,
+        estadoVariant: e1.variant,
+        widthPct: (q1.total_cop / max) * 100,
+        barColor: e1.color
+      },
+      {
+        key: 'q2',
+        label: 'Q2 (16–fin)',
+        total_cop: q2.estado === 'no_iniciada' ? 0 : q2.total_cop,
+        cantidad_pagos: q2.cantidad_pagos,
+        estado: q2.estado,
+        estadoLabel: e2.label,
+        estadoVariant: e2.variant,
+        widthPct: q2.estado === 'no_iniciada' ? 0 : (q2.total_cop / max) * 100,
+        barColor: e2.color
+      }
+    ];
+  }
+
+  /** Texto de insight automático debajo de la lista de quincenas. */
+  buildQuincenaInsight(detalle: FinanzasDetalleResponse): string {
+    const q1 = detalle.quincenas.q1.total_cop;
+    const q2 = detalle.quincenas.q2.total_cop;
+    const q2Estado = detalle.quincenas.q2.estado;
+
+    if (q2Estado === 'no_iniciada') {
+      return 'La Q1 concentra el 100% del ingreso del mes. La Q2 aún no inició.';
+    }
+
+    const total = q1 + q2;
+    if (total === 0) {
+      return 'Aún no hay ingresos registrados en este período.';
+    }
+
+    if (q1 === q2) {
+      return 'Ingresos distribuidos uniformemente entre quincenas.';
+    }
+
+    if (q1 > q2) {
+      const pct = Math.round((q1 / total) * 100);
+      return `La Q1 concentra el ${pct}% del ingreso mensual.`;
+    }
+
+    const pct = Math.round((q2 / total) * 100);
+    return `La Q2 superó a Q1 este mes (${pct}% del total).`;
+  }
+
+  /** "Cierre 15 mayo · 31 mayo" basado en fecha real, no en período. */
+  buildQuincenaCierreLabel(): string {
+    const now = new Date();
+    const today = now.getDate();
+    const mesNombre = MESES_COMPLETOS[now.getMonth()];
+    const ultimoDia = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+
+    if (today <= 15) {
+      return `Cierre 15 ${mesNombre} · ${ultimoDia} ${mesNombre}`;
+    }
+    return `Cierre ${ultimoDia} ${mesNombre}`;
+  }
+
+  /** Total de pagos del mes para el header de la card de métodos. */
+  totalPagos(detalle: FinanzasDetalleResponse): number {
+    return detalle.por_metodo.reduce((acc, m) => acc + m.cantidad_pagos, 0);
+  }
+
+  trackByMetodo(_i: number, m: MetodoPagoRow): MetodoPago {
+    return m.metodo;
+  }
+
+  trackByQuincenaKey(_i: number, q: QuincenaRow): 'q1' | 'q2' {
+    return q.key;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════
+  // SECCIÓN 05 — Composición de egresos
+  // ═══════════════════════════════════════════════════════════════════════
+
+  /** Filas de composición según la vista activa (categoría o proveedor). */
+  buildComposicionRows(comp: FinanzasComposicionResponse): ComposicionRow[] {
+    if (!comp.tiene_datos) return [];
+
     const rows = this.vistaComposicion === 'categoria'
-      ? data.por_categoria.map(r => ({
+      ? comp.por_categoria.map((r, i) => ({
           id: r.categoria_id,
           nombre: r.nombre,
           emoji: r.emoji,
           total_cop: r.total_cop,
           porcentaje: r.porcentaje,
-          cantidad: r.cantidad
+          cantidad: r.cantidad,
+          color: r.categoria_id === 'nomina'
+            ? COLOR_NOMINA
+            : COMPOSICION_COLORS[i % COMPOSICION_COLORS.length],
+          widthPct: r.porcentaje
         }))
-      : data.por_proveedor.map(r => ({
+      : comp.por_proveedor.map((r, i) => ({
           id: r.proveedor_id,
           nombre: r.nombre,
-          emoji: undefined,
+          emoji: undefined as string | undefined,
           total_cop: r.total_cop,
           porcentaje: r.porcentaje,
-          cantidad: r.cantidad
+          cantidad: r.cantidad,
+          color: COMPOSICION_COLORS[i % COMPOSICION_COLORS.length],
+          widthPct: r.porcentaje
         }));
-    this._composicionLastRows = rows;
-    return rows;
+
+    return rows.sort((a, b) => b.total_cop - a.total_cop);
   }
 
-  /**
-   * Construye el ChartData para la dona de composición.
-   * Usa el color `border` de la paleta (más saturado) para los segmentos —
-   * el `bg` pastel queda lavado sobre el canvas blanco de Chart.js.
-   */
-  buildDoughnutData(
-    rows: Array<{ id: string; nombre: string; total_cop: number; porcentaje: number }>
-  ): ChartData<'doughnut'> {
+  buildComposicionChartData(comp: FinanzasComposicionResponse): ChartData<'doughnut'> {
+    if (!comp.tiene_datos) {
+      return {
+        labels: ['Sin datos'],
+        datasets: [
+          {
+            data: [1],
+            backgroundColor: ['#e5e7eb'],
+            borderWidth: 0
+          }
+        ]
+      };
+    }
+
+    const rows = this.buildComposicionRows(comp);
     return {
-      labels: rows.map(r => r.nombre),
-      datasets: [{
-        data: rows.map(r => r.total_cop),
-        backgroundColor: rows.map(r => this.getRowColor(r.id)),
-        borderColor: '#ffffff',
-        borderWidth: 2,
-        hoverOffset: 6
-      }]
+      labels: rows.map((r) => r.nombre),
+      datasets: [
+        {
+          data: rows.map((r) => r.total_cop),
+          backgroundColor: rows.map((r) => r.color),
+          borderWidth: 2,
+          borderColor: '#ffffff'
+        }
+      ]
     };
   }
 
-  /** Opciones estáticas de Chart.js para la dona. La leyenda va en la columna derecha. */
-  readonly doughnutOptions: ChartConfiguration<'doughnut'>['options'] = {
+  readonly composicionChartOptions: ChartConfiguration<'doughnut'>['options'] = {
     responsive: true,
     maintainAspectRatio: false,
     cutout: '60%',
@@ -754,8 +1481,12 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
       tooltip: {
         callbacks: {
           label: (ctx) => {
-            const value = (ctx.dataset.data as number[])[ctx.dataIndex];
-            const pct = this._composicionLastRows[ctx.dataIndex]?.porcentaje ?? 0;
+            const value = (ctx.parsed as unknown as number) ?? 0;
+            const total = ctx.dataset.data.reduce(
+              (a: number, b: unknown) => a + ((b as number) ?? 0),
+              0
+            );
+            const pct = total > 0 ? ((value / total) * 100).toFixed(1) : '0';
             return `${ctx.label}: ${formatAmountCop(value)} (${pct}%)`;
           }
         }
@@ -763,24 +1494,13 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     }
   };
 
-  // ─── Formatters ──────────────────────────────────────────────────────────
-
-  formatCop(amount: number): string {
-    return formatAmountCop(amount);
+  trackByComposicionId(_i: number, r: ComposicionRow): string {
+    return r.id;
   }
 
-  formatVisible(amount: number, visible: boolean | null): string {
-    return visible ? formatAmountCop(amount) : '••••••';
-  }
+  // ─── trackBy ──────────────────────────────────────────────────────────────
 
-  formatDateDmy(iso: string): string {
-    const parts = iso.split('-');
-    if (parts.length !== 3) return iso;
-    const [yyyy, mm, dd] = parts;
-    return `${dd}/${mm}/${yyyy}`;
-  }
-
-  trackByIndex(index: number, _item: unknown): number {
+  trackByIndex(index: number): number {
     return index;
   }
 }

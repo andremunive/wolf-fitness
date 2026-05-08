@@ -27,7 +27,7 @@ export class ExpenseProviderAutocompleteComponent implements OnInit, OnChanges, 
   @Input() selectedProvider: SimpleProviderOption | null = null;
   @Input() isInvalid = false;
 
-  @Output() providerSelected = new EventEmitter<SimpleProviderOption>();
+  @Output() providerSelected = new EventEmitter<SimpleProviderOption | null>();
 
   private readonly destroy$ = new Subject<void>();
 
@@ -79,6 +79,13 @@ export class ExpenseProviderAutocompleteComponent implements OnInit, OnChanges, 
   select(provider: SimpleProviderOption): void {
     this.providerSelected.emit(provider);
     this.searchControl.setValue(provider.name, { emitEvent: false });
+    this.isOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  clear(): void {
+    this.providerSelected.emit(null);
+    this.searchControl.setValue('', { emitEvent: false });
     this.isOpen = false;
     this.cdr.markForCheck();
   }

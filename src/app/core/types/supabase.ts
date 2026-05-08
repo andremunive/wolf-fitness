@@ -622,7 +622,7 @@ export type Database = {
           is_active: boolean
           notes: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
-          provider_id: string
+          provider_id: string | null
           updated_at: string
           updated_by: string | null
         }
@@ -639,7 +639,7 @@ export type Database = {
           is_active?: boolean
           notes?: string | null
           payment_method: Database["public"]["Enums"]["payment_method"]
-          provider_id: string
+          provider_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }
@@ -656,7 +656,7 @@ export type Database = {
           is_active?: boolean
           notes?: string | null
           payment_method?: Database["public"]["Enums"]["payment_method"]
-          provider_id?: string
+          provider_id?: string | null
           updated_at?: string
           updated_by?: string | null
         }

@@ -32,7 +32,7 @@
             <span *ngIf="record.categoryEmoji">{{ record.categoryEmoji }}&nbsp;</span>{{ record.categoryName }}
           </span>
         </div>
-        <div class="detail-row">
+        <div class="detail-row" *ngIf="record.providerName">
           <span class="detail-row__label">Proveedor</span>
           <span class="detail-row__value">{{ record.providerName }}</span>
         </div>

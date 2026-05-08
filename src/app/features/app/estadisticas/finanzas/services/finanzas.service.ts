@@ -9,6 +9,7 @@ import {
   FinanzasComposicionResponse,
   FinanzasDetalleResponse,
   FinanzasResumenResponse,
+  FinanzasSparklinesResponse,
   FinanzasTendenciaResponse,
   VentanaTendenciaFin
 } from '../models/finanzas.model';
@@ -18,15 +19,22 @@ export interface MesPeriodo {
   month: number;
 }
 
+/** localStorage key para persistir el estado ocultar/mostrar montos. */
+const HIDE_MONEY_KEY = 'wolf:dashboard:hideMoney';
+
 @Injectable({ providedIn: 'root' })
 export class FinanzasService {
   private readonly _mesPeriodo$ = new BehaviorSubject<MesPeriodo>(this.currentMonthYear());
 
   /**
-   * Ocultar/mostrar valores monetarios de Caja.
-   * Arranca en false (oculto) — comportamiento tipo app bancaria.
+   * Ocultar/mostrar valores monetarios en todo el dashboard.
+   * Se persiste en localStorage con la clave wolf:dashboard:hideMoney.
+   * Arranca en oculto (false = montos ocultos) a menos que localStorage diga lo contrario.
+   * `montosVisibles$` emite `true` cuando los montos son visibles.
    */
-  private readonly _cajaVisible$ = new BehaviorSubject<boolean>(false);
+  private readonly _montosVisibles$ = new BehaviorSubject<boolean>(
+    this.readInitialVisibility()
+  );
 
   /**
    * Ventana temporal de la gráfica de tendencia.
@@ -65,16 +73,62 @@ export class FinanzasService {
     return `${MONTH_NAMES_ES[m - 1]} ${y}`;
   }
 
-  // ─── Caja visible toggle ───────────────────────────────────────────────────
+  // ─── Montos visibles toggle ────────────────────────────────────────────────
 
-  /** Observable de solo lectura: true cuando los montos de Caja son visibles. */
-  get cajaVisible$(): Observable<boolean> {
-    return this._cajaVisible$.asObservable().pipe(distinctUntilChanged());
+  /** Observable de solo lectura: true cuando los montos son visibles. */
+  get montosVisibles$(): Observable<boolean> {
+    return this._montosVisibles$.asObservable().pipe(distinctUntilChanged());
   }
 
-  /** Alterna entre mostrar y ocultar los valores monetarios de Caja. */
+  /**
+   * Mantiene retrocompatibilidad con el binding `cajaVisible$` del template anterior.
+   * @deprecated Usar montosVisibles$ directamente.
+   */
+  get cajaVisible$(): Observable<boolean> {
+    return this.montosVisibles$;
+  }
+
+  /** Alterna entre mostrar y ocultar los valores monetarios. Persiste en localStorage. */
+  toggleMontosVisibles(): void {
+    const next = !this._montosVisibles$.getValue();
+    this._montosVisibles$.next(next);
+    try {
+      // hideMoney es el inverso de visible (true = oculto)
+      localStorage.setItem(HIDE_MONEY_KEY, String(!next));
+    } catch {
+      // localStorage puede fallar en modo incógnito/privado — ignoramos silenciosamente
+    }
+  }
+
+  /** Retrocompatibilidad con el método anterior. */
   toggleCajaVisible(): void {
-    this._cajaVisible$.next(!this._cajaVisible$.getValue());
+    this.toggleMontosVisibles();
+  }
+
+  // ─── Edge Function: stats-finanzas-sparklines ─────────────────────────────
+
+  /**
+   * Invoca `stats-finanzas-sparklines` one-shot.
+   * Devuelve los últimos 6 meses de cada métrica (oldest→newest).
+   * No depende del período seleccionado.
+   */
+  getSparklines(): Observable<FinanzasSparklinesResponse> {
+    return from(
+      this.supabase.client.functions.invoke<FinanzasSparklinesResponse>(
+        'stats-finanzas-sparklines',
+        { body: {} }
+      )
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        if (!data) throw new Error('Respuesta vacía de stats-finanzas-sparklines');
+        return data;
+      }),
+      catchError((err) => {
+        console.error('[FinanzasService] getSparklines error:', err);
+        throw err;
+      })
+    );
   }
 
   // ─── Edge Function: stats-finanzas-resumen ────────────────────────────────
@@ -218,5 +272,21 @@ export class FinanzasService {
   private currentMonthYear(): MesPeriodo {
     const now = new Date();
     return { year: now.getFullYear(), month: now.getMonth() + 1 };
+  }
+
+  /**
+   * Lee el estado inicial de visibilidad desde localStorage.
+   * Si no hay valor guardado → arranca en oculto (false).
+   * Si hideMoney=false en localStorage → visible (true).
+   */
+  private readInitialVisibility(): boolean {
+    try {
+      const stored = localStorage.getItem(HIDE_MONEY_KEY);
+      if (stored === null) return false; // default: oculto
+      // hideMoney='true' → montos ocultos → visible=false
+      return stored !== 'true';
+    } catch {
+      return false;
+    }
   }
 }

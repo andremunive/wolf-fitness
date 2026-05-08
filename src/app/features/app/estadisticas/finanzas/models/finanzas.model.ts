@@ -1,3 +1,17 @@
+// ─── Sparklines response (Edge Function: stats-finanzas-sparklines) ───────────
+
+export interface FinanzasSparklinesResponse {
+  meses: Array<{ mes: string; label: string; es_mes_actual: boolean }>;
+  /** 6 valores oldest→newest */
+  utilidad: number[];
+  ingresos: number[];
+  /** egresos totales (operativos + nomina) */
+  egresos: number[];
+  nomina: number[];
+  /** running balance al cierre de cada mes */
+  caja: number[];
+}
+
 // ─── Caja response (Edge Function: stats-finanzas-caja) ───────────────────────
 
 export interface CajaConsolidada {

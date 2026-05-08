@@ -8,7 +8,10 @@ import { ClientesDashboardComponent } from './clientes/pages/clientes-dashboard/
 import { FinanzasDashboardComponent } from './finanzas/pages/finanzas-dashboard/finanzas-dashboard.component';
 
 @NgModule({
-  declarations: [ClientesDashboardComponent, FinanzasDashboardComponent],
+  declarations: [
+    ClientesDashboardComponent,
+    FinanzasDashboardComponent,
+  ],
   imports: [SharedModule, EstadisticasRoutingModule, NgChartsModule]
 })
 export class EstadisticasModule {}

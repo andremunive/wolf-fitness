@@ -52,7 +52,7 @@
             <span *ngIf="record.categoryEmoji" class="record-card__emoji">{{ record.categoryEmoji }}</span>
             {{ record.categoryName }}
           </span>
-          <span class="record-card__provider">{{ record.providerName }}</span>
+          <span class="record-card__provider" *ngIf="record.providerName">{{ record.providerName }}</span>
         </div>
         <span class="record-card__amount">{{ formatAmount(record.amountCop) }}</span>
       </div>

@@ -104,20 +104,17 @@
           <span class="form-field__hint-error" *ngIf="categoryInvalid">Selecciona una categoría.</span>
         </div>
 
-        <!-- Proveedor -->
+        <!-- Proveedor (opcional) -->
         <div class="form-field">
-          <label class="form-field__label">
-            Proveedor <span class="form-field__required" aria-hidden="true">*</span>
-          </label>
+          <label class="form-field__label">Proveedor (opcional)</label>
           <div class="form-field__loading" *ngIf="isLoadingProviders">Cargando proveedores...</div>
           <app-expense-provider-autocomplete
             *ngIf="!isLoadingProviders"
             [providers]="activeProviders"
             [selectedProvider]="selectedProvider"
-            [isInvalid]="providerInvalid"
+            [isInvalid]="false"
             (providerSelected)="onProviderSelected($event)"
           ></app-expense-provider-autocomplete>
-          <span class="form-field__hint-error" *ngIf="providerInvalid">Selecciona un proveedor.</span>
         </div>
 
         <!-- Notas -->

@@ -6,7 +6,7 @@
     height: 44px;
     border: 1.5px solid #e5e7eb;
     border-radius: 10px;
-    padding: 0 12px;
+    padding: 0 40px 0 12px;
     font-size: 14px;
     color: #111827;
     background: #ffffff;
@@ -16,6 +16,28 @@
     &::placeholder { color: #9ca3af; }
     &:focus { border-color: #228d9f; }
     &--error { border-color: #fca5a5; }
+  }
+
+  &__clear {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: transparent;
+    color: #9ca3af;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.1s ease, color 0.1s ease;
+
+    svg { width: 16px; height: 16px; }
+    &:hover { background: #f3f4f6; color: #374151; }
+    &:focus-visible { outline: 2px solid #228d9f; outline-offset: 1px; }
   }
 
   &__dropdown {

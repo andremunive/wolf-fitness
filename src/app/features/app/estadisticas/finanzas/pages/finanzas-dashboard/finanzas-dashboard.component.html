@@ -1,614 +1,1132 @@
-<div class="stats-page">
+<div class="fv2-page">
 
-  <!-- ── Sticky header con título y selector de mes ── -->
-  <header class="stats-page__header">
-    <div class="stats-page__header-content">
+  <!-- ════════════════════════════════════════════════════════════════
+       HERO SECTION — dos zonas (60/40 desktop, apiladas en mobile)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-hero" *ngIf="{ v: montosVisibles$ | async } as m">
 
-      <div class="stats-page__title-row">
-        <h1 class="stats-page__title">Estadísticas — Finanzas</h1>
-      </div>
+    <!-- ─── ZONA IZQUIERDA ─────────────────────────────────────────── -->
+    <div class="fv2-hero__left">
 
-      <div class="stats-page__filter">
-        <span id="periodo-label" class="stats-page__filter-label">Período</span>
-        <div class="month-nav" role="group" aria-labelledby="periodo-label">
-          <button
-            type="button"
-            class="month-nav__btn"
-            (click)="onPrevMonth()"
-            [disabled]="isAtAppStartMonth"
-            aria-label="Mes anterior"
-          >&#9664;</button>
-          <span class="month-nav__label">{{ periodoLabel }}</span>
-          <button
-            type="button"
-            class="month-nav__btn"
-            (click)="onNextMonth()"
-            [disabled]="isAtCurrentMonth"
-            aria-label="Mes siguiente"
-          >&#9654;</button>
-        </div>
-      </div>
+      <!-- Breadcrumb -->
+      <div class="fv2-breadcrumb">
+        <span>ESTADÍSTICAS</span>
+        <span class="fv2-breadcrumb__sep">—</span>
+        <span>FINANZAS</span>
+        <span class="fv2-breadcrumb__sep">—</span>
+        <span class="fv2-breadcrumb__current">{{ periodoLabel | uppercase }}</span>
 
-    </div>
-  </header>
-
-  <main class="stats-page__main">
-
-    <!-- ── Caja ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Caja</h2>
-
-      <ng-container *ngIf="cajaState$ | async as state">
-
-        <!-- Loading -->
-        <div *ngIf="state.status === 'loading'" class="stats-cards-grid">
-          <div class="skeleton-card skeleton-card--highlight" aria-hidden="true">
-            <div class="skeleton skeleton--line-sm" style="width: 30%"></div>
-            <div class="skeleton skeleton--line-lg" style="width: 50%; height: 48px; margin-top: 4px;"></div>
-            <div class="skeleton skeleton--line-md"></div>
-          </div>
-        </div>
-
-        <!-- Error con retry -->
-        <div *ngIf="state.status === 'error'" class="stats-cards-grid">
-          <div class="caja-card caja-card--error" role="alert">
-            <span class="caja-card__error-msg">No se pudo cargar el estado de caja.</span>
-            <button
-              type="button"
-              class="caja-card__retry"
-              (click)="retryCaja()"
-            >Reintentar</button>
-          </div>
-        </div>
-
-        <!-- Loaded -->
-        <div *ngIf="state.status === 'loaded'" class="stats-cards-grid">
-          <div class="caja-hero">
-
-            <!-- Header con tag y botón toggle -->
-            <header class="caja-hero__header">
-              <span class="caja-hero__tag">Estado de Caja</span>
-              <button
-                type="button"
-                class="caja-hero__toggle"
-                (click)="onToggleCaja()"
-                [attr.aria-pressed]="(cajaVisible$ | async) === true"
-                [attr.aria-label]="((cajaVisible$ | async) ? 'Ocultar' : 'Mostrar') + ' valores monetarios'"
-              >
-                <!-- Ojo abierto (visible) -->
-                <svg
-                  *ngIf="cajaVisible$ | async"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.75"
-                  aria-hidden="true"
-                  class="caja-hero__toggle-icon"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <!-- Ojo tachado (oculto) -->
-                <svg
-                  *ngIf="!(cajaVisible$ | async)"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.75"
-                  aria-hidden="true"
-                  class="caja-hero__toggle-icon"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21" />
-                </svg>
-                <span class="caja-hero__toggle-label">
-                  {{ (cajaVisible$ | async) ? 'Ocultar' : 'Mostrar' }}
-                </span>
-              </button>
-            </header>
-
-            <!-- Grilla de subcards -->
-            <div class="caja-hero__grid">
-
-              <!-- Caja consolidada -->
-              <article class="caja-sub caja-sub--consolidada">
-                <h3 class="caja-sub__title">Caja consolidada</h3>
-                <p
-                  class="caja-sub__amount"
-                  [class.caja-sub__amount--negative]="state.data!.caja_consolidada.saldo_cop < 0"
-                >
-                  {{ formatVisible(state.data!.caja_consolidada.saldo_cop, (cajaVisible$ | async)) }}
-                </p>
-
-                <!-- Alerta saldo negativo -->
-                <p *ngIf="state.data!.caja_consolidada.saldo_cop < 0" class="caja-sub__warning">
-                  <svg
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="1.75"
-                    aria-hidden="true"
-                    class="caja-sub__warning-icon"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round"
-                      d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                  </svg>
-                  Saldo en negativo
-                </p>
-
-                <p class="caja-sub__since">Desde {{ formatDateDmy(state.data!.caja_consolidada.semilla_fecha) }}</p>
-
-                <hr class="caja-sub__divider" />
-
-                <ul class="caja-sub__breakdown">
-                  <li class="caja-sub__breakdown-item caja-sub__breakdown-item--income">
-                    <span class="caja-sub__breakdown-sign">+</span>
-                    <span class="caja-sub__breakdown-label">Consolidado</span>
-                    <span class="caja-sub__breakdown-value">
-                      {{ formatVisible(state.data!.caja_consolidada.ingresos_consolidados_cop, (cajaVisible$ | async)) }}
-                    </span>
-                  </li>
-                  <li class="caja-sub__breakdown-item">
-                    <span class="caja-sub__breakdown-sign">−</span>
-                    <span class="caja-sub__breakdown-label">Operativos</span>
-                    <span class="caja-sub__breakdown-value">
-                      {{ formatVisible(state.data!.caja_consolidada.egresos_operativos_cop, (cajaVisible$ | async)) }}
-                    </span>
-                  </li>
-                  <li class="caja-sub__breakdown-item">
-                    <span class="caja-sub__breakdown-sign">−</span>
-                    <span class="caja-sub__breakdown-label">Nómina</span>
-                    <span class="caja-sub__breakdown-value">
-                      {{ formatVisible(state.data!.caja_consolidada.nomina_pagada_cop, (cajaVisible$ | async)) }}
-                    </span>
-                  </li>
-                </ul>
-              </article>
-
-              <!-- Caja menor -->
-              <article class="caja-sub caja-sub--menor">
-                <h3 class="caja-sub__title">Caja menor</h3>
-                <p class="caja-sub__quincena">{{ state.data!.caja_menor.quincena_label }}</p>
-                <p class="caja-sub__amount">
-                  {{ formatVisible(state.data!.caja_menor.total_cop, (cajaVisible$ | async)) }}
-                </p>
-
-                <p *ngIf="state.data!.caja_menor.total_cop === 0" class="caja-sub__empty">
-                  Sin pagos en la quincena actual
-                </p>
-                <p *ngIf="state.data!.caja_menor.total_cop > 0" class="caja-sub__count">
-                  {{ state.data!.caja_menor.cantidad_pagos }}
-                  {{ state.data!.caja_menor.cantidad_pagos === 1 ? 'pago recibido' : 'pagos recibidos' }}
-                </p>
-                <p *ngIf="state.data!.caja_menor.total_cop > 0" class="caja-sub__hint">
-                  Aún no consolidados
-                </p>
-              </article>
-
-            </div><!-- /.caja-hero__grid -->
-
-          </div><!-- /.caja-hero -->
-        </div><!-- /.stats-cards-grid (loaded) -->
-
-      </ng-container>
-    </section>
-
-    <!-- ── Resumen ── -->
-    <section class="stats-section">
-
-      <ng-container *ngIf="resumenState$ | async as state">
-
-        <!-- Título con chip "En curso" cuando el mes no ha cerrado -->
-        <h2 class="stats-section__title">
-          Resumen
+        <ng-container *ngIf="resumenState$ | async as rs">
           <span
-            *ngIf="state.status === 'loaded' && !state.data!.mes_completo"
-            class="stats-section__chip"
-          >En curso</span>
-        </h2>
-
-        <!-- LOADING: 4 skeletons (1 highlight + 3 normales) -->
-        <div *ngIf="state.status === 'loading'" class="stats-cards-grid">
-          <div class="skeleton-card skeleton-card--highlight" aria-hidden="true">
-            <div class="skeleton skeleton--line-sm" style="width: 35%"></div>
-            <div class="skeleton skeleton--line-lg" style="width: 45%; height: 44px; margin-top: 4px;"></div>
-            <div class="skeleton skeleton--line-md" style="width: 70%"></div>
-          </div>
-          <div
-            *ngFor="let i of [1, 2, 3]; trackBy: trackByIndex"
-            class="skeleton-card"
-            aria-hidden="true"
-          >
-            <div class="skeleton skeleton--line-sm"></div>
-            <div class="skeleton skeleton--line-lg"></div>
-            <div class="skeleton skeleton--line-md"></div>
-          </div>
-        </div>
-
-        <!-- PRE-APP: período anterior a abril 2026 -->
-        <div *ngIf="state.status === 'pre-app'" class="stats-empty">
-          <p class="stats-empty__title">Sin datos para este período</p>
-          <p class="stats-empty__hint">La aplicación comenzó a registrar datos en abril 2026.</p>
-        </div>
-
-        <!-- ERROR con retry -->
-        <div *ngIf="state.status === 'error'" class="stats-error">
-          <p class="stats-error__msg">No se pudo cargar el resumen.</p>
-          <button
-            type="button"
-            class="stats-error__retry"
-            (click)="retryResumen()"
-          >Reintentar</button>
-        </div>
-
-        <!-- LOADED: 4 cards reales -->
-        <div *ngIf="state.status === 'loaded'" class="stats-cards-grid">
-
-          <!-- Card Utilidad (highlight, ancho completo, primera fila) -->
-          <article
-            class="stats-card stats-card--highlight"
-            [class.stats-card--positive]="state.data!.utilidad.es_positiva"
-            [class.stats-card--negative]="!state.data!.utilidad.es_positiva"
-            role="region"
-            aria-label="Utilidad del mes"
-          >
-            <div class="stats-card--highlight__header">
-              <span class="stats-card--highlight__tag">Utilidad del mes</span>
-            </div>
-
-            <div class="stats-card__total-row">
-              <span class="stats-card__total stats-card__total--highlight">
-                <!-- Icono de alerta cuando utilidad es negativa -->
-                <svg
-                  *ngIf="!state.data!.utilidad.es_positiva"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  stroke-width="1.75"
-                  class="utilidad-warning-icon"
-                  aria-hidden="true"
-                >
-                  <path stroke-linecap="round" stroke-linejoin="round"
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
-                </svg>
-                {{ formatCop(state.data!.utilidad.total_cop) }}
-              </span>
-              <span
-                class="stats-card__delta"
-                [class.stats-card__delta--up]="state.data!.utilidad.delta_cop > 0"
-                [class.stats-card__delta--down]="state.data!.utilidad.delta_cop < 0"
-                [class.stats-card__delta--zero]="state.data!.utilidad.delta_cop === 0"
-                [attr.aria-label]="'Variación vs mes anterior: ' + state.data!.utilidad.delta_cop"
-              >
-                <ng-container *ngIf="state.data!.utilidad.delta_cop > 0">&#8593;{{ formatCop(state.data!.utilidad.delta_cop) }}</ng-container>
-                <ng-container *ngIf="state.data!.utilidad.delta_cop < 0">&#8595;{{ formatCop(state.data!.utilidad.delta_cop * -1) }}</ng-container>
-                <ng-container *ngIf="state.data!.utilidad.delta_cop === 0">=</ng-container>
-                vs {{ prevMonthLabel(periodo) }}
-              </span>
-            </div>
-
-            <p class="stats-card--highlight__formula">
-              Ingresos {{ formatCop(state.data!.ingresos.total_cop) }}
-              &minus; Operativos {{ formatCop(state.data!.egresos_operativos.total_cop) }}
-              &minus; Nómina {{ formatCop(state.data!.nomina.total_cop) }}
-            </p>
-          </article>
-
-          <!-- Card Ingresos -->
-          <article class="stats-card" role="region" aria-label="Ingresos del mes">
-            <p class="stats-card__title">Ingresos</p>
-            <div class="stats-card__total-row">
-              <span class="stats-card__total">{{ formatCop(state.data!.ingresos.total_cop) }}</span>
-              <span
-                class="stats-card__delta"
-                [ngClass]="ingresosDeltaClass(state.data!.ingresos.delta_cop)"
-                [attr.aria-label]="'Variación ingresos: ' + state.data!.ingresos.delta_cop"
-              >
-                <ng-container *ngIf="state.data!.ingresos.delta_cop > 0">&#8593;{{ formatCop(state.data!.ingresos.delta_cop) }}</ng-container>
-                <ng-container *ngIf="state.data!.ingresos.delta_cop < 0">&#8595;{{ formatCop(state.data!.ingresos.delta_cop * -1) }}</ng-container>
-                <ng-container *ngIf="state.data!.ingresos.delta_cop === 0">=</ng-container>
-                vs {{ prevMonthLabel(periodo) }}
-              </span>
-            </div>
-            <p class="stats-card__breakdown">
-              {{ state.data!.ingresos.cantidad_pagos }}
-              {{ state.data!.ingresos.cantidad_pagos === 1 ? 'pago recibido' : 'pagos recibidos' }}
-            </p>
-          </article>
-
-          <!-- Card Egresos operativos -->
-          <article class="stats-card" role="region" aria-label="Egresos operativos del mes">
-            <p class="stats-card__title">Egresos operativos</p>
-            <div class="stats-card__total-row">
-              <span class="stats-card__total">{{ formatCop(state.data!.egresos_operativos.total_cop) }}</span>
-              <span
-                class="stats-card__delta"
-                [ngClass]="egresosDeltaClass(state.data!.egresos_operativos.delta_cop)"
-                [attr.aria-label]="'Variación egresos: ' + state.data!.egresos_operativos.delta_cop"
-              >
-                <ng-container *ngIf="state.data!.egresos_operativos.delta_cop > 0">&#8593;{{ formatCop(state.data!.egresos_operativos.delta_cop) }}</ng-container>
-                <ng-container *ngIf="state.data!.egresos_operativos.delta_cop < 0">&#8595;{{ formatCop(state.data!.egresos_operativos.delta_cop * -1) }}</ng-container>
-                <ng-container *ngIf="state.data!.egresos_operativos.delta_cop === 0">=</ng-container>
-                vs {{ prevMonthLabel(periodo) }}
-              </span>
-            </div>
-            <p class="stats-card__breakdown">
-              {{ state.data!.egresos_operativos.cantidad_registros }}
-              {{ state.data!.egresos_operativos.cantidad_registros === 1 ? 'registro' : 'registros' }}
-            </p>
-          </article>
-
-          <!-- Card Nómina -->
-          <article class="stats-card" role="region" aria-label="Nómina pagada del mes">
-            <p class="stats-card__title">Nómina pagada</p>
-            <div class="stats-card__total-row">
-              <span class="stats-card__total">{{ formatCop(state.data!.nomina.total_cop) }}</span>
-              <span
-                class="stats-card__delta"
-                [ngClass]="egresosDeltaClass(state.data!.nomina.delta_cop)"
-                [attr.aria-label]="'Variación nómina: ' + state.data!.nomina.delta_cop"
-              >
-                <ng-container *ngIf="state.data!.nomina.delta_cop > 0">&#8593;{{ formatCop(state.data!.nomina.delta_cop) }}</ng-container>
-                <ng-container *ngIf="state.data!.nomina.delta_cop < 0">&#8595;{{ formatCop(state.data!.nomina.delta_cop * -1) }}</ng-container>
-                <ng-container *ngIf="state.data!.nomina.delta_cop === 0">=</ng-container>
-                vs {{ prevMonthLabel(periodo) }}
-              </span>
-            </div>
-            <p class="stats-card__breakdown">
-              {{ state.data!.nomina.cantidad_cierres }}
-              {{ state.data!.nomina.cantidad_cierres === 1 ? 'quincena cerrada' : 'quincenas cerradas' }}
-            </p>
-          </article>
-
-        </div><!-- /.stats-cards-grid (loaded) -->
-
-      </ng-container>
-
-    </section>
-
-    <!-- ── Tendencia ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Tendencia</h2>
-
-      <!-- Pills de ventana temporal -->
-      <div class="stats-pills" role="group" aria-label="Ventana temporal">
-        <button
-          *ngFor="let v of ventanasTendencia; trackBy: trackByVentanaTendencia"
-          type="button"
-          class="stats-pill"
-          [class.stats-pill--active]="(ventanaTendencia$ | async) === v"
-          [attr.aria-pressed]="(ventanaTendencia$ | async) === v"
-          (click)="onVentanaTendenciaChange(v)"
-        >
-          {{ ventanaTendenciaLabels[v] }}
-        </button>
+            *ngIf="rs.status === 'loaded' && !rs.data!.mes_completo"
+            class="fv2-status-chip">
+            <span class="fv2-status-chip__dot"></span>
+            en curso · datos parciales
+          </span>
+        </ng-container>
       </div>
 
-      <ng-container *ngIf="tendenciaState$ | async as tstate">
+      <ng-container *ngIf="resumenState$ | async as rs">
 
-        <!-- Loading -->
-        <div *ngIf="tstate.status === 'loading'" class="skeleton-chart skeleton-chart--lg" aria-hidden="true">
-          <div class="skeleton skeleton--block"></div>
+        <!-- ── Loading skeleton ─────────────────────────────────── -->
+        <div *ngIf="rs.status === 'loading'" class="fv2-skeleton-block">
+          <div class="fv2-skeleton fv2-skeleton--label"></div>
+          <div class="fv2-skeleton fv2-skeleton--hero"></div>
+          <div class="fv2-skeleton fv2-skeleton--meta"></div>
+          <div class="fv2-skeleton fv2-skeleton--formula"></div>
         </div>
 
-        <!-- Empty (todos los meses con ingresos=0 y egresos=0) -->
-        <div *ngIf="tstate.status === 'empty'" class="stats-empty">
-          <p class="stats-empty__title">Sin datos suficientes para mostrar tendencia</p>
-          <p class="stats-empty__hint">Los datos aparecerán a medida que se registren ingresos y egresos.</p>
+        <!-- ── Error ──────────────────────────────────────────── -->
+        <div *ngIf="rs.status === 'error'" class="fv2-error-block">
+          <p class="fv2-muted">No pudimos cargar los datos del período.</p>
+          <button type="button" class="fv2-link-btn" (click)="retryResumen()">
+            Reintentar
+          </button>
         </div>
 
-        <!-- Error con retry -->
-        <div *ngIf="tstate.status === 'error'" class="stats-error" role="alert">
-          <p class="stats-error__msg">No se pudo cargar la tendencia.</p>
-          <button type="button" class="stats-error__retry" (click)="retryTendencia()">Reintentar</button>
+        <!-- ── Pre-app (mes anterior a abril 2026) ────────────── -->
+        <div *ngIf="rs.status === 'pre-app'" class="fv2-pre-app-block">
+          <p class="fv2-caption">Utilidad acumulada del período</p>
+          <div class="fv2-hero__number fv2-hero__number--neutral">$0</div>
+          <p class="fv2-muted">Sin datos para este período.</p>
         </div>
 
-        <!-- Loaded -->
-        <ng-container *ngIf="tstate.status === 'loaded' && tstate.data as puntos">
-          <div class="tendencia-chart-wrapper">
-            <div
-              class="tendencia-chart-scroll"
-              [style.min-width]="puntos.length > 3 ? puntos.length * 88 + 'px' : '100%'"
-            >
-              <div class="tendencia-chart-canvas">
-                <canvas
-                  baseChart
-                  [type]="'bar'"
-                  [data]="buildTendenciaChartData(puntos)"
-                  [options]="tendenciaChartOptions"
-                ></canvas>
-              </div>
-            </div>
+        <!-- ── Loaded ─────────────────────────────────────────── -->
+        <ng-container *ngIf="rs.status === 'loaded'">
+
+          <p class="fv2-caption">Utilidad acumulada del período</p>
+
+          <!-- Hero number + delta pill -->
+          <div class="fv2-hero__number-row">
+            <span
+              class="fv2-hero__number"
+              [class.fv2-hero__number--positive]="rs.data!.utilidad.es_positiva"
+              [class.fv2-hero__number--negative]="!rs.data!.utilidad.es_positiva">
+              {{ formatVisible(rs.data!.utilidad.total_cop, m.v) }}
+            </span>
+
+            <span [ngClass]="deltaPillClass(rs.data!.utilidad.delta_cop)">
+              {{ deltaPillArrow(rs.data!.utilidad.delta_cop) }}
+              <ng-container *ngIf="rs.data!.utilidad.delta_cop !== 0">
+                {{ formatVisibleShort(
+                    rs.data!.utilidad.delta_cop < 0
+                      ? -rs.data!.utilidad.delta_cop
+                      : rs.data!.utilidad.delta_cop, m.v) }}
+              </ng-container>
+              <span class="fv2-pill__label">vs {{ prevMonthLabel(periodo) }}</span>
+            </span>
           </div>
-          <p *ngIf="hasMesActual(puntos)" class="stats-chart-footnote">
-            * Mes en curso — datos parciales hasta hoy.
+
+          <!-- Pagos · ingresos -->
+          <p class="fv2-hero__meta">
+            {{ rs.data!.ingresos.cantidad_pagos ?? 0 }} pagos
+            <span class="fv2-faint">·</span>
+            {{ formatVisible(rs.data!.ingresos.total_cop, m.v) }}
           </p>
+
+          <!-- Fórmula P&L -->
+          <p class="fv2-hero__formula">
+            {{ formulaText(rs.data!, m.v) }}
+          </p>
+
+          <!-- Sparkline de utilidad -->
+          <ng-container *ngIf="tendenciaState$ | async as ts">
+            <div *ngIf="ts.status === 'loading'" class="fv2-spark-skeleton"></div>
+
+            <ng-container *ngIf="ts.status === 'loaded'">
+              <ng-container *ngIf="buildHeroSparkline(ts.data!) as g">
+                <div class="fv2-spark">
+                  <svg
+                    [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
+                    preserveAspectRatio="none"
+                    class="fv2-spark__svg"
+                    aria-hidden="true">
+                    <defs>
+                      <linearGradient
+                        id="fv2SparkGrad"
+                        x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#10b981" stop-opacity="0.18" />
+                        <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      [attr.d]="g.areaPath"
+                      fill="url(#fv2SparkGrad)"
+                      stroke="none" />
+                    <path
+                      [attr.d]="g.linePath"
+                      fill="none"
+                      stroke="#10b981"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <circle
+                      [attr.cx]="g.lastX"
+                      [attr.cy]="g.lastY"
+                      r="3.5"
+                      fill="#10b981"
+                      stroke="#ffffff"
+                      stroke-width="2" />
+                  </svg>
+                </div>
+              </ng-container>
+            </ng-container>
+          </ng-container>
+
         </ng-container>
 
       </ng-container>
-    </section>
+    </div>
 
-    <!-- ── Composición ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Composición</h2>
+    <!-- ─── ZONA DERECHA — card flotante ────────────────────────── -->
+    <div class="fv2-hero__right">
 
-      <!-- Toggle Por categoría / Por proveedor -->
-      <div class="stats-pills" role="group" aria-label="Vista de composición">
-        <button
-          *ngFor="let v of vistasComposicion; trackBy: trackByVistaComposicion"
-          type="button"
-          class="stats-pill stats-pill--sm"
-          [class.stats-pill--active]="vistaComposicion === v"
-          [attr.aria-pressed]="vistaComposicion === v"
-          (click)="onVistaComposicionChange(v)"
-        >
-          {{ vistaComposicionLabels[v] }}
-        </button>
-      </div>
+      <ng-container *ngIf="resumenState$ | async as rs">
 
-      <ng-container *ngIf="composicionState$ | async as cstate">
-
-        <!-- Loading -->
-        <div *ngIf="cstate.status === 'loading'" class="skeleton-chart skeleton-chart--lg" aria-hidden="true">
-          <div class="skeleton skeleton--block"></div>
-        </div>
-
-        <!-- Pre-app -->
-        <div *ngIf="cstate.status === 'pre-app'" class="stats-empty">
-          <p class="stats-empty__title">Sin datos para este período</p>
-          <p class="stats-empty__hint">La aplicación comenzó a registrar datos en abril 2026.</p>
-        </div>
-
-        <!-- Error con retry -->
-        <div *ngIf="cstate.status === 'error'" class="stats-error" role="alert">
-          <p class="stats-error__msg">No se pudo cargar la composición.</p>
-          <button type="button" class="stats-error__retry" (click)="retryComposicion()">Reintentar</button>
-        </div>
-
-        <!-- Loaded sin egresos en el mes -->
-        <div *ngIf="cstate.status === 'loaded' && !cstate.data.tiene_datos" class="stats-empty stats-empty--composicion">
-          <p class="stats-empty__title">Sin egresos registrados en {{ periodoLabel }}</p>
-          <p class="stats-empty__hint">
-            Los datos aparecerán cuando registres gastos en
-            <a routerLink="/app/registro" class="stats-empty__link">Registro de egresos</a>
-            o se paguen quincenas de entrenadores.
-          </p>
-        </div>
-
-        <!-- Loaded con datos -->
-        <div *ngIf="cstate.status === 'loaded' && cstate.data.tiene_datos" class="composicion-grid">
-          <ng-container *ngIf="composicionRows(cstate.data) as rows">
-
-            <!-- Columna izquierda: dona -->
-            <div class="composicion-grid__chart">
-              <div class="composicion-doughnut">
-                <canvas
-                  baseChart
-                  [type]="'doughnut'"
-                  [data]="buildDoughnutData(rows)"
-                  [options]="doughnutOptions"
-                ></canvas>
-              </div>
-            </div>
-
-            <!-- Columna derecha: lista -->
-            <ul class="composicion-list">
-              <li
-                *ngFor="let r of rows; trackBy: trackByComposicionRow"
-                class="composicion-item"
-              >
-                <div class="composicion-item__header">
-                  <span class="composicion-item__name">
-                    <span *ngIf="r.emoji" class="composicion-item__emoji">{{ r.emoji }}</span>
-                    {{ r.nombre }}
-                  </span>
-                  <span class="composicion-item__amount">{{ formatCop(r.total_cop) }}</span>
-                  <span class="composicion-item__pct">{{ r.porcentaje }}%</span>
-                </div>
-                <div class="composicion-item__bar-track" aria-hidden="true">
-                  <div
-                    class="composicion-item__bar-fill"
-                    [style.width.%]="r.porcentaje"
-                    [style.background-color]="getRowColor(r.id)"
-                  ></div>
-                </div>
-              </li>
-              <li class="composicion-item composicion-item--total">
-                <div class="composicion-item__header">
-                  <span class="composicion-item__name">Total egresos</span>
-                  <span class="composicion-item__amount">{{ formatCop(cstate.data.total_egresos_cop) }}</span>
-                </div>
-              </li>
-            </ul>
-
-          </ng-container>
-        </div>
-
-      </ng-container>
-    </section>
-
-    <!-- ── Detalle ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Detalle</h2>
-
-      <ng-container *ngIf="detalleState$ | async as dstate">
-
-        <!-- Loading -->
-        <div *ngIf="dstate.status === 'loading'" class="skeleton-chart skeleton-chart--lg" aria-hidden="true">
-          <div class="skeleton skeleton--block"></div>
-        </div>
-
-        <!-- Pre-app -->
-        <div *ngIf="dstate.status === 'pre-app'" class="stats-empty">
-          <p class="stats-empty__title">Sin datos para este período</p>
-          <p class="stats-empty__hint">La aplicación comenzó a registrar datos en abril 2026.</p>
+        <!-- Skeleton -->
+        <div *ngIf="rs.status === 'loading'" class="fv2-card fv2-card--floating fv2-card-skeleton">
+          <div class="fv2-skeleton fv2-skeleton--gauge"></div>
+          <div class="fv2-card-skeleton__text">
+            <div class="fv2-skeleton fv2-skeleton--line"></div>
+            <div class="fv2-skeleton fv2-skeleton--line"></div>
+            <div class="fv2-skeleton fv2-skeleton--line fv2-skeleton--short"></div>
+          </div>
         </div>
 
         <!-- Error -->
-        <div *ngIf="dstate.status === 'error'" class="stats-error" role="alert">
-          <p class="stats-error__msg">No se pudo cargar el detalle.</p>
-          <button type="button" class="stats-error__retry" (click)="retryDetalle()">Reintentar</button>
+        <div *ngIf="rs.status === 'error'" class="fv2-card fv2-card--floating fv2-card-error">
+          <p class="fv2-muted">Error al cargar la salud financiera.</p>
+          <button type="button" class="fv2-link-btn" (click)="retryResumen()">
+            Reintentar
+          </button>
         </div>
 
-        <!-- Loaded sin datos -->
-        <div *ngIf="dstate.status === 'loaded' && !dstate.data.tiene_datos" class="stats-empty">
-          <p class="stats-empty__title">Sin ingresos registrados en {{ periodoLabel }}</p>
+        <!-- Loaded / Pre-app: card unificada con gauge y controles -->
+        <div
+          *ngIf="rs.status === 'loaded' || rs.status === 'pre-app'"
+          class="fv2-card fv2-card--floating">
+
+          <!-- Body: gauge + contexto -->
+          <div class="fv2-card__body">
+
+            <!-- Columna izquierda: gauge -->
+            <div class="fv2-gauge-col">
+              <ng-container *ngIf="rs.status === 'loaded'; else preAppGauge">
+                <ng-container *ngIf="buildGauge(rs.data!) as gg">
+                  <div class="fv2-gauge"
+                    [attr.style]="'--fv2-gauge-color: ' + gg.color">
+                    <svg
+                      [attr.viewBox]="gg.viewBox"
+                      [attr.width]="gg.width"
+                      [attr.height]="gg.height"
+                      class="fv2-gauge__svg"
+                      aria-hidden="true">
+                      <path
+                        [attr.d]="gg.trackD"
+                        stroke="#e5e7eb"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        fill="none" />
+                      <path
+                        [attr.d]="gg.barD"
+                        [attr.stroke]="gg.color"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        fill="none"
+                        class="fv2-gauge__bar" />
+                    </svg>
+                    <div class="fv2-gauge__center">
+                      <span class="fv2-gauge__pct">{{ gg.pctLabel }}<span class="fv2-gauge__suffix">%</span></span>
+                      <span class="fv2-gauge__grade" [style.color]="gg.color">{{ gg.grade }}</span>
+                    </div>
+                  </div>
+                </ng-container>
+              </ng-container>
+
+              <ng-template #preAppGauge>
+                <div class="fv2-gauge fv2-gauge--empty">
+                  <div class="fv2-gauge__center">
+                    <span class="fv2-gauge__pct fv2-gauge__pct--muted">—</span>
+                    <span class="fv2-gauge__grade fv2-gauge__grade--muted">SIN DATOS</span>
+                  </div>
+                </div>
+              </ng-template>
+            </div>
+
+            <!-- Columna derecha: contexto -->
+            <div class="fv2-context-col">
+              <span class="fv2-context__label">SALUD FINANCIERA</span>
+              <h3 class="fv2-context__title">Margen utilidad / ingresos</h3>
+
+              <ng-container *ngIf="rs.status === 'loaded'; else preAppContext">
+                <ng-container *ngIf="buildGauge(rs.data!) as gg">
+                  <p class="fv2-context__desc">{{ gg.description }}</p>
+                </ng-container>
+              </ng-container>
+
+              <ng-template #preAppContext>
+                <p class="fv2-context__desc fv2-muted">
+                  No hay registros para este período.
+                </p>
+              </ng-template>
+            </div>
+
+          </div>
+
+          <!-- Separador -->
+          <div class="fv2-card__sep"></div>
+
+          <!-- Footer: nav de mes + toggle -->
+          <div class="fv2-card__footer">
+
+            <!-- Nav de mes compacto -->
+            <div class="fv2-month-nav fv2-month-nav--compact">
+              <button
+                type="button"
+                class="fv2-month-nav__btn"
+                [disabled]="isAtAppStartMonth"
+                (click)="onPrevMonth()"
+                aria-label="Mes anterior">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6"></polyline>
+                </svg>
+              </button>
+              <span class="fv2-month-nav__label">{{ periodoLabel }}</span>
+              <button
+                type="button"
+                class="fv2-month-nav__btn"
+                [disabled]="isAtCurrentMonth"
+                (click)="onNextMonth()"
+                aria-label="Mes siguiente">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6"></polyline>
+                </svg>
+              </button>
+            </div>
+
+            <!-- Toggle visibilidad -->
+            <button
+              type="button"
+              class="fv2-toggle-btn"
+              (click)="onToggleMontos()"
+              [attr.aria-pressed]="!(montosVisibles$ | async)">
+              <svg
+                *ngIf="(montosVisibles$ | async)"
+                width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                <circle cx="12" cy="12" r="3"></circle>
+              </svg>
+              <svg
+                *ngIf="!(montosVisibles$ | async)"
+                width="16" height="16" viewBox="0 0 24 24" fill="none"
+                stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                <line x1="1" y1="1" x2="23" y2="23"></line>
+              </svg>
+              <span>{{ (montosVisibles$ | async) ? 'Ocultar montos' : 'Mostrar montos' }}</span>
+            </button>
+
+          </div>
         </div>
 
-        <!-- Loaded con datos -->
-        <div *ngIf="dstate.status === 'loaded' && dstate.data.tiene_datos" class="detalle-grid">
+      </ng-container>
+    </div>
 
-          <!-- Subsección izquierda: quincenas -->
-          <div class="detalle-card">
-            <h3 class="detalle-card__title">Ingresos por quincena</h3>
-            <div class="detalle-quincenas-canvas">
-              <canvas
-                baseChart
-                [type]="'bar'"
-                [data]="buildQuincenasChartData(quincenasForChart(dstate.data.quincenas))"
-                [options]="quincenasChartOptions"
-              ></canvas>
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 01 — INDICADORES DEL PERÍODO
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <header class="fv2-section__header">
+      <div class="fv2-section__title-row">
+        <span class="fv2-section__num">01 /</span>
+        <h2 class="fv2-section__title">Indicadores del período</h2>
+      </div>
+      <p class="fv2-section__subtitle">
+        Movimientos del mes en curso comparados con {{ prevMonthLabel(periodo) }}
+      </p>
+    </header>
+
+    <ng-container *ngIf="{
+      rs: resumenState$ | async,
+      ts: tendenciaState$ | async,
+      cs: cajaState$ | async,
+      v: montosVisibles$ | async
+    } as state">
+
+      <div class="fv2-cards-grid">
+        <article
+          *ngFor="let card of buildCards(state.rs, state.ts, state.cs); trackBy: trackByCardKey"
+          class="fv2-card fv2-card--metric"
+          [attr.data-key]="card.key">
+
+          <!-- ── Loading skeleton ─────────────────────────────────── -->
+          <ng-container *ngIf="card.status === 'loading'">
+            <div class="fv2-card-metric__skeleton">
+              <div class="fv2-skeleton fv2-skeleton--label-sm"></div>
+              <div class="fv2-skeleton fv2-skeleton--card-value"></div>
+              <div class="fv2-skeleton fv2-skeleton--line fv2-skeleton--short"></div>
+            </div>
+          </ng-container>
+
+          <!-- ── Error ────────────────────────────────────────────── -->
+          <ng-container *ngIf="card.status === 'error'">
+            <div class="fv2-card-metric__error">
+              <span class="fv2-card-metric__label-row">
+                <span class="fv2-card-metric__dot" [style.background]="card.color"></span>
+                <span class="fv2-card-metric__label">{{ card.label }}</span>
+              </span>
+              <p class="fv2-muted">No se pudo cargar.</p>
+              <button
+                type="button"
+                class="fv2-link-btn"
+                (click)="card.key === 'caja' ? retryCaja() : retryResumen()">
+                Reintentar
+              </button>
+            </div>
+          </ng-container>
+
+          <!-- ── Loaded / Pre-app ─────────────────────────────────── -->
+          <ng-container *ngIf="card.status === 'loaded' || card.status === 'pre-app'">
+
+            <!-- Top row: label + sparkline a la derecha -->
+            <div class="fv2-card-metric__top">
+              <span class="fv2-card-metric__label-row">
+                <span class="fv2-card-metric__dot" [style.background]="card.color"></span>
+                <span class="fv2-card-metric__label">{{ card.label }}</span>
+              </span>
+
+              <ng-container *ngIf="card.sparkline as sl">
+                <svg
+                  class="fv2-card-metric__spark"
+                  [attr.viewBox]="'0 0 ' + sl.width + ' ' + sl.height"
+                  preserveAspectRatio="none"
+                  aria-hidden="true">
+                  <defs>
+                    <linearGradient
+                      [attr.id]="card.gradId"
+                      x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" [attr.stop-color]="card.color" stop-opacity="0.22" />
+                      <stop offset="100%" [attr.stop-color]="card.color" stop-opacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path
+                    [attr.d]="sl.areaPath"
+                    [attr.fill]="'url(#' + card.gradId + ')'"
+                    stroke="none" />
+                  <path
+                    [attr.d]="sl.linePath"
+                    fill="none"
+                    [attr.stroke]="card.color"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </ng-container>
+            </div>
+
+            <!-- Valor principal -->
+            <div class="fv2-card-metric__value">
+              {{ formatVisible(card.value, state.v) }}
+            </div>
+
+            <!-- Delta chip o caption -->
+            <div class="fv2-card-metric__meta">
+              <ng-container *ngIf="card.delta !== null && card.status === 'loaded'; else cardCaption">
+                <span [ngClass]="card.deltaInverted
+                    ? deltaPillClass(-card.delta)
+                    : deltaPillClass(card.delta)">
+                  {{ deltaPillArrow(card.delta) }}
+                  <ng-container *ngIf="card.delta !== 0">
+                    {{ formatVisibleShort(card.delta < 0 ? -card.delta : card.delta, state.v) }}
+                  </ng-container>
+                  <span class="fv2-pill__label">vs {{ prevMonthLabel(periodo) }}</span>
+                </span>
+              </ng-container>
+
+              <ng-template #cardCaption>
+                <span *ngIf="card.caption" class="fv2-card-metric__caption">
+                  {{ card.caption }}
+                </span>
+              </ng-template>
+            </div>
+
+            <!-- Texto secundario -->
+            <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
+
+          </ng-container>
+
+        </article>
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 02 — TENDENCIA
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <header class="fv2-section__header fv2-section__header--with-actions">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">02 /</span>
+          <h2 class="fv2-section__title">Tendencia</h2>
+        </div>
+        <p class="fv2-section__subtitle">
+          Comparativa de ingresos, egresos y utilidad en el tiempo
+        </p>
+      </div>
+
+      <!-- Pills de ventana temporal -->
+      <div class="fv2-pills" role="tablist" aria-label="Ventana temporal">
+        <button
+          *ngFor="let v of ventanasTendencia; trackBy: trackByVentana"
+          type="button"
+          role="tab"
+          class="fv2-pill-tab"
+          [class.fv2-pill-tab--active]="(ventanaTendencia$ | async) === v"
+          [attr.aria-selected]="(ventanaTendencia$ | async) === v"
+          (click)="onVentanaTendenciaChange(v)">
+          {{ ventanaTendenciaLabels[v] }}
+        </button>
+      </div>
+    </header>
+
+    <ng-container *ngIf="{
+      ts: tendenciaState$ | async,
+      ventana: ventanaTendencia$ | async,
+      v: montosVisibles$ | async
+    } as state">
+
+      <div class="fv2-card fv2-tendencia-card">
+
+        <!-- Loading -->
+        <div
+          *ngIf="!state.ts || state.ts.status === 'loading'"
+          class="fv2-tendencia__skeleton">
+          <div class="fv2-skeleton fv2-skeleton--block fv2-skeleton--tendencia-left"></div>
+          <div class="fv2-skeleton fv2-skeleton--block fv2-skeleton--tendencia-right"></div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="state.ts && state.ts.status === 'error'" class="fv2-tendencia__error">
+          <p class="fv2-muted">No se pudo cargar la tendencia.</p>
+          <button type="button" class="fv2-link-btn" (click)="retryTendencia()">
+            Reintentar
+          </button>
+        </div>
+
+        <!-- Loaded -->
+        <ng-container *ngIf="state.ts && state.ts.status === 'loaded'">
+          <ng-container *ngIf="windowedPuntos(state.ts.data!, state.ventana) as puntos">
+
+            <div class="fv2-tendencia__body">
+
+              <!-- ─── Zona izquierda: Variación + leyenda ───────────── -->
+              <div class="fv2-tendencia__left">
+                <span class="fv2-tendencia__label">VARIACIÓN</span>
+
+                <ng-container *ngIf="buildVariacion(puntos) as varia">
+                  <div class="fv2-var" [ngClass]="varia.cssClass">
+                    {{ varia.display }}
+                  </div>
+                  <p
+                    *ngIf="varia.mesInicialLabel"
+                    class="fv2-tendencia__sub">
+                    en utilidad vs {{ varia.mesInicialLabel }}
+                  </p>
+                </ng-container>
+
+                <div class="fv2-tendencia__divider"></div>
+
+                <!-- Mini leyenda con barras min→max -->
+                <ul class="fv2-legend">
+                  <li
+                    *ngFor="let row of buildSeriesLegend(puntos); trackBy: trackByIndex"
+                    class="fv2-legend__row">
+                    <div class="fv2-legend__head">
+                      <span
+                        class="fv2-legend__dot"
+                        [style.background]="row.color"></span>
+                      <span class="fv2-legend__label">{{ row.label }}</span>
+                      <span class="fv2-legend__range">
+                        {{ state.v ? row.minLabel : '••' }}
+                        <span class="fv2-legend__arrow">→</span>
+                        {{ state.v ? row.maxLabel : '••' }}
+                      </span>
+                    </div>
+                    <div class="fv2-legend__bar-track">
+                      <div
+                        class="fv2-legend__bar"
+                        [style.width.%]="row.widthPct"
+                        [style.background]="row.color">
+                      </div>
+                    </div>
+                  </li>
+                </ul>
+              </div>
+
+              <!-- ─── Zona derecha: Chart.js ───────────────────────── -->
+              <div class="fv2-tendencia__right">
+                <div class="fv2-chart-canvas-wrap">
+                  <canvas
+                    baseChart
+                    [type]="'bar'"
+                    [data]="buildChartData(puntos)"
+                    [options]="chartOptions"
+                    aria-label="Gráfica de tendencia mensual"
+                    role="img"></canvas>
+                </div>
+
+                <div class="fv2-chart-legend">
+                  <span class="fv2-chart-legend__item">
+                    <span class="fv2-chart-legend__sw" style="background:#10b981"></span>
+                    Ingresos
+                  </span>
+                  <span class="fv2-chart-legend__item">
+                    <span class="fv2-chart-legend__sw" style="background:#dc2626"></span>
+                    Egresos totales
+                  </span>
+                  <span class="fv2-chart-legend__item">
+                    <span class="fv2-chart-legend__sw" style="background:#228d9f"></span>
+                    Utilidad
+                  </span>
+                </div>
+              </div>
+
+            </div>
+
+          </ng-container>
+        </ng-container>
+
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 03 — ESTADO DE CAJA
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <header class="fv2-section__header">
+      <div class="fv2-section__title-row">
+        <span class="fv2-section__num">03 /</span>
+        <h2 class="fv2-section__title">Estado de caja</h2>
+      </div>
+      <p class="fv2-section__subtitle">
+        Posición consolidada y caja menor del período
+      </p>
+    </header>
+
+    <ng-container *ngIf="{
+      cs: cajaState$ | async,
+      ts: tendenciaState$ | async,
+      v: montosVisibles$ | async
+    } as state">
+
+      <div class="fv2-caja-grid">
+
+        <!-- ─── Card izquierda: Caja Consolidada ───────────────────── -->
+        <article class="fv2-card fv2-caja-card fv2-caja-card--light">
+
+          <!-- Loading -->
+          <div *ngIf="!state.cs || state.cs.status === 'loading'" class="fv2-caja-skeleton">
+            <div class="fv2-skeleton fv2-skeleton--label-sm"></div>
+            <div class="fv2-skeleton fv2-skeleton--big-value"></div>
+            <div class="fv2-skeleton fv2-skeleton--line fv2-skeleton--short"></div>
+            <div class="fv2-caja-skeleton__cols">
+              <div class="fv2-skeleton fv2-skeleton--block-sm"></div>
+              <div class="fv2-skeleton fv2-skeleton--block-sm"></div>
+              <div class="fv2-skeleton fv2-skeleton--block-sm"></div>
             </div>
           </div>
 
-          <!-- Subsección derecha: por método de pago -->
-          <div class="detalle-card">
-            <h3 class="detalle-card__title">Ingresos por método de pago</h3>
-            <ul class="detalle-metodo-list">
-              <li
-                *ngFor="let m of dstate.data.por_metodo; trackBy: trackByMetodo"
-                class="detalle-metodo-item"
-              >
-                <div class="detalle-metodo-item__header">
-                  <span class="detalle-metodo-item__name">
-                    <span class="detalle-metodo-item__emoji">{{ metodoEmoji(m.metodo) }}</span>
-                    {{ m.label }}
-                  </span>
-                  <span class="detalle-metodo-item__amount">{{ formatCop(m.total_cop) }}</span>
-                  <span class="detalle-metodo-item__pct">{{ m.porcentaje }}%</span>
+          <!-- Error -->
+          <div *ngIf="state.cs && state.cs.status === 'error'" class="fv2-caja-error">
+            <p class="fv2-muted">Error al cargar la caja.</p>
+            <button type="button" class="fv2-link-btn" (click)="retryCaja()">
+              Reintentar
+            </button>
+          </div>
+
+          <!-- Loaded -->
+          <ng-container *ngIf="state.cs && state.cs.status === 'loaded'">
+
+            <div class="fv2-caja-card__top">
+              <div>
+                <span class="fv2-caja-card__label">CAJA CONSOLIDADA</span>
+                <div class="fv2-caja-card__value">
+                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_cop, state.v) }}
                 </div>
-                <div class="detalle-metodo-item__bar-track" aria-hidden="true">
+                <p class="fv2-caja-card__since">
+                  Desde {{ formatDateDmy(state.cs.data!.caja_consolidada.semilla_fecha) }}
+                </p>
+              </div>
+
+              <!-- Sparkline pequeña 120×50 -->
+              <ng-container *ngIf="buildSparkline(computeSaldoSeries(state.ts, state.cs), 120, 50) as sl">
+                <svg
+                  class="fv2-caja-card__spark-sm"
+                  [attr.viewBox]="'0 0 ' + sl.width + ' ' + sl.height"
+                  preserveAspectRatio="none"
+                  aria-hidden="true">
+                  <defs>
+                    <linearGradient id="fv2-caja-spark-sm" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stop-color="#228d9f" stop-opacity="0.22" />
+                      <stop offset="100%" stop-color="#228d9f" stop-opacity="0" />
+                    </linearGradient>
+                  </defs>
+                  <path [attr.d]="sl.areaPath" fill="url(#fv2-caja-spark-sm)" stroke="none" />
+                  <path
+                    [attr.d]="sl.linePath"
+                    fill="none"
+                    stroke="#228d9f"
+                    stroke-width="1.5"
+                    stroke-linecap="round"
+                    stroke-linejoin="round" />
+                </svg>
+              </ng-container>
+            </div>
+
+            <div class="fv2-caja-card__divider"></div>
+
+            <!-- Tres columnas de desglose -->
+            <div class="fv2-caja-card__breakdown">
+              <div class="fv2-caja-stat">
+                <span class="fv2-caja-stat__label">
+                  <span class="fv2-caja-stat__sign fv2-caja-stat__sign--pos">+</span>
+                  CONSOLIDADO
+                </span>
+                <div class="fv2-caja-stat__value">
+                  {{ formatVisible(state.cs.data!.caja_consolidada.ingresos_consolidados_cop, state.v) }}
+                </div>
+              </div>
+              <div class="fv2-caja-stat">
+                <span class="fv2-caja-stat__label">
+                  <span class="fv2-caja-stat__sign fv2-caja-stat__sign--neg">−</span>
+                  OPERATIVOS
+                </span>
+                <div class="fv2-caja-stat__value">
+                  {{ formatVisible(state.cs.data!.caja_consolidada.egresos_operativos_cop, state.v) }}
+                </div>
+              </div>
+              <div class="fv2-caja-stat">
+                <span class="fv2-caja-stat__label">
+                  <span class="fv2-caja-stat__sign fv2-caja-stat__sign--neg">−</span>
+                  NÓMINA
+                </span>
+                <div class="fv2-caja-stat__value">
+                  {{ formatVisible(state.cs.data!.caja_consolidada.nomina_pagada_cop, state.v) }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Sparkline grande decorativa al fondo -->
+            <ng-container *ngIf="buildSparkline(computeSaldoSeries(state.ts, state.cs), 600, 60) as bigSl">
+              <svg
+                class="fv2-caja-card__spark-bg"
+                [attr.viewBox]="'0 0 ' + bigSl.width + ' ' + bigSl.height"
+                preserveAspectRatio="none"
+                aria-hidden="true">
+                <defs>
+                  <linearGradient id="fv2-caja-spark-bg" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#228d9f" stop-opacity="0.18" />
+                    <stop offset="100%" stop-color="#228d9f" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path [attr.d]="bigSl.areaPath" fill="url(#fv2-caja-spark-bg)" stroke="none" />
+                <path
+                  [attr.d]="bigSl.linePath"
+                  fill="none"
+                  stroke="#228d9f"
+                  stroke-width="1.5"
+                  stroke-linecap="round"
+                  stroke-linejoin="round" />
+              </svg>
+            </ng-container>
+
+          </ng-container>
+        </article>
+
+        <!-- ─── Card derecha: Caja Menor (oscura) ──────────────────── -->
+        <article class="fv2-card fv2-caja-card fv2-caja-card--dark">
+
+          <!-- Loading -->
+          <div *ngIf="!state.cs || state.cs.status === 'loading'" class="fv2-caja-skeleton fv2-caja-skeleton--dark">
+            <div class="fv2-skeleton-dark fv2-skeleton--label-sm"></div>
+            <div class="fv2-skeleton-dark fv2-skeleton--big-value"></div>
+            <div class="fv2-skeleton-dark fv2-skeleton--line fv2-skeleton--short"></div>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="state.cs && state.cs.status === 'error'" class="fv2-caja-error fv2-caja-error--dark">
+            <p>Error al cargar la caja menor.</p>
+            <button type="button" class="fv2-link-btn fv2-link-btn--dark" (click)="retryCaja()">
+              Reintentar
+            </button>
+          </div>
+
+          <!-- Loaded -->
+          <ng-container *ngIf="state.cs && state.cs.status === 'loaded'">
+
+            <div class="fv2-caja-card__top">
+              <span class="fv2-caja-card__label fv2-caja-card__label--light">CAJA MENOR</span>
+              <span class="fv2-caja-card__badge">
+                {{ state.cs.data!.caja_menor.quincena_label }}
+              </span>
+            </div>
+
+            <div class="fv2-caja-card__value fv2-caja-card__value--light">
+              {{ formatVisible(state.cs.data!.caja_menor.total_cop, state.v) }}
+            </div>
+
+            <p class="fv2-caja-card__pagos">
+              {{ state.cs.data!.caja_menor.cantidad_pagos }} pagos recibidos
+            </p>
+            <p class="fv2-caja-card__sub">Aún no consolidados</p>
+
+            <div class="fv2-caja-card__divider fv2-caja-card__divider--dark"></div>
+
+            <!-- Alerta de cierre de quincena -->
+            <ng-container *ngIf="buildQuincenaCierre(state.cs) as info">
+              <div class="fv2-cierre-alert">
+                <div class="fv2-cierre-alert__main">
+                  <span class="fv2-cierre-alert__dot"></span>
+                  <span class="fv2-cierre-alert__text">
+                    Quincena cierra el {{ info.cierreLabel }}
+                  </span>
+                </div>
+                <span
+                  class="fv2-countdown"
+                  [class.fv2-countdown--warn]="info.countdownVariant === 'warn'"
+                  [class.fv2-countdown--danger]="info.countdownVariant === 'danger'">
+                  {{ info.countdownLabel }}
+                </span>
+              </div>
+            </ng-container>
+
+          </ng-container>
+        </article>
+
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 04 — DETALLE DE INGRESOS
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <header class="fv2-section__header">
+      <div class="fv2-section__title-row">
+        <span class="fv2-section__num">04 /</span>
+        <h2 class="fv2-section__title">Detalle de ingresos</h2>
+      </div>
+      <p class="fv2-section__subtitle">
+        Composición por método de pago y por quincena
+      </p>
+    </header>
+
+    <ng-container *ngIf="{
+      ds: detalleState$ | async,
+      v: montosVisibles$ | async
+    } as state">
+
+      <div class="fv2-detalle-grid">
+
+        <!-- ─── Card izquierda: Métodos de pago ─────────────────── -->
+        <article class="fv2-card fv2-detalle-card">
+
+          <!-- Loading -->
+          <div *ngIf="!state.ds || state.ds.status === 'loading'" class="fv2-detalle-skeleton">
+            <div class="fv2-skeleton fv2-skeleton--label-sm"></div>
+            <div class="fv2-detalle-skeleton__body">
+              <div class="fv2-skeleton fv2-skeleton--donut"></div>
+              <div class="fv2-detalle-skeleton__list">
+                <div class="fv2-skeleton fv2-skeleton--line"></div>
+                <div class="fv2-skeleton fv2-skeleton--line"></div>
+                <div class="fv2-skeleton fv2-skeleton--line"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="state.ds && state.ds.status === 'error'" class="fv2-detalle-error">
+            <p class="fv2-muted">No se pudo cargar el detalle.</p>
+            <button type="button" class="fv2-link-btn" (click)="retryDetalle()">
+              Reintentar
+            </button>
+          </div>
+
+          <!-- Pre-app -->
+          <div *ngIf="state.ds && state.ds.status === 'pre-app'" class="fv2-detalle-empty">
+            <p class="fv2-muted">Sin datos para este período.</p>
+          </div>
+
+          <!-- Loaded -->
+          <ng-container *ngIf="state.ds && state.ds.status === 'loaded'">
+            <header class="fv2-detalle-card__header">
+              <h3 class="fv2-detalle-card__title">Ingresos por método de pago</h3>
+              <span class="fv2-detalle-card__meta">
+                {{ totalPagos(state.ds.data!) }} pagos
+                <span class="fv2-faint">·</span>
+                {{ formatVisible(state.ds.data!.total_ingresos_cop, state.v) }}
+              </span>
+            </header>
+
+            <div class="fv2-detalle-card__body">
+              <!-- Dona -->
+              <div class="fv2-donut-wrap">
+                <div class="fv2-donut-canvas">
+                  <canvas
+                    baseChart
+                    [type]="'doughnut'"
+                    [data]="buildMetodoChartData(state.ds.data!)"
+                    [options]="metodoChartOptions"
+                    aria-label="Distribución de ingresos por método de pago"
+                    role="img"></canvas>
+                </div>
+                <div class="fv2-donut-center">
+                  <span class="fv2-donut-center__label">TOTAL</span>
+                  <span class="fv2-donut-center__value">
+                    {{ state.v ? formatShort(state.ds.data!.total_ingresos_cop) : '$••••' }}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Lista -->
+              <ul class="fv2-row-list">
+                <li
+                  *ngFor="let r of buildMetodoRows(state.ds.data!); trackBy: trackByMetodo"
+                  class="fv2-row">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name">
+                      <span class="fv2-row__dot" [style.background]="r.color"></span>
+                      {{ r.label }}
+                    </span>
+                    <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
+                    <span class="fv2-row__amount">
+                      {{ formatVisible(r.total_cop, state.v) }}
+                    </span>
+                  </div>
+                  <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
+                    <div
+                      class="fv2-row__bar"
+                      [style.width.%]="r.widthPct"
+                      [style.background]="r.color"></div>
+                  </div>
+                </li>
+
+                <!-- Total destacado -->
+                <li
+                  *ngIf="buildMetodoRows(state.ds.data!).length > 0"
+                  class="fv2-row fv2-row--total">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name fv2-row__name--total">Total</span>
+                    <span class="fv2-row__amount fv2-row__amount--total">
+                      {{ formatVisible(state.ds.data!.total_ingresos_cop, state.v) }}
+                    </span>
+                  </div>
+                </li>
+
+                <!-- Empty inline -->
+                <li
+                  *ngIf="buildMetodoRows(state.ds.data!).length === 0"
+                  class="fv2-row-empty">
+                  <p class="fv2-muted">Sin pagos registrados en este período.</p>
+                </li>
+              </ul>
+            </div>
+          </ng-container>
+        </article>
+
+        <!-- ─── Card derecha: Quincenas ─────────────────────────── -->
+        <article class="fv2-card fv2-detalle-card">
+
+          <!-- Loading -->
+          <div *ngIf="!state.ds || state.ds.status === 'loading'" class="fv2-detalle-skeleton">
+            <div class="fv2-skeleton fv2-skeleton--label-sm"></div>
+            <div class="fv2-skeleton fv2-skeleton--quincena-row"></div>
+            <div class="fv2-skeleton fv2-skeleton--quincena-row"></div>
+          </div>
+
+          <!-- Error -->
+          <div *ngIf="state.ds && state.ds.status === 'error'" class="fv2-detalle-error">
+            <p class="fv2-muted">No se pudo cargar el detalle.</p>
+            <button type="button" class="fv2-link-btn" (click)="retryDetalle()">
+              Reintentar
+            </button>
+          </div>
+
+          <!-- Pre-app -->
+          <div *ngIf="state.ds && state.ds.status === 'pre-app'" class="fv2-detalle-empty">
+            <p class="fv2-muted">Sin datos para este período.</p>
+          </div>
+
+          <!-- Loaded -->
+          <ng-container *ngIf="state.ds && state.ds.status === 'loaded'">
+            <header class="fv2-detalle-card__header">
+              <h3 class="fv2-detalle-card__title">Ingresos por quincena</h3>
+              <span class="fv2-detalle-card__meta">{{ buildQuincenaCierreLabel() }}</span>
+            </header>
+
+            <ul class="fv2-quincenas">
+              <li
+                *ngFor="let q of buildQuincenaRows(state.ds.data!); trackBy: trackByQuincenaKey"
+                class="fv2-quincena">
+                <div class="fv2-quincena__head">
+                  <span class="fv2-quincena__label">{{ q.label }}</span>
+                  <span
+                    class="fv2-quincena__badge"
+                    [class.fv2-quincena__badge--success]="q.estadoVariant === 'success'"
+                    [class.fv2-quincena__badge--warn]="q.estadoVariant === 'warn'"
+                    [class.fv2-quincena__badge--muted]="q.estadoVariant === 'muted'">
+                    {{ q.estadoLabel }}
+                  </span>
+                  <span class="fv2-quincena__amount">
+                    {{ formatVisible(q.total_cop, state.v) }}
+                  </span>
+                </div>
+                <div class="fv2-quincena__bar-track">
                   <div
-                    class="detalle-metodo-item__bar-fill"
-                    [style.width.%]="m.porcentaje"
-                  ></div>
+                    class="fv2-quincena__bar"
+                    [style.width.%]="q.widthPct"
+                    [style.background]="q.barColor"></div>
+                </div>
+                <p class="fv2-quincena__sub">{{ q.cantidad_pagos }} pagos</p>
+              </li>
+            </ul>
+
+            <!-- Insight -->
+            <div class="fv2-insight">
+              {{ buildQuincenaInsight(state.ds.data!) }}
+            </div>
+          </ng-container>
+        </article>
+
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 05 — COMPOSICIÓN DE EGRESOS
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <header class="fv2-section__header fv2-section__header--with-actions">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">05 /</span>
+          <h2 class="fv2-section__title">Composición de egresos</h2>
+        </div>
+        <p class="fv2-section__subtitle">
+          Distribución de gastos por categoría o proveedor
+        </p>
+      </div>
+
+      <div class="fv2-pills" role="tablist" aria-label="Vista de composición">
+        <button
+          *ngFor="let v of vistasComposicion; trackBy: trackByVistaComposicion"
+          type="button"
+          role="tab"
+          class="fv2-pill-tab"
+          [class.fv2-pill-tab--active]="vistaComposicion === v"
+          [attr.aria-selected]="vistaComposicion === v"
+          (click)="onVistaComposicionChange(v)">
+          {{ vistaComposicionLabels[v] }}
+        </button>
+      </div>
+    </header>
+
+    <ng-container *ngIf="{
+      cs: composicionState$ | async,
+      v: montosVisibles$ | async
+    } as state">
+
+      <article class="fv2-card fv2-composicion-card">
+
+        <!-- Loading -->
+        <div *ngIf="!state.cs || state.cs.status === 'loading'" class="fv2-detalle-skeleton">
+          <div class="fv2-detalle-skeleton__body">
+            <div class="fv2-skeleton fv2-skeleton--donut-lg"></div>
+            <div class="fv2-detalle-skeleton__list">
+              <div class="fv2-skeleton fv2-skeleton--line"></div>
+              <div class="fv2-skeleton fv2-skeleton--line"></div>
+              <div class="fv2-skeleton fv2-skeleton--line"></div>
+              <div class="fv2-skeleton fv2-skeleton--line"></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="state.cs && state.cs.status === 'error'" class="fv2-detalle-error">
+          <p class="fv2-muted">No se pudo cargar la composición.</p>
+          <button type="button" class="fv2-link-btn" (click)="retryComposicion()">
+            Reintentar
+          </button>
+        </div>
+
+        <!-- Pre-app -->
+        <div *ngIf="state.cs && state.cs.status === 'pre-app'" class="fv2-empty-state">
+          <p class="fv2-muted">Sin datos para este período.</p>
+        </div>
+
+        <!-- Loaded — sin datos -->
+        <ng-container *ngIf="state.cs && state.cs.status === 'loaded' && !state.cs.data!.tiene_datos">
+          <div class="fv2-empty-state">
+            <svg
+              class="fv2-empty-state__icon"
+              width="80" height="80" viewBox="0 0 80 80"
+              aria-hidden="true">
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#dceff1" stroke-width="6" />
+              <circle cx="40" cy="40" r="32" fill="none" stroke="#228d9f" stroke-width="6"
+                stroke-dasharray="50 200" stroke-linecap="round"
+                transform="rotate(-90 40 40)" />
+              <circle cx="40" cy="40" r="14" fill="#dceff1" />
+            </svg>
+            <h3 class="fv2-empty-state__title">
+              Sin egresos registrados en {{ periodoLabel }}
+            </h3>
+            <p class="fv2-empty-state__subtitle">
+              Los datos aparecerán cuando registres gastos o se paguen quincenas de entrenadores.
+            </p>
+            <a class="fv2-empty-state__btn" routerLink="/app/registro">
+              <span>→ Ir a Registro de egresos</span>
+            </a>
+          </div>
+        </ng-container>
+
+        <!-- Loaded — con datos -->
+        <ng-container *ngIf="state.cs && state.cs.status === 'loaded' && state.cs.data!.tiene_datos">
+          <div class="fv2-composicion-body">
+
+            <!-- Dona grande -->
+            <div class="fv2-donut-wrap fv2-donut-wrap--lg">
+              <div class="fv2-donut-canvas fv2-donut-canvas--lg">
+                <canvas
+                  baseChart
+                  [type]="'doughnut'"
+                  [data]="buildComposicionChartData(state.cs.data!)"
+                  [options]="composicionChartOptions"
+                  aria-label="Composición de egresos"
+                  role="img"></canvas>
+              </div>
+              <div class="fv2-donut-center fv2-donut-center--lg">
+                <span class="fv2-donut-center__label">TOTAL</span>
+                <span class="fv2-donut-center__value fv2-donut-center__value--lg">
+                  {{ state.v ? formatShort(state.cs.data!.total_egresos_cop) : '$••••' }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Lista -->
+            <ul class="fv2-row-list fv2-row-list--lg">
+              <li
+                *ngFor="let r of buildComposicionRows(state.cs.data!); trackBy: trackByComposicionId"
+                class="fv2-row">
+                <div class="fv2-row__top">
+                  <span class="fv2-row__name">
+                    <span class="fv2-row__dot" [style.background]="r.color"></span>
+                    <span *ngIf="r.emoji" class="fv2-row__emoji">{{ r.emoji }}</span>
+                    {{ r.nombre }}
+                  </span>
+                  <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
+                  <span class="fv2-row__amount">
+                    {{ formatVisible(r.total_cop, state.v) }}
+                  </span>
+                </div>
+                <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
+                  <div
+                    class="fv2-row__bar"
+                    [style.width.%]="r.widthPct"
+                    [style.background]="r.color"></div>
                 </div>
               </li>
-              <li class="detalle-metodo-item detalle-metodo-item--total">
-                <div class="detalle-metodo-item__header">
-                  <span class="detalle-metodo-item__name">Total</span>
-                  <span class="detalle-metodo-item__amount">{{ formatCop(dstate.data.total_ingresos_cop) }}</span>
+
+              <li class="fv2-row fv2-row--total">
+                <div class="fv2-row__top">
+                  <span class="fv2-row__name fv2-row__name--total">Total egresos</span>
+                  <span class="fv2-row__amount fv2-row__amount--total">
+                    {{ formatVisible(state.cs.data!.total_egresos_cop, state.v) }}
+                  </span>
                 </div>
               </li>
             </ul>
           </div>
+        </ng-container>
 
-        </div>
+      </article>
+    </ng-container>
 
-      </ng-container>
-    </section>
+  </section>
 
-  </main>
 </div>

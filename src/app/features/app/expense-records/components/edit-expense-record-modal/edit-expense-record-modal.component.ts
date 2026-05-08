@@ -8,7 +8,7 @@ import {
   OnInit,
   Output
 } from '@angular/core';
-import { FormArray, FormControl, FormGroup, Validators } from '@angular/forms';
+import { FormControl, FormGroup, Validators } from '@angular/forms';
 import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
@@ -82,10 +82,9 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
   newCategoryPrefill = '';
   isLoadingCategories = false;
 
-  // Provider
+  // Provider (opcional)
   activeProviders: SimpleProviderOption[] = [];
   selectedProvider: SimpleProviderOption | null = null;
-  providerInvalid = false;
   isLoadingProviders = false;
 
   // Invoice
@@ -190,16 +189,20 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
     this.providersService.listActiveSimple().pipe(takeUntil(this.destroy$)).subscribe({
       next: (providers) => {
         this.activeProviders = providers;
-        const found = providers.find((p) => p.id === this.record.providerId);
-        if (found) {
-          this.selectedProvider = found;
+        if (this.record.providerId === null) {
+          this.selectedProvider = null;
         } else {
-          // Provider may have been soft-deleted — show it as placeholder so save still works.
-          this.selectedProvider = {
-            id: this.record.providerId,
-            name: this.record.providerName,
-            serviceTypeName: this.record.serviceTypeName
-          };
+          const found = providers.find((p) => p.id === this.record.providerId);
+          if (found) {
+            this.selectedProvider = found;
+          } else {
+            // Provider may have been soft-deleted — show it as placeholder so save still works.
+            this.selectedProvider = {
+              id: this.record.providerId,
+              name: this.record.providerName ?? '(proveedor eliminado)',
+              serviceTypeName: this.record.serviceTypeName ?? ''
+            };
+          }
         }
         this.isLoadingProviders = false;
         this.cdr.markForCheck();
@@ -242,9 +245,8 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
 
   // ─── Provider handlers ─────────────────────────────────────────────────────
 
-  onProviderSelected(provider: SimpleProviderOption): void {
+  onProviderSelected(provider: SimpleProviderOption | null): void {
     this.selectedProvider = provider;
-    this.providerInvalid = false;
     this.cdr.markForCheck();
   }
 
@@ -405,12 +407,10 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
     this.form.markAllAsTouched();
     this.itemEntries.forEach((e) => e.group.markAllAsTouched());
     this.categoryInvalid = !this.selectedCategory;
-    this.providerInvalid = !this.selectedProvider;
 
     if (
       this.form.invalid ||
       !this.selectedCategory ||
-      !this.selectedProvider ||
       this.isSaving
     ) return;
 
@@ -507,7 +507,7 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
         amount_cop: amount,
         payment_method: method,
         category_id: this.selectedCategory!.id,
-        provider_id: this.selectedProvider!.id,
+        provider_id: this.selectedProvider?.id ?? null,
         notes: notes || null,
         ...invoiceFields,
         itemsDiff

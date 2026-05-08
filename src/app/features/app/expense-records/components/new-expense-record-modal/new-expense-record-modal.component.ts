@@ -71,10 +71,9 @@ export class NewExpenseRecordModalComponent implements OnInit, OnDestroy {
   newCategoryPrefill = '';
   isLoadingCategories = false;
 
-  // Provider
+  // Provider (opcional)
   activeProviders: SimpleProviderOption[] = [];
   selectedProvider: SimpleProviderOption | null = null;
-  providerInvalid = false;
   isLoadingProviders = false;
 
   // Invoice
@@ -172,9 +171,8 @@ export class NewExpenseRecordModalComponent implements OnInit, OnDestroy {
 
   // ─── Provider handlers ─────────────────────────────────────────────────────
 
-  onProviderSelected(provider: SimpleProviderOption): void {
+  onProviderSelected(provider: SimpleProviderOption | null): void {
     this.selectedProvider = provider;
-    this.providerInvalid = false;
     this.cdr.markForCheck();
   }
 
@@ -287,12 +285,10 @@ export class NewExpenseRecordModalComponent implements OnInit, OnDestroy {
     this.form.markAllAsTouched();
     this.itemsArray.controls.forEach((g) => g.markAllAsTouched());
     this.categoryInvalid = !this.selectedCategory;
-    this.providerInvalid = !this.selectedProvider;
 
     if (
       this.form.invalid ||
       !this.selectedCategory ||
-      !this.selectedProvider ||
       !this.profileId ||
       this.isSaving
     ) return;
@@ -327,7 +323,7 @@ export class NewExpenseRecordModalComponent implements OnInit, OnDestroy {
           amount_cop: amount_cop!,
           payment_method: payment_method!,
           category_id: this.selectedCategory.id,
-          provider_id: this.selectedProvider.id,
+          provider_id: this.selectedProvider?.id ?? null,
           notes: notes || null,
           created_by: this.profileId,
           items
@@ -346,7 +342,7 @@ export class NewExpenseRecordModalComponent implements OnInit, OnDestroy {
           amount_cop: amount_cop!,
           payment_method: payment_method!,
           category_id: this.selectedCategory.id,
-          provider_id: this.selectedProvider.id,
+          provider_id: this.selectedProvider?.id ?? null,
           notes: notes || null,
           created_by: this.profileId,
           items

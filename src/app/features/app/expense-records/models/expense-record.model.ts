@@ -109,9 +109,9 @@ export interface ExpenseRecordViewModel {
   categoryId: string;
   categoryName: string;
   categoryEmoji: string | null;
-  providerId: string;
-  providerName: string;
-  serviceTypeName: string;
+  providerId: string | null;
+  providerName: string | null;
+  serviceTypeName: string | null;
   notes: string | null;
   isActive: boolean;
   hasInvoice: boolean;
@@ -132,8 +132,8 @@ export function mapExpenseRecordRow(row: ExpenseRecordRow): ExpenseRecordViewMod
     categoryName: row.expense_categories?.name ?? '',
     categoryEmoji: row.expense_categories?.emoji ?? null,
     providerId: row.provider_id,
-    providerName: row.service_providers?.name ?? '',
-    serviceTypeName: row.service_providers?.service_types?.name ?? '',
+    providerName: row.service_providers?.name ?? null,
+    serviceTypeName: row.service_providers?.service_types?.name ?? null,
     notes: row.notes,
     isActive: row.is_active,
     hasInvoice: row.invoice_storage_path !== null,
@@ -198,7 +198,7 @@ export interface CreateExpenseRecordPayload {
   amount_cop: number;
   payment_method: string;
   category_id: string;
-  provider_id: string;
+  provider_id: string | null;
   notes?: string | null;
   created_by: string;
   /** Optional invoice metadata — all three must be present or all absent. */
@@ -214,7 +214,7 @@ export interface UpdateExpenseRecordPayload {
   amount_cop?: number;
   payment_method?: string;
   category_id?: string;
-  provider_id?: string;
+  provider_id?: string | null;
   notes?: string | null;
   is_active?: boolean;
   invoice_storage_path?: string | null;
