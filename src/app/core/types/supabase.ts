@@ -1,8 +1,3 @@
-// Generado con mcp supabase generate_typescript_types.
-// Refleja el estado de la base tras discounts_v2_types_and_personal_closure + claim_receipt_send_add_discount_type_applied.
-// NO editar a mano. Regenerar cuando el esquema cambie.
-// IMPORTANTE: tras regenerar, re-agregar el bloque de aliases al final del archivo.
-
 export type Json =
   | string
   | number
@@ -19,6 +14,38 @@ export type Database = {
   }
   public: {
     Tables: {
+      app_config: {
+        Row: {
+          description: string | null
+          key: string
+          updated_at: string
+          updated_by: string | null
+          value: string
+        }
+        Insert: {
+          description?: string | null
+          key: string
+          updated_at?: string
+          updated_by?: string | null
+          value: string
+        }
+        Update: {
+          description?: string | null
+          key?: string
+          updated_at?: string
+          updated_by?: string | null
+          value?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "app_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_measurements: {
         Row: {
           abdomen_cm: number | null
@@ -37,6 +64,8 @@ export type Database = {
           registered_by: string | null
           skinfold_abdomen_mm: number | null
           skinfold_axilla_mm: number | null
+          skinfold_biceps_mm: number | null
+          skinfold_calf_mm: number | null
           skinfold_chest_mm: number | null
           skinfold_subscapular_mm: number | null
           skinfold_suprailiac_mm: number | null
@@ -63,6 +92,8 @@ export type Database = {
           registered_by?: string | null
           skinfold_abdomen_mm?: number | null
           skinfold_axilla_mm?: number | null
+          skinfold_biceps_mm?: number | null
+          skinfold_calf_mm?: number | null
           skinfold_chest_mm?: number | null
           skinfold_subscapular_mm?: number | null
           skinfold_suprailiac_mm?: number | null
@@ -89,6 +120,8 @@ export type Database = {
           registered_by?: string | null
           skinfold_abdomen_mm?: number | null
           skinfold_axilla_mm?: number | null
+          skinfold_biceps_mm?: number | null
+          skinfold_calf_mm?: number | null
           skinfold_chest_mm?: number | null
           skinfold_subscapular_mm?: number | null
           skinfold_suprailiac_mm?: number | null
@@ -1507,6 +1540,82 @@ export type Database = {
         Args: { p_notes: string; p_payment_id: string; p_voided_by: string }
         Returns: Json
       }
+      fn_stats_clients_cards: {
+        Args: { p_ref: string; p_te: string }
+        Returns: {
+          ta_3d: number
+          ta_6d: number
+          ta_prev_total: number
+          ta_total: number
+          tah_3d: number
+          tah_6d: number
+          tah_prev_total: number
+          tah_total: number
+          tb_3d: number
+          tb_6d: number
+          tb_prev_total: number
+          tb_total: number
+        }[]
+      }
+      fn_stats_clients_detalle: {
+        Args: { p_ref: string; p_te: string }
+        Returns: {
+          en_riesgo: Json
+          nuevos_3d: number
+          nuevos_6d: number
+          nuevos_total: number
+          recuperados_3d: number
+          recuperados_6d: number
+          recuperados_total: number
+          retencion_activos_prev: number
+          retencion_repitieron: number
+        }[]
+      }
+      fn_stats_clients_quincenal: {
+        Args: { p_ref: string; p_te: string }
+        Returns: {
+          pen_3d: number
+          pen_6d: number
+          pen_total: number
+          per_3d: number
+          per_6d: number
+          per_prev_total: number
+          per_total: number
+          q1_3d: number
+          q1_6d: number
+          q1_prev_total: number
+          q1_total: number
+          q2_3d: number
+          q2_6d: number
+          q2_prev_total: number
+          q2_total: number
+        }[]
+      }
+      fn_stats_clients_quincenal_tendencia: {
+        Args: { p_meses_atras: number; p_ref: string; p_te: string }
+        Returns: {
+          cut_date: string
+          is_current: boolean
+          mes: string
+          q1_3d: number
+          q1_6d: number
+          q1_total: number
+          q2_3d: number
+          q2_6d: number
+          q2_total: number
+        }[]
+      }
+      fn_stats_clients_tendencia: {
+        Args: { p_meses_atras: number; p_ref: string; p_te: string }
+        Returns: {
+          cut_date: string
+          is_current: boolean
+          mes: string
+          plan_3d: number
+          plan_6d: number
+          total: number
+        }[]
+      }
       get_client_last_field_values: {
         Args: { p_client_id: string }
         Returns: Json
@@ -1544,6 +1653,55 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_client: { Args: never; Returns: boolean }
       is_trainer: { Args: never; Returns: boolean }
+      stats_finanzas_caja_menor: {
+        Args: { p_hoy: string; p_inicio: string }
+        Returns: {
+          cantidad_pagos: number
+          total: number
+        }[]
+      }
+      stats_finanzas_composicion: {
+        Args: { p_month: number; p_year: number }
+        Returns: Json
+      }
+      stats_finanzas_detalle: {
+        Args: { p_month: number; p_year: number }
+        Returns: Json
+      }
+      stats_finanzas_egresos_operativos: {
+        Args: never
+        Returns: {
+          total: number
+        }[]
+      }
+      stats_finanzas_ingresos_consolidados: {
+        Args: never
+        Returns: {
+          total: number
+        }[]
+      }
+      stats_finanzas_month_metrics: {
+        Args: { p_end_date: string; p_start_date: string }
+        Returns: {
+          egresos_operativos_cop: number
+          ingresos_cop: number
+          nomina_cop: number
+        }[]
+      }
+      stats_finanzas_nomina_pagada: {
+        Args: never
+        Returns: {
+          total: number
+        }[]
+      }
+      stats_finanzas_resumen: {
+        Args: { p_month: number; p_year: number }
+        Returns: Json
+      }
+      stats_finanzas_tendencia: {
+        Args: { p_meses_atras: number }
+        Returns: Json
+      }
     }
     Enums: {
       bank:
@@ -1744,7 +1902,6 @@ export const Constants = {
     },
   },
 } as const
-
 // ---------------------------------------------------------------------------
 // Aliases de conveniencia — usar en lugar de los tipos genéricos de Database
 // ---------------------------------------------------------------------------
@@ -1875,3 +2032,9 @@ export type ExpenseRecordUpdate = Database["public"]["Tables"]["expense_records"
 export type ExpenseRecordItem = Database["public"]["Tables"]["expense_record_items"]["Row"]
 export type ExpenseRecordItemInsert = Database["public"]["Tables"]["expense_record_items"]["Insert"]
 export type ExpenseRecordItemUpdate = Database["public"]["Tables"]["expense_record_items"]["Update"]
+
+// app_config
+export type AppConfig = Database["public"]["Tables"]["app_config"]["Row"]
+export type AppConfigInsert = Database["public"]["Tables"]["app_config"]["Insert"]
+export type AppConfigUpdate = Database["public"]["Tables"]["app_config"]["Update"]
+

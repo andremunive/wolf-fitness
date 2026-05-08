@@ -24,19 +24,21 @@ import { ClientDetailFull } from 'src/app/features/app/clients/models/client.mod
 import { ClientMeasurementInsert } from 'src/app/core/types/supabase';
 import { MeasurementsService } from '../../services/measurements.service';
 import {
-  JacksonPollock7Calculator,
+  JacksonPollock9Calculator,
   Skinfolds
-} from '../../utils/jackson-pollock7.calculator';
+} from '../../utils/jackson-pollock9.calculator';
 
-/** Names of the 7 skinfold fields in the form (matches DB column suffix). */
+/** Names of the 9 skinfold fields in the form (matches DB column suffix). */
 const SKINFOLD_FIELDS = [
   'skinfold_chest_mm',
   'skinfold_axilla_mm',
-  'skinfold_triceps_mm',
   'skinfold_subscapular_mm',
+  'skinfold_biceps_mm',
+  'skinfold_triceps_mm',
   'skinfold_abdomen_mm',
   'skinfold_suprailiac_mm',
-  'skinfold_thigh_mm'
+  'skinfold_thigh_mm',
+  'skinfold_calf_mm'
 ] as const;
 
 /** Names of the 9 circumference fields in the form. */
@@ -78,12 +80,14 @@ export const FIELD_LABELS: Record<string, string> = {
   arm_left_cm: 'Brazo izquierdo',
   arm_right_cm: 'Brazo derecho',
   skinfold_chest_mm: 'Pectoral',
-  skinfold_axilla_mm: 'Axilar medio',
-  skinfold_triceps_mm: 'Tríceps',
+  skinfold_axilla_mm: 'Midaxilar',
   skinfold_subscapular_mm: 'Subescapular',
+  skinfold_biceps_mm: 'Bicipital',
+  skinfold_triceps_mm: 'Tricipital',
   skinfold_abdomen_mm: 'Abdominal',
   skinfold_suprailiac_mm: 'Suprailíaco',
-  skinfold_thigh_mm: 'Muslo (pliegue)',
+  skinfold_thigh_mm: 'Cuadricipital',
+  skinfold_calf_mm: 'Pantorrilla (peroneal)',
   body_fat_pct: '% Grasa'
 };
 
@@ -100,11 +104,13 @@ export const FIELD_UNITS: Record<string, string> = {
   arm_right_cm: 'cm',
   skinfold_chest_mm: 'mm',
   skinfold_axilla_mm: 'mm',
-  skinfold_triceps_mm: 'mm',
   skinfold_subscapular_mm: 'mm',
+  skinfold_biceps_mm: 'mm',
+  skinfold_triceps_mm: 'mm',
   skinfold_abdomen_mm: 'mm',
   skinfold_suprailiac_mm: 'mm',
   skinfold_thigh_mm: 'mm',
+  skinfold_calf_mm: 'mm',
   body_fat_pct: '%'
 };
 
@@ -221,14 +227,16 @@ export class RegisterMeasurementModalComponent implements OnInit, OnDestroy {
         chest_cm: [null],
         arm_left_cm: [null],
         arm_right_cm: [null],
-        // Skinfolds
+        // Skinfolds (9-site Jackson-Pollock variant)
         skinfold_chest_mm: [null],
         skinfold_axilla_mm: [null],
-        skinfold_triceps_mm: [null],
         skinfold_subscapular_mm: [null],
+        skinfold_biceps_mm: [null],
+        skinfold_triceps_mm: [null],
         skinfold_abdomen_mm: [null],
         skinfold_suprailiac_mm: [null],
         skinfold_thigh_mm: [null],
+        skinfold_calf_mm: [null],
         // Calculated — disabled so the user cannot type in it
         body_fat_pct: [{ value: null, disabled: true }],
         notes: [null, [Validators.maxLength(500)]]
@@ -301,7 +309,7 @@ export class RegisterMeasurementModalComponent implements OnInit, OnDestroy {
         control.setValidators([
           Validators.required,
           Validators.min(0.01),
-          Validators.max(80)
+          Validators.max(100)
         ]);
       } else {
         control.clearValidators();
@@ -335,28 +343,31 @@ export class RegisterMeasurementModalComponent implements OnInit, OnDestroy {
     if (!this.includeBodyFat) return;
 
     const vals = SKINFOLD_FIELDS.map((f) => this.form.get(f)?.value as number | null);
-    const allValid = vals.every((v) => v !== null && v > 0 && v <= 80);
+    const allValid = vals.every((v) => v !== null && v > 0 && v <= 100);
 
-    // Guard: gender is required for the JP7 formula; block if missing at runtime.
+    // Guard: gender is required for the JP9 formula; block if missing at runtime.
     if (!allValid || !this.client.birthDate || !this.client.gender) {
       this.form.get('body_fat_pct')?.setValue(null, { emitEvent: false });
       return;
     }
 
     const measuredAt: string = this.form.get('measured_at')?.value ?? this.todayIso;
-    const age = JacksonPollock7Calculator.ageAtDate(this.client.birthDate, measuredAt);
+    const age = JacksonPollock9Calculator.ageAtDate(this.client.birthDate, measuredAt);
 
+    // Order must match SKINFOLD_FIELDS exactly.
     const skinfolds: Skinfolds = {
-      chest: vals[0]!,
-      axilla: vals[1]!,
-      triceps: vals[2]!,
-      subscapular: vals[3]!,
-      abdomen: vals[4]!,
-      suprailiac: vals[5]!,
-      thigh: vals[6]!
+      chest:       vals[0]!,
+      axilla:      vals[1]!,
+      subscapular: vals[2]!,
+      biceps:      vals[3]!,
+      triceps:     vals[4]!,
+      abdomen:     vals[5]!,
+      suprailiac:  vals[6]!,
+      thigh:       vals[7]!,
+      calf:        vals[8]!
     };
 
-    const pct = JacksonPollock7Calculator.calculate(skinfolds, age, this.client.gender);
+    const pct = JacksonPollock9Calculator.calculate(skinfolds, age, this.client.gender);
     this.form.get('body_fat_pct')?.setValue(pct, { emitEvent: false });
   }
 
@@ -435,11 +446,13 @@ export class RegisterMeasurementModalComponent implements OnInit, OnDestroy {
     if (this.includeBodyFat) {
       payload.skinfold_chest_mm = raw.skinfold_chest_mm;
       payload.skinfold_axilla_mm = raw.skinfold_axilla_mm;
-      payload.skinfold_triceps_mm = raw.skinfold_triceps_mm;
       payload.skinfold_subscapular_mm = raw.skinfold_subscapular_mm;
+      payload.skinfold_biceps_mm = raw.skinfold_biceps_mm;
+      payload.skinfold_triceps_mm = raw.skinfold_triceps_mm;
       payload.skinfold_abdomen_mm = raw.skinfold_abdomen_mm;
       payload.skinfold_suprailiac_mm = raw.skinfold_suprailiac_mm;
       payload.skinfold_thigh_mm = raw.skinfold_thigh_mm;
+      payload.skinfold_calf_mm = raw.skinfold_calf_mm;
       payload.body_fat_pct = raw.body_fat_pct ?? null;
     }
 

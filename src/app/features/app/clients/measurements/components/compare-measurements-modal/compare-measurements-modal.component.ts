@@ -36,9 +36,9 @@ const COMPARABLE_FIELDS: Array<keyof ClientMeasurement> = [
   'thigh_left_cm', 'thigh_right_cm',
   'hip_cm', 'abdomen_cm', 'chest_cm',
   'arm_left_cm', 'arm_right_cm',
-  'skinfold_chest_mm', 'skinfold_axilla_mm', 'skinfold_triceps_mm',
-  'skinfold_subscapular_mm', 'skinfold_abdomen_mm',
-  'skinfold_suprailiac_mm', 'skinfold_thigh_mm',
+  'skinfold_chest_mm', 'skinfold_axilla_mm', 'skinfold_subscapular_mm',
+  'skinfold_biceps_mm', 'skinfold_triceps_mm', 'skinfold_abdomen_mm',
+  'skinfold_suprailiac_mm', 'skinfold_thigh_mm', 'skinfold_calf_mm',
   'body_fat_pct'
 ];
 

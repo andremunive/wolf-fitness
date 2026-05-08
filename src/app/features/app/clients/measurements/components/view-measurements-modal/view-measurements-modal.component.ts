@@ -58,9 +58,9 @@ export class ViewMeasurementsModalComponent implements OnInit, OnDestroy {
   ] as const;
 
   readonly skinfoldFields = [
-    'skinfold_chest_mm', 'skinfold_axilla_mm', 'skinfold_triceps_mm',
-    'skinfold_subscapular_mm', 'skinfold_abdomen_mm',
-    'skinfold_suprailiac_mm', 'skinfold_thigh_mm'
+    'skinfold_chest_mm', 'skinfold_axilla_mm', 'skinfold_subscapular_mm',
+    'skinfold_biceps_mm', 'skinfold_triceps_mm', 'skinfold_abdomen_mm',
+    'skinfold_suprailiac_mm', 'skinfold_thigh_mm', 'skinfold_calf_mm'
   ] as const;
 
   constructor(

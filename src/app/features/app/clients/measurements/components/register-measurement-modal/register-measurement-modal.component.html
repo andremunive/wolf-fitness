@@ -194,7 +194,7 @@
                     [class.rm-input--error]="form.get(field)?.invalid && form.get(field)?.touched"
                     [formControlName]="field"
                     min="0.1"
-                    max="80"
+                    max="100"
                     step="0.1"
                     placeholder="ej. 12.5"
                     (focus)="onFieldFocus(field)"
@@ -211,7 +211,7 @@
                   *ngIf="form.get(field)?.invalid && form.get(field)?.touched"
                   class="rm-error-msg"
                   role="alert"
-                >Valor requerido (0.1 – 80 mm).</p>
+                >Valor requerido (0.1 – 100 mm).</p>
               </div>
             </ng-container>
           </div>
@@ -221,7 +221,7 @@
             class="rm-fat-result"
             aria-label="Porcentaje de grasa calculado automáticamente"
           >
-            <div class="rm-fat-result__label">% Grasa (Jackson-Pollock 7)</div>
+            <div class="rm-fat-result__label">% Grasa (Jackson-Pollock 9)</div>
             <div
               class="rm-fat-result__value"
               [class.rm-fat-result__value--ready]="calculatedBodyFat !== null"
@@ -232,7 +232,7 @@
                 <span class="rm-fat-result__hint">(calculado)</span>
               </ng-container>
               <ng-template #fatPending>
-                <span class="rm-fat-result__pending">Completa los 7 pliegues</span>
+                <span class="rm-fat-result__pending">Completa los 9 pliegues</span>
               </ng-template>
             </div>
           </div>

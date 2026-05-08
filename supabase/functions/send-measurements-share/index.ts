@@ -23,11 +23,13 @@ interface Measurement {
   arm_right_cm: number | null;
   skinfold_chest_mm: number | null;
   skinfold_axilla_mm: number | null;
-  skinfold_triceps_mm: number | null;
   skinfold_subscapular_mm: number | null;
+  skinfold_biceps_mm: number | null;
+  skinfold_triceps_mm: number | null;
   skinfold_abdomen_mm: number | null;
   skinfold_suprailiac_mm: number | null;
   skinfold_thigh_mm: number | null;
+  skinfold_calf_mm: number | null;
   body_fat_pct: number | null;
   notes: string | null;
 }
@@ -130,12 +132,14 @@ const METRICS_BODY: MetricDef[] = [
 
 const METRICS_SKINFOLD: MetricDef[] = [
   { key: "skinfold_chest_mm", label: "Pliegue pectoral", unit: "mm" },
-  { key: "skinfold_axilla_mm", label: "Pliegue axilar", unit: "mm" },
-  { key: "skinfold_triceps_mm", label: "Pliegue tríceps", unit: "mm" },
+  { key: "skinfold_axilla_mm", label: "Pliegue midaxilar", unit: "mm" },
   { key: "skinfold_subscapular_mm", label: "Pliegue subescapular", unit: "mm" },
+  { key: "skinfold_biceps_mm", label: "Pliegue bicipital", unit: "mm" },
+  { key: "skinfold_triceps_mm", label: "Pliegue tricipital", unit: "mm" },
   { key: "skinfold_abdomen_mm", label: "Pliegue abdominal", unit: "mm" },
   { key: "skinfold_suprailiac_mm", label: "Pliegue suprailíaco", unit: "mm" },
-  { key: "skinfold_thigh_mm", label: "Pliegue muslo", unit: "mm" },
+  { key: "skinfold_thigh_mm", label: "Pliegue cuadricipital", unit: "mm" },
+  { key: "skinfold_calf_mm", label: "Pliegue pantorrilla", unit: "mm" },
   { key: "body_fat_pct", label: "% Grasa corporal", unit: "%" },
 ];
 
@@ -513,9 +517,10 @@ Deno.serve(async (req: Request) => {
     "id", "client_id", "measured_at", "weight_kg",
     "calf_left_cm", "calf_right_cm", "thigh_left_cm", "thigh_right_cm",
     "hip_cm", "abdomen_cm", "chest_cm", "arm_left_cm", "arm_right_cm",
-    "skinfold_chest_mm", "skinfold_axilla_mm", "skinfold_triceps_mm",
-    "skinfold_subscapular_mm", "skinfold_abdomen_mm", "skinfold_suprailiac_mm",
-    "skinfold_thigh_mm", "body_fat_pct", "notes",
+    "skinfold_chest_mm", "skinfold_axilla_mm", "skinfold_subscapular_mm",
+    "skinfold_biceps_mm", "skinfold_triceps_mm", "skinfold_abdomen_mm",
+    "skinfold_suprailiac_mm", "skinfold_thigh_mm", "skinfold_calf_mm",
+    "body_fat_pct", "notes",
   ].join(", ");
 
   let measurementA: Measurement;

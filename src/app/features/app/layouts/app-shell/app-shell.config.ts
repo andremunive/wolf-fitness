@@ -88,6 +88,13 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         description: 'Métricas de clientes activos, retención y comportamiento de pago.',
         iconKey: 'chart',
         routerLink: '/app/estadisticas/clientes'
+      },
+      {
+        label: 'Finanzas',
+        description: 'Ingresos, egresos y estado de caja del gimnasio.',
+        iconKey: 'chart',
+        routerLink: '/app/estadisticas/finanzas',
+        allowedRoles: ['admin']
       }
     ]
   }
