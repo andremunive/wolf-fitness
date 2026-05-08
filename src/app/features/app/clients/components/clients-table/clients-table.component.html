@@ -80,7 +80,7 @@
         </td>
 
         <!-- Entrenador -->
-        <td class="clients-table__cell">{{ client.trainerName ?? '—' }}</td>
+        <td class="clients-table__cell" [attr.title]="client.trainerName">{{ formatTrainerName(client.trainerName) }}</td>
 
         <!-- Origen -->
         <td class="clients-table__cell">

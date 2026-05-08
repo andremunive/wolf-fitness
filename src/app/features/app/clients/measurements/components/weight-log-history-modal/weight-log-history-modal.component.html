@@ -1,0 +1,97 @@
+<div class="wh-backdrop" role="dialog" aria-modal="true" aria-labelledby="wh-title" (click)="close()">
+  <div class="wh-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="wh-header">
+      <div class="wh-header__info">
+        <h2 id="wh-title" class="wh-header__title">Historial de peso</h2>
+        <p class="wh-header__subtitle">{{ client.fullName }}</p>
+      </div>
+      <button
+        type="button"
+        class="wh-header__close"
+        (click)="close()"
+        aria-label="Cerrar historial de peso"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Body ── -->
+    <div class="wh-body">
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="loading">
+        <div class="wh-skeleton-list" aria-hidden="true">
+          <div *ngFor="let i of [1,2,3]" class="wh-skeleton-row">
+            <div class="wh-skeleton wh-skeleton--date"></div>
+            <div class="wh-skeleton wh-skeleton--weight"></div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Error state -->
+      <div *ngIf="error" class="wh-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="wh-empty__icon" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+        </svg>
+        <p class="wh-empty__title">Error al cargar pesajes</p>
+        <p class="wh-empty__msg">{{ error }}</p>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="isEmpty" class="wh-empty">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" class="wh-empty__icon" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M3 7l1.5 11.5a2 2 0 002 1.5h11a2 2 0 002-1.5L21 7M3 7h18M3 7l1-2.5A2 2 0 016 3h12a2 2 0 012 1.5L21 7M9 11l3 3 3-3"/>
+        </svg>
+        <p class="wh-empty__title">Sin pesajes registrados</p>
+        <p class="wh-empty__msg">Este cliente aún no tiene pesajes registrados.</p>
+        <button
+          type="button"
+          class="wh-cta-btn"
+          (click)="requestRegister()"
+        >
+          Registrar peso
+        </button>
+      </div>
+
+      <!-- Entry list -->
+      <ng-container *ngIf="!loading && !error && entries.length > 0">
+        <div class="wh-list">
+          <div
+            *ngFor="let entry of entries; trackBy: trackById"
+            class="wh-row"
+          >
+            <span class="wh-row__date">{{ formatDate(entry.measured_at) }}</span>
+            <span class="wh-row__weight">{{ formatWeight(entry.weight_kg) }} kg</span>
+          </div>
+        </div>
+
+        <!-- Load more / exhausted -->
+        <button
+          type="button"
+          class="wh-load-more"
+          [disabled]="!hasMore || loadingMore"
+          (click)="loadMore()"
+        >
+          <ng-container *ngIf="loadingMore">
+            <span class="wh-spinner" aria-hidden="true"></span>
+            Cargando…
+          </ng-container>
+          <ng-container *ngIf="!loadingMore && hasMore">
+            Cargar más
+          </ng-container>
+          <ng-container *ngIf="!loadingMore && !hasMore">
+            Sin más registros
+          </ng-container>
+        </button>
+      </ng-container>
+
+    </div>
+
+  </div>
+</div>

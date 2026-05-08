@@ -7,6 +7,8 @@ import { Database, Gender } from 'src/app/core/types/supabase';
 import {
   Client,
   ClientDetailFull,
+  ClientOrigin as ClientOriginModel,
+  ClientPaymentStatusDisplay,
   ClientsPage,
   ClientsQueryParams,
   CreateClientPayload,
@@ -203,12 +205,19 @@ export class ClientsService {
   constructor(private readonly supabase: SupabaseService) {}
 
   getClients(params: ClientsQueryParams): Observable<ClientsPage> {
-    const { search, activeFilter, trainerId, page, pageSize } = params;
+    const { search, paymentStatuses, origins, trainerId, page, pageSize } = params;
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
 
     return from(
-      this.buildClientsQuery(search ?? '', activeFilter, trainerId ?? null, rangeFrom, rangeTo)
+      this.buildClientsQuery(
+        search ?? '',
+        paymentStatuses ?? [],
+        origins ?? [],
+        trainerId ?? null,
+        rangeFrom,
+        rangeTo
+      )
     ).pipe(
       map(({ data, count, error }) => {
         if (error) throw error;
@@ -227,7 +236,8 @@ export class ClientsService {
 
   private async buildClientsQuery(
     search: string,
-    activeFilter: 'all' | 'active' | 'inactive',
+    paymentStatuses: ClientPaymentStatusDisplay[],
+    origins: ClientOriginModel[],
     trainerId: string | null,
     rangeFrom: number,
     rangeTo: number
@@ -235,13 +245,20 @@ export class ClientsService {
     let query = this.supabase.client
       .from('v_clients_with_payment_status')
       .select(CLIENT_LIST_SELECT, { count: 'exact' })
+      .eq('status', 'active')
       .order('created_at', { ascending: false })
       .range(rangeFrom, rangeTo);
 
-    if (activeFilter === 'active') {
-      query = query.eq('status', 'active');
-    } else if (activeFilter === 'inactive') {
-      query = query.eq('status', 'inactive');
+    // Filtro por estado de pago (multi-selección).
+    // La vista v_clients_with_payment_status expone los valores como strings literales
+    // (incluido 'no_payments'), no NULL — un .in() directo cubre todos los casos.
+    if (paymentStatuses.length > 0) {
+      query = query.in('last_payment_status', paymentStatuses);
+    }
+
+    // Filtro por origen (multi-selección).
+    if (origins.length > 0) {
+      query = query.in('origin', origins);
     }
 
     // Filtro por entrenador: la vista expone `trainer_name` pero no `trainer_id`,

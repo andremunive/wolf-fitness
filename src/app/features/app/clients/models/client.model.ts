@@ -100,11 +100,12 @@ export interface ClientDetailFull extends Client {
 
 // ─── Parámetros de consulta ────────────────────────────────────────────────────
 
-export type ClientActiveFilter = 'all' | 'active' | 'inactive';
-
 export interface ClientsQueryParams {
   search?: string;
-  activeFilter: ClientActiveFilter;
+  /** Filtro multi-selección por estado de pago. Lista vacía = sin filtro. */
+  paymentStatuses?: ClientPaymentStatusDisplay[];
+  /** Filtro multi-selección por origen del cliente. Lista vacía = sin filtro. */
+  origins?: ClientOrigin[];
   /** UUID de un trainer para mostrar solo sus clientes (asignación activa). */
   trainerId?: string | null;
   page: number;

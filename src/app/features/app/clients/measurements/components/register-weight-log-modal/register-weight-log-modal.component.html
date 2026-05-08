@@ -1,0 +1,121 @@
+<div class="rw-backdrop" role="dialog" aria-modal="true" aria-labelledby="rw-title" (click)="close()">
+  <div class="rw-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── Header ── -->
+    <div class="rw-header">
+      <div class="rw-header__avatar" aria-hidden="true">{{ initials }}</div>
+      <div class="rw-header__info">
+        <h2 id="rw-title" class="rw-header__title">Registrar peso</h2>
+        <p class="rw-header__subtitle">{{ client.fullName }}</p>
+      </div>
+      <button
+        type="button"
+        class="rw-header__close"
+        (click)="close()"
+        aria-label="Cerrar modal de registro de peso"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Body ── -->
+    <div class="rw-body">
+      <form [formGroup]="form" (ngSubmit)="save()" novalidate>
+
+        <!-- Fecha -->
+        <div class="rw-field-group">
+          <label class="rw-label" for="rw_measured_at">
+            Fecha
+            <span class="rw-required" aria-hidden="true">*</span>
+          </label>
+          <div class="rw-input-wrap">
+            <input
+              id="rw_measured_at"
+              type="date"
+              class="rw-input"
+              [class.rw-input--error]="form.get('measured_at')?.invalid && form.get('measured_at')?.touched"
+              formControlName="measured_at"
+              [max]="todayIso"
+            />
+          </div>
+          <p
+            *ngIf="form.get('measured_at')?.hasError('futureDate') && form.get('measured_at')?.touched"
+            class="rw-error-msg"
+            role="alert"
+          >La fecha no puede ser futura.</p>
+        </div>
+
+        <!-- Peso -->
+        <div class="rw-field-group">
+          <label class="rw-label" for="rw_weight_kg">
+            Peso (kg)
+            <span class="rw-required" aria-hidden="true">*</span>
+          </label>
+          <div class="rw-input-wrap rw-input-wrap--with-tooltip">
+            <input
+              id="rw_weight_kg"
+              type="number"
+              class="rw-input"
+              [class.rw-input--error]="form.get('weight_kg')?.invalid && form.get('weight_kg')?.touched"
+              formControlName="weight_kg"
+              min="0.1"
+              max="300"
+              step="0.01"
+              inputmode="decimal"
+              placeholder="ej. 70.50"
+              (focus)="onWeightFocus()"
+              (blur)="onWeightBlur()"
+            />
+            <!-- Last-weight tooltip -->
+            <div
+              *ngIf="isWeightTooltipVisible && lastWeight"
+              class="rw-tooltip"
+              role="status"
+              aria-live="polite"
+            >
+              {{ lastWeightLabel }}
+            </div>
+          </div>
+          <p
+            *ngIf="form.get('weight_kg')?.invalid && form.get('weight_kg')?.touched"
+            class="rw-error-msg"
+            role="alert"
+          >Ingresa un peso válido (0.1 – 300 kg).</p>
+        </div>
+
+        <!-- Save error -->
+        <div *ngIf="saveError" class="rw-save-error" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+          {{ saveError }}
+        </div>
+
+      </form>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="rw-footer">
+      <button
+        type="button"
+        class="rw-btn rw-btn--secondary"
+        (click)="close()"
+      >
+        Cancelar
+      </button>
+      <button
+        type="button"
+        class="rw-btn rw-btn--primary"
+        [disabled]="form.invalid || isSaving"
+        (click)="save()"
+      >
+        <span *ngIf="isSaving" class="rw-btn__spinner" aria-hidden="true"></span>
+        {{ isSaving ? 'Guardando…' : 'Guardar peso' }}
+      </button>
+    </div>
+
+  </div>
+</div>

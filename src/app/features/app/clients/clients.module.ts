@@ -24,6 +24,8 @@ import { ViewMeasurementsModalComponent } from './measurements/components/view-m
 import { CompareMeasurementsModalComponent } from './measurements/components/compare-measurements-modal/compare-measurements-modal.component';
 import { LastValueTooltipComponent } from './measurements/components/last-value-tooltip/last-value-tooltip.component';
 import { MeasurementShareModalComponent } from './measurements/components/measurement-share-modal/measurement-share-modal.component';
+import { RegisterWeightLogModalComponent } from './measurements/components/register-weight-log-modal/register-weight-log-modal.component';
+import { WeightLogHistoryModalComponent } from './measurements/components/weight-log-history-modal/weight-log-history-modal.component';
 
 @NgModule({
   declarations: [
@@ -47,7 +49,10 @@ import { MeasurementShareModalComponent } from './measurements/components/measur
     ViewMeasurementsModalComponent,
     CompareMeasurementsModalComponent,
     LastValueTooltipComponent,
-    MeasurementShareModalComponent
+    MeasurementShareModalComponent,
+    // Weight logs
+    RegisterWeightLogModalComponent,
+    WeightLogHistoryModalComponent
   ],
   imports: [
     SharedModule,

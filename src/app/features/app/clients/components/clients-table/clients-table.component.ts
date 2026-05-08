@@ -71,6 +71,13 @@ export class ClientsTableComponent {
       .join('');
   }
 
+  formatTrainerName(name: string | null): string {
+    if (!name) return '—';
+    const parts = name.trim().split(/\s+/);
+    if (parts.length <= 2) return name;
+    return parts.slice(0, 2).join(' ') + '...';
+  }
+
   formatDate(dateStr: string | null): string {
     return formatDateOnly(dateStr);
   }

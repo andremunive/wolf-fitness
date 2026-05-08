@@ -269,3 +269,19 @@
   [client]="measurementsBaseClient"
   (closed)="closeMeasurementsModal()"
 ></app-compare-measurements-modal>
+
+<!-- ===== MODAL REGISTRAR PESO ===== -->
+<app-register-weight-log-modal
+  *ngIf="weightRegisterClient"
+  [client]="weightRegisterClient"
+  (closed)="closeWeightRegisterModal()"
+  (weightLogRegistered)="onWeightLogRegistered($event)"
+></app-register-weight-log-modal>
+
+<!-- ===== MODAL HISTORIAL DE PESO ===== -->
+<app-weight-log-history-modal
+  *ngIf="weightHistoryClient"
+  [client]="weightHistoryClient"
+  (closed)="closeWeightHistoryModal()"
+  (registerRequested)="onWeightHistoryRegisterRequested()"
+></app-weight-log-history-modal>

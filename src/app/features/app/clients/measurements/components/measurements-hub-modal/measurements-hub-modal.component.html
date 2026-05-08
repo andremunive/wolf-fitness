@@ -1,11 +1,28 @@
 <div class="hub-backdrop" role="dialog" aria-modal="true" [attr.aria-labelledby]="'hub-title-' + client.id" (click)="close()">
   <div class="hub-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
 
-    <!-- Header -->
+    <!-- ── Header (shared across both views) ── -->
     <div class="hub-header">
+      <!-- Back button — only in weight sub-hub -->
+      <button
+        *ngIf="view === 'weight'"
+        type="button"
+        class="hub-header__back"
+        (click)="backToMain()"
+        aria-label="Volver al menú de medidas"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+        </svg>
+      </button>
+
       <div class="hub-header__avatar" aria-hidden="true">{{ initials }}</div>
       <div class="hub-header__info">
-        <h2 [id]="'hub-title-' + client.id" class="hub-header__title">Medidas de {{ client.fullName }}</h2>
+        <h2 [id]="'hub-title-' + client.id" class="hub-header__title">
+          <ng-container *ngIf="view === 'main'">Medidas de {{ client.fullName }}</ng-container>
+          <ng-container *ngIf="view === 'weight'">Seguimiento del peso</ng-container>
+        </h2>
+        <p *ngIf="view === 'weight'" class="hub-header__subtitle">{{ client.fullName }}</p>
       </div>
       <button
         type="button"
@@ -19,8 +36,8 @@
       </button>
     </div>
 
-    <!-- Action cards -->
-    <div class="hub-body">
+    <!-- ── Main hub (4 action cards) ── -->
+    <div *ngIf="view === 'main'" class="hub-body">
       <button
         type="button"
         class="hub-action"
@@ -79,6 +96,76 @@
         <span class="hub-action__content">
           <span class="hub-action__label">Comparar medidas</span>
           <span class="hub-action__desc">Ver evolución entre dos sesiones</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+
+      <!-- Fourth card: weight tracking sub-hub -->
+      <button
+        type="button"
+        class="hub-action"
+        (click)="openWeightSubHub()"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 7l1.5 11.5a2 2 0 002 1.5h11a2 2 0 002-1.5L21 7M3 7h18M3 7l1-2.5A2 2 0 016 3h12a2 2 0 012 1.5L21 7M9 11l3 3 3-3"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Seguimiento del peso</span>
+          <span class="hub-action__desc">Registro diario del peso del cliente</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+    </div>
+
+    <!-- ── Weight sub-hub (two action cards) ── -->
+    <div *ngIf="view === 'weight'" class="hub-body">
+      <button
+        type="button"
+        class="hub-action"
+        (click)="selectAction('weight-register')"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 4v16m8-8H4"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Registrar peso</span>
+          <span class="hub-action__desc">Registrar el peso de hoy</span>
+        </span>
+        <span class="hub-action__arrow" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+          </svg>
+        </span>
+      </button>
+
+      <button
+        type="button"
+        class="hub-action"
+        (click)="selectAction('weight-history')"
+      >
+        <span class="hub-action__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+          </svg>
+        </span>
+        <span class="hub-action__content">
+          <span class="hub-action__label">Ver histórico</span>
+          <span class="hub-action__desc">Consultar pesos anteriores</span>
         </span>
         <span class="hub-action__arrow" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">

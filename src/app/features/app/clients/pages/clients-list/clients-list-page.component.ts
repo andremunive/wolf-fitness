@@ -76,7 +76,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   readonly searchControl = new FormControl<string>('');
 
   private readonly filtersSubject = new BehaviorSubject<ClientFiltersValue>({
-    activeFilter: 'active',
+    paymentStatuses: [],
+    origins: [],
     trainerId: null
   });
 
@@ -113,6 +114,11 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   /** Active modal within the measurements flow. */
   measurementsAction: MeasurementAction | null = null;
   isLoadingMeasurementsClient = false;
+
+  // ─── Modales de seguimiento del peso ────────────────────────────────────────
+
+  weightRegisterClient: Client | null = null;
+  weightHistoryClient: Client | null = null;
 
   // ─── Modales de pago ─────────────────────────────────────────────────────────
 
@@ -161,7 +167,8 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       const result$: Observable<ViewState> = this.clientsService
         .getClients({
           search,
-          activeFilter: filters.activeFilter,
+          paymentStatuses: filters.paymentStatuses,
+          origins: filters.origins,
           trainerId: filters.trainerId,
           page: pageState.page,
           pageSize: pageState.pageSize
@@ -244,7 +251,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   }
 
   onFiltersClear(): void {
-    this.filtersSubject.next({ activeFilter: 'active', trainerId: null });
+    this.filtersSubject.next({ paymentStatuses: [], origins: [], trainerId: null });
   }
 
   get currentFilters(): ClientFiltersValue {
@@ -516,8 +523,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
 
   onMeasurementsActionSelected(action: MeasurementAction): void {
     const baseClient = this.measurementsHubClient!;
-    // Close the hub immediately regardless of action so the UX is snappy and
-    // the loader covers the page while the fetch is in flight.
+    // Close the hub immediately so the UX is snappy.
     this.measurementsHubClient = null;
     this.cdr.markForCheck();
 
@@ -547,6 +553,14 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
             this.toastService.error('No se pudo cargar el detalle del cliente. Intenta de nuevo.');
           }
         });
+    } else if (action === 'weight-register') {
+      // Weight register modal only needs the base Client.
+      this.weightRegisterClient = baseClient;
+      this.cdr.markForCheck();
+    } else if (action === 'weight-history') {
+      // Weight history modal only needs the base Client.
+      this.weightHistoryClient = baseClient;
+      this.cdr.markForCheck();
     } else {
       // View and compare only need the base Client.
       this.measurementsBaseClient = baseClient;
@@ -565,6 +579,35 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   onMeasurementRegistered(clientName: string): void {
     this.toastService.success('Medida guardada para ' + clientName);
     this.closeMeasurementsModal();
+  }
+
+  // ─── Seguimiento del peso ────────────────────────────────────────────────────
+
+  closeWeightRegisterModal(): void {
+    this.weightRegisterClient = null;
+    this.cdr.markForCheck();
+  }
+
+  closeWeightHistoryModal(): void {
+    this.weightHistoryClient = null;
+    this.cdr.markForCheck();
+  }
+
+  onWeightLogRegistered(clientName: string): void {
+    this.toastService.success('Peso guardado para ' + clientName);
+    this.weightRegisterClient = null;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * When the user taps "Registrar peso" inside the history modal's empty state,
+   * jump directly to the register modal without going back through the hub.
+   */
+  onWeightHistoryRegisterRequested(): void {
+    const client = this.weightHistoryClient;
+    this.weightHistoryClient = null;
+    this.weightRegisterClient = client;
+    this.cdr.markForCheck();
   }
 
   // ─── Utilidades ─────────────────────────────────────────────────────────────

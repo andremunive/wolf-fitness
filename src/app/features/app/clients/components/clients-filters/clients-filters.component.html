@@ -28,17 +28,32 @@
     role="region"
     aria-label="Panel de filtros"
   >
-    <!-- Estado -->
+    <!-- Estado de pago -->
     <div class="filter-group">
-      <span class="filter-group__label">Por estado</span>
-      <div class="filter-chips" role="group" aria-label="Filtrar por estado">
+      <span class="filter-group__label">Por estado de pago</span>
+      <div class="filter-chips" role="group" aria-label="Filtrar por estado de pago">
         <button
-          *ngFor="let opt of activeFilterOptions; trackBy: trackByValue"
+          *ngFor="let opt of paymentStatusOptions; trackBy: trackByValue"
           type="button"
           class="filter-chip"
-          [class.filter-chip--active]="isActiveFilterSelected(opt.value)"
-          (click)="selectActiveFilter(opt.value)"
-          [attr.aria-pressed]="isActiveFilterSelected(opt.value)"
+          [class.filter-chip--active]="isPaymentStatusSelected(opt.value)"
+          (click)="togglePaymentStatus(opt.value)"
+          [attr.aria-pressed]="isPaymentStatusSelected(opt.value)"
+        >{{ opt.label }}</button>
+      </div>
+    </div>
+
+    <!-- Origen -->
+    <div class="filter-group">
+      <span class="filter-group__label">Por origen</span>
+      <div class="filter-chips" role="group" aria-label="Filtrar por origen">
+        <button
+          *ngFor="let opt of originOptions; trackBy: trackByValue"
+          type="button"
+          class="filter-chip"
+          [class.filter-chip--active]="isOriginSelected(opt.value)"
+          (click)="toggleOrigin(opt.value)"
+          [attr.aria-pressed]="isOriginSelected(opt.value)"
         >{{ opt.label }}</button>
       </div>
     </div>

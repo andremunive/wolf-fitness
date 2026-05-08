@@ -17,11 +17,18 @@ import {
 } from '@angular/core';
 import { Observable, shareReplay } from 'rxjs';
 
-import { ClientActiveFilter, TrainerOption } from '../../models/client.model';
+import {
+  ClientOrigin,
+  ClientPaymentStatusDisplay,
+  TrainerOption
+} from '../../models/client.model';
 import { ClientsService } from '../../services/clients.service';
 
 export interface ClientFiltersValue {
-  activeFilter: ClientActiveFilter;
+  /** Lista vacía = sin filtro (todos los estados de pago). */
+  paymentStatuses: ClientPaymentStatusDisplay[];
+  /** Lista vacía = sin filtro (todos los orígenes). */
+  origins: ClientOrigin[];
   /** null = todos los entrenadores. */
   trainerId: string | null;
 }
@@ -55,7 +62,8 @@ export interface ClientFiltersValue {
 })
 export class ClientsFiltersComponent implements OnChanges {
   @Input() currentFilters: ClientFiltersValue = {
-    activeFilter: 'active',
+    paymentStatuses: [],
+    origins: [],
     trainerId: null
   };
   @Output() filtersChange = new EventEmitter<ClientFiltersValue>();
@@ -63,15 +71,27 @@ export class ClientsFiltersComponent implements OnChanges {
 
   isOpen = false;
 
-  readonly activeFilterOptions: Array<{ value: ClientActiveFilter; label: string }> = [
-    { value: 'all', label: 'Todos' },
-    { value: 'active', label: 'Activos' },
-    { value: 'inactive', label: 'Inactivos' }
+  readonly paymentStatusOptions: Array<{ value: ClientPaymentStatusDisplay; label: string }> = [
+    { value: 'paid',        label: 'Al día' },
+    { value: 'partial',     label: 'Pago parcial' },
+    { value: 'pending',     label: 'Pendiente' },
+    { value: 'voided',      label: 'Anulado' },
+    { value: 'no_payments', label: 'Sin pagos' }
+  ];
+
+  readonly originOptions: Array<{ value: ClientOrigin; label: string }> = [
+    { value: 'referido',   label: 'Referido' },
+    { value: 'publicidad', label: 'Publicidad' },
+    { value: 'llego_solo', label: 'Directo' }
   ];
 
   readonly trainers$: Observable<TrainerOption[]>;
 
-  localFilters: ClientFiltersValue = { activeFilter: 'active', trainerId: null };
+  localFilters: ClientFiltersValue = {
+    paymentStatuses: [],
+    origins: [],
+    trainerId: null
+  };
 
   constructor(private readonly clientsService: ClientsService) {
     this.trainers$ = this.clientsService.getActiveTrainers().pipe(shareReplay(1));
@@ -79,13 +99,18 @@ export class ClientsFiltersComponent implements OnChanges {
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentFilters']) {
-      this.localFilters = { ...this.currentFilters };
+      this.localFilters = {
+        ...this.currentFilters,
+        paymentStatuses: [...this.currentFilters.paymentStatuses],
+        origins: [...this.currentFilters.origins]
+      };
     }
   }
 
   get activeFilterCount(): number {
     let count = 0;
-    if (this.currentFilters.activeFilter !== 'active') count++;
+    if (this.currentFilters.paymentStatuses.length > 0) count++;
+    if (this.currentFilters.origins.length > 0) count++;
     if (this.currentFilters.trainerId) count++;
     return count;
   }
@@ -98,24 +123,49 @@ export class ClientsFiltersComponent implements OnChanges {
     this.isOpen = !this.isOpen;
   }
 
-  selectActiveFilter(value: ClientActiveFilter): void {
-    this.localFilters = { ...this.localFilters, activeFilter: value };
-    this.filtersChange.emit({ ...this.localFilters });
+  togglePaymentStatus(value: ClientPaymentStatusDisplay): void {
+    const current = this.localFilters.paymentStatuses;
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    this.localFilters = { ...this.localFilters, paymentStatuses: next };
+    this.emitChange();
+  }
+
+  isPaymentStatusSelected(value: ClientPaymentStatusDisplay): boolean {
+    return this.localFilters.paymentStatuses.includes(value);
+  }
+
+  toggleOrigin(value: ClientOrigin): void {
+    const current = this.localFilters.origins;
+    const next = current.includes(value)
+      ? current.filter((v) => v !== value)
+      : [...current, value];
+    this.localFilters = { ...this.localFilters, origins: next };
+    this.emitChange();
+  }
+
+  isOriginSelected(value: ClientOrigin): boolean {
+    return this.localFilters.origins.includes(value);
   }
 
   onTrainerChange(value: string): void {
     const trainerId = value ? value : null;
     this.localFilters = { ...this.localFilters, trainerId };
-    this.filtersChange.emit({ ...this.localFilters });
+    this.emitChange();
+  }
+
+  private emitChange(): void {
+    this.filtersChange.emit({
+      ...this.localFilters,
+      paymentStatuses: [...this.localFilters.paymentStatuses],
+      origins: [...this.localFilters.origins]
+    });
   }
 
   clearFilters(): void {
     this.filtersClear.emit();
     this.isOpen = false;
-  }
-
-  isActiveFilterSelected(value: ClientActiveFilter): boolean {
-    return this.localFilters.activeFilter === value;
   }
 
   trackByValue(_index: number, item: { value: string; label: string }): string {

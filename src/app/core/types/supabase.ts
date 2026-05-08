@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -283,6 +283,61 @@ export type Database = {
           {
             foreignKeyName: "cta_trainer_id_fkey"
             columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      client_weight_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          measured_at: string
+          notes: string | null
+          registered_by: string | null
+          updated_at: string
+          weight_kg: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          measured_at: string
+          notes?: string | null
+          registered_by?: string | null
+          updated_at?: string
+          weight_kg: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          measured_at?: string
+          notes?: string | null
+          registered_by?: string | null
+          updated_at?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cwl_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cwl_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cwl_registered_by_fkey"
+            columns: ["registered_by"]
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
@@ -1414,6 +1469,51 @@ export type Database = {
           },
         ]
       }
+      weight_logs: {
+        Row: {
+          client_id: string
+          created_at: string
+          id: string
+          measured_at: string
+          registered_by: string | null
+          updated_at: string
+          weight_kg: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          id?: string
+          measured_at: string
+          registered_by?: string | null
+          updated_at?: string
+          weight_kg: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          id?: string
+          measured_at?: string
+          registered_by?: string | null
+          updated_at?: string
+          weight_kg?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "weight_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "weight_logs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       v_clients_with_payment_status: {
@@ -1620,6 +1720,13 @@ export type Database = {
         Args: { p_client_id: string }
         Returns: Json
       }
+      get_client_last_weight_log: {
+        Args: { p_client_id: string }
+        Returns: {
+          measured_at: string
+          weight_kg: number
+        }[]
+      }
       get_expense_summary_by_category: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
@@ -1653,6 +1760,10 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_client: { Args: never; Returns: boolean }
       is_trainer: { Args: never; Returns: boolean }
+      stats_finanzas_caja_al_corte: {
+        Args: { p_corte: string }
+        Returns: number
+      }
       stats_finanzas_caja_menor: {
         Args: { p_hoy: string; p_inicio: string }
         Returns: {
@@ -1698,6 +1809,7 @@ export type Database = {
         Args: { p_month: number; p_year: number }
         Returns: Json
       }
+      stats_finanzas_sparklines: { Args: never; Returns: Json }
       stats_finanzas_tendencia: {
         Args: { p_meses_atras: number }
         Returns: Json
@@ -1965,6 +2077,11 @@ export type ClientMeasurement = Database["public"]["Tables"]["client_measurement
 export type ClientMeasurementInsert = Database["public"]["Tables"]["client_measurements"]["Insert"]
 export type ClientMeasurementUpdate = Database["public"]["Tables"]["client_measurements"]["Update"]
 
+// client_weight_logs
+export type ClientWeightLog       = Database["public"]["Tables"]["client_weight_logs"]["Row"]
+export type ClientWeightLogInsert = Database["public"]["Tables"]["client_weight_logs"]["Insert"]
+export type ClientWeightLogUpdate = Database["public"]["Tables"]["client_weight_logs"]["Update"]
+
 // payments
 export type PaymentStatus = Database["public"]["Enums"]["payment_status"]
 export type PaymentMethod = Database["public"]["Enums"]["payment_method"]
@@ -2037,4 +2154,3 @@ export type ExpenseRecordItemUpdate = Database["public"]["Tables"]["expense_reco
 export type AppConfig = Database["public"]["Tables"]["app_config"]["Row"]
 export type AppConfigInsert = Database["public"]["Tables"]["app_config"]["Insert"]
 export type AppConfigUpdate = Database["public"]["Tables"]["app_config"]["Update"]
-

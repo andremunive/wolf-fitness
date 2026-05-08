@@ -1,0 +1,325 @@
+:host {
+  display: contents;
+}
+
+.rw-backdrop {
+  position: fixed;
+  inset: 0;
+  height: 100vh;
+  height: 100dvh;
+  background: rgba(17, 24, 39, 0.55);
+  z-index: 50;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  @media (min-width: 640px) {
+    align-items: center;
+  }
+}
+
+.rw-sheet {
+  width: 100%;
+  max-width: 480px;
+  background: #ffffff;
+  border-radius: 24px 24px 0 0;
+  display: flex;
+  flex-direction: column;
+  max-height: 92vh;
+  max-height: 92dvh;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  animation: slideUp 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  @media (min-width: 640px) {
+    border-radius: 20px;
+    margin: 16px;
+    max-height: 90vh;
+    max-height: 90dvh;
+    animation: fadeScale 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+
+.rw-header {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 20px 16px;
+  border-bottom: 1px solid #f3f4f6;
+
+  &__avatar {
+    flex-shrink: 0;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: #e0f2f4;
+    color: #228d9f;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  &__info {
+    flex: 1;
+    min-width: 0;
+  }
+
+  &__title {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+  }
+
+  &__subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 2px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  &__close {
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: #f3f4f6;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    transition: background 0.15s;
+
+    svg { width: 18px; height: 18px; }
+
+    &:hover { background: #e5e7eb; }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ─── Body ─────────────────────────────────────────────────────────────────────
+
+.rw-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 20px 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+// ─── Field group ──────────────────────────────────────────────────────────────
+
+.rw-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rw-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #374151;
+  line-height: 1.4;
+}
+
+.rw-required {
+  color: #ef4444;
+  margin-left: 2px;
+}
+
+// ─── Input wrapper ────────────────────────────────────────────────────────────
+
+.rw-input-wrap {
+  position: relative;
+}
+
+// ─── Inputs ───────────────────────────────────────────────────────────────────
+
+.rw-input {
+  width: 100%;
+  height: 48px;
+  padding: 0 14px;
+  border: 1.5px solid #d1d5db;
+  border-radius: 10px;
+  font-size: 16px;
+  color: #111827;
+  background: #ffffff;
+  transition: border-color 0.15s;
+  box-sizing: border-box;
+
+  &:focus {
+    outline: none;
+    border-color: #228d9f;
+    box-shadow: 0 0 0 3px rgba(34, 141, 159, 0.15);
+  }
+
+  &--error {
+    border-color: #ef4444;
+
+    &:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
+    }
+  }
+
+  &[type="date"] {
+    cursor: pointer;
+  }
+
+  // Remove number arrows in webkit
+  &[type="number"] {
+    -moz-appearance: textfield;
+
+    &::-webkit-outer-spin-button,
+    &::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+  }
+}
+
+// ─── Tooltip ──────────────────────────────────────────────────────────────────
+
+.rw-tooltip {
+  position: absolute;
+  bottom: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #1f2937;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 500;
+  padding: 7px 12px;
+  border-radius: 8px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+  z-index: 10;
+
+  // Caret pointing down
+  &::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 16px;
+    border: 5px solid transparent;
+    border-top-color: #1f2937;
+  }
+}
+
+// ─── Error message ────────────────────────────────────────────────────────────
+
+.rw-error-msg {
+  font-size: 12px;
+  color: #ef4444;
+  margin: 0;
+}
+
+// ─── Save error ───────────────────────────────────────────────────────────────
+
+.rw-save-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 14px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  color: #dc2626;
+  font-size: 14px;
+
+  svg { width: 18px; height: 18px; flex-shrink: 0; }
+}
+
+// ─── Footer ───────────────────────────────────────────────────────────────────
+
+.rw-footer {
+  flex-shrink: 0;
+  display: flex;
+  gap: 10px;
+  padding: 16px 20px;
+  border-top: 1px solid #f3f4f6;
+}
+
+.rw-btn {
+  flex: 1;
+  height: 48px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: all 0.15s;
+  border: none;
+
+  &--secondary {
+    background: #f3f4f6;
+    color: #374151;
+
+    &:hover { background: #e5e7eb; }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 2px;
+    }
+  }
+
+  &--primary {
+    background: #228d9f;
+    color: #ffffff;
+
+    &:hover:not(:disabled) { background: #1a7a8a; }
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    &:focus-visible {
+      outline: 2px solid #228d9f;
+      outline-offset: 2px;
+    }
+  }
+
+  &__spinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+  }
+}
+
+// ─── Animations ───────────────────────────────────────────────────────────────
+
+@keyframes slideUp {
+  from { transform: translateY(32px); opacity: 0; }
+  to   { transform: translateY(0);    opacity: 1; }
+}
+
+@keyframes fadeScale {
+  from { transform: scale(0.97); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

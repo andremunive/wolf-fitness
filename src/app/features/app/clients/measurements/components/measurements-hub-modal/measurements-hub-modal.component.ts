@@ -1,5 +1,6 @@
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
   EventEmitter,
   Input,
@@ -8,7 +9,9 @@ import {
 
 import { Client } from 'src/app/features/app/clients/models/client.model';
 
-export type MeasurementAction = 'register' | 'view' | 'compare';
+export type MeasurementAction = 'register' | 'view' | 'compare' | 'weight-register' | 'weight-history';
+
+type HubView = 'main' | 'weight';
 
 @Component({
   selector: 'app-measurements-hub-modal',
@@ -21,6 +24,11 @@ export class MeasurementsHubModalComponent {
 
   @Output() closed = new EventEmitter<void>();
   @Output() actionSelected = new EventEmitter<MeasurementAction>();
+
+  /** Controls which panel is rendered inside the sheet. */
+  view: HubView = 'main';
+
+  constructor(private readonly cdr: ChangeDetectorRef) {}
 
   get initials(): string {
     return this.client.fullName
@@ -36,5 +44,15 @@ export class MeasurementsHubModalComponent {
 
   selectAction(action: MeasurementAction): void {
     this.actionSelected.emit(action);
+  }
+
+  openWeightSubHub(): void {
+    this.view = 'weight';
+    this.cdr.markForCheck();
+  }
+
+  backToMain(): void {
+    this.view = 'main';
+    this.cdr.markForCheck();
   }
 }
