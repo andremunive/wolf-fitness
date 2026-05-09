@@ -279,107 +279,123 @@
       ts: (sparklineState$ | async),
       ds: (detalleState$ | async)
     } as st">
+
+      <!-- Fila 1: Tipo A · Tipo B · Nuevos · Recuperados -->
       <div class="cv2-cards-grid">
-        <ng-container *ngFor="let c of buildCards(st.cs, st.ts, st.ds); trackBy: trackByCardKey">
-
-          <article class="cv2-card cv2-card--metric">
-
-            <!-- Loading -->
-            <div *ngIf="c.status === 'loading'" class="cv2-card-metric__skeleton">
-              <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
-              <div class="cv2-skeleton cv2-skeleton--card-value"></div>
-              <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
-            </div>
-
-            <!-- Error -->
-            <div *ngIf="c.status === 'error'" class="cv2-card-metric__error">
-              <div class="cv2-card-metric__top">
-                <div class="cv2-card-metric__label-row">
-                  <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
-                  <span class="cv2-card-metric__label">{{ c.label }}</span>
-                </div>
-              </div>
-              <p class="cv2-muted">No se pudo cargar.</p>
-              <button
-                type="button"
-                class="cv2-link-btn"
-                (click)="c.key === 'nuevos' || c.key === 'recuperados' ? retryDetalle() : retryHero()">
-                Reintentar
-              </button>
-            </div>
-
-            <!-- Loaded -->
-            <ng-container *ngIf="c.status === 'loaded'">
-
-              <!-- Top: dot + label + sparkline -->
-              <div class="cv2-card-metric__top">
-                <div class="cv2-card-metric__label-row">
-                  <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
-                  <span class="cv2-card-metric__label">{{ c.label }}</span>
-                </div>
-
-                <ng-container *ngIf="c.sparkline as g">
-                  <svg
-                    [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
-                    preserveAspectRatio="none"
-                    class="cv2-card-metric__spark"
-                    aria-hidden="true">
-                    <defs>
-                      <linearGradient
-                        [attr.id]="c.gradId"
-                        x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" [attr.stop-color]="c.color" stop-opacity="0.18" />
-                        <stop offset="100%" [attr.stop-color]="c.color" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      [attr.d]="g.areaPath"
-                      [attr.fill]="'url(#' + c.gradId + ')'"
-                      stroke="none" />
-                    <path
-                      [attr.d]="g.linePath"
-                      fill="none"
-                      [attr.stroke]="c.color"
-                      stroke-width="1.8"
-                      stroke-linecap="round"
-                      stroke-linejoin="round" />
-                    <circle
-                      [attr.cx]="g.lastX"
-                      [attr.cy]="g.lastY"
-                      r="2.5"
-                      [attr.fill]="c.color"
-                      stroke="#ffffff"
-                      stroke-width="1.5" />
-                  </svg>
-                </ng-container>
-              </div>
-
-              <!-- Valor -->
-              <div class="cv2-card-metric__value">{{ c.value }}</div>
-
-              <!-- Delta pill (solo cards con delta) -->
-              <div class="cv2-card-metric__meta">
-                <span
-                  *ngIf="c.delta !== null"
-                  [ngClass]="deltaPillClass(c.delta)">
-                  {{ deltaPillArrow(c.delta) }}
-                  <ng-container *ngIf="c.delta !== 0">
-                    {{ c.delta < 0 ? -c.delta : c.delta }}
-                  </ng-container>
-                  <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
-                </span>
-              </div>
-
-              <!-- Texto secundario: 6d / 3d -->
-              <p class="cv2-card-metric__secondary">{{ c.secondaryText }}</p>
-
-            </ng-container>
-
-          </article>
-
+        <ng-container *ngFor="let c of buildCards(st.cs, st.ds); trackBy: trackByCardKey">
+          <ng-container *ngTemplateOutlet="cardItem; context: { $implicit: c }">
+          </ng-container>
         </ng-container>
       </div>
+
+      <!-- Fila 2: Nuevos por canal de captación (Recomendación · Publicidad · Directos) -->
+      <div class="cv2-cards-grid cv2-cards-grid--3 cv2-cards-grid--row-2">
+        <ng-container *ngFor="let c of buildOrigenCards(st.ds); trackBy: trackByCardKey">
+          <ng-container *ngTemplateOutlet="cardItem; context: { $implicit: c }">
+          </ng-container>
+        </ng-container>
+      </div>
+
     </ng-container>
+
+    <!-- Plantilla compartida — render de una sola card métrica (loading/error/loaded). -->
+    <ng-template #cardItem let-c>
+      <article class="cv2-card cv2-card--metric">
+
+        <!-- Loading -->
+        <div *ngIf="c.status === 'loading'" class="cv2-card-metric__skeleton">
+          <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+          <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+          <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="c.status === 'error'" class="cv2-card-metric__error">
+          <div class="cv2-card-metric__top">
+            <div class="cv2-card-metric__label-row">
+              <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
+              <span class="cv2-card-metric__label">{{ c.label }}</span>
+            </div>
+          </div>
+          <p class="cv2-muted">No se pudo cargar.</p>
+          <button
+            type="button"
+            class="cv2-link-btn"
+            (click)="cardRetryFor(c.key)">
+            Reintentar
+          </button>
+        </div>
+
+        <!-- Loaded -->
+        <ng-container *ngIf="c.status === 'loaded'">
+
+          <!-- Top: dot + label + sparkline -->
+          <div class="cv2-card-metric__top">
+            <div class="cv2-card-metric__label-row">
+              <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
+              <span class="cv2-card-metric__label">{{ c.label }}</span>
+            </div>
+
+            <ng-container *ngIf="c.sparkline as g">
+              <svg
+                [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
+                preserveAspectRatio="none"
+                class="cv2-card-metric__spark"
+                aria-hidden="true">
+                <defs>
+                  <linearGradient
+                    [attr.id]="c.gradId"
+                    x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" [attr.stop-color]="c.trendColor" stop-opacity="0.18" />
+                    <stop offset="100%" [attr.stop-color]="c.trendColor" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path
+                  [attr.d]="g.areaPath"
+                  [attr.fill]="'url(#' + c.gradId + ')'"
+                  stroke="none" />
+                <path
+                  [attr.d]="g.linePath"
+                  fill="none"
+                  [attr.stroke]="c.trendColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <circle
+                  [attr.cx]="g.lastX"
+                  [attr.cy]="g.lastY"
+                  r="2.5"
+                  [attr.fill]="c.trendColor"
+                  stroke="#ffffff"
+                  stroke-width="1.5" />
+              </svg>
+            </ng-container>
+          </div>
+
+          <!-- Valor -->
+          <div class="cv2-card-metric__value">{{ c.value }}</div>
+
+          <!-- Delta pill — Tipo A/B y las 3 cards de origen muestran chip.
+               Nuevos y Recuperados ya comunican la tendencia con la sparkline. -->
+          <div class="cv2-card-metric__meta">
+            <span
+              *ngIf="c.delta !== null && c.key !== 'nuevos' && c.key !== 'recuperados'"
+              [ngClass]="deltaPillClass(c.delta)">
+              {{ deltaPillArrow(c.delta) }}
+              <ng-container *ngIf="c.delta !== 0">
+                {{ c.delta < 0 ? -c.delta : c.delta }}
+              </ng-container>
+              <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+            </span>
+          </div>
+
+          <!-- Texto secundario: 6d / 3d -->
+          <p class="cv2-card-metric__secondary">{{ c.secondaryText }}</p>
+
+        </ng-container>
+
+      </article>
+    </ng-template>
 
   </section>
 

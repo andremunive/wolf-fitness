@@ -1665,9 +1665,23 @@ export type Database = {
           en_riesgo: Json
           nuevos_3d: number
           nuevos_6d: number
+          nuevos_llego_solo_3d: number
+          nuevos_llego_solo_6d: number
+          nuevos_llego_solo_prev_total: number
+          nuevos_llego_solo_total: number
+          nuevos_prev_total: number
+          nuevos_publicidad_3d: number
+          nuevos_publicidad_6d: number
+          nuevos_publicidad_prev_total: number
+          nuevos_publicidad_total: number
+          nuevos_referido_3d: number
+          nuevos_referido_6d: number
+          nuevos_referido_prev_total: number
+          nuevos_referido_total: number
           nuevos_total: number
           recuperados_3d: number
           recuperados_6d: number
+          recuperados_prev_total: number
           recuperados_total: number
           retencion_activos_prev: number
           retencion_repitieron: number

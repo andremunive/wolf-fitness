@@ -30,10 +30,12 @@ import { EstadisticasService } from '../../../services/estadisticas.service';
 import {
   ClientesActivosCards,
   ClientesQuincenalCards,
+  CohortBreakdown,
   DetalleResponse,
   EnRiesgoEntry,
   EntrenadorFilter,
   EntrenadorOption,
+  NuevosPorOrigen,
   PlanFilter,
   QuincenaBreakdown,
   QuincenalTendenciaResponse,
@@ -151,14 +153,30 @@ interface GaugeGeometry {
 
 // ─── Card VM (Sección 01 — Movimiento del mes) ────────────────────────────────
 
-export type CardKey = 'tipo_a' | 'tipo_b' | 'nuevos' | 'recuperados';
+export type CardKey =
+  | 'tipo_a'
+  | 'tipo_b'
+  | 'nuevos'
+  | 'recuperados'
+  | 'nuevos_referido'
+  | 'nuevos_publicidad'
+  | 'nuevos_directos';
 export type CardStatus = 'loading' | 'loaded' | 'error';
+/** Tendencia de la sparkline: arriba (verde), abajo (rojo) o plana (gris). */
+export type CardTrend = 'up' | 'down' | 'flat';
 
 export interface CardVM {
   key: CardKey;
   label: string;
-  /** Color del dot/línea del sparkline. */
+  /**
+   * Color del dot identificador de la card en el header (semántico de la card,
+   * no de la tendencia). La sparkline usa `trendColor` aparte.
+   */
   color: string;
+  /** Tendencia derivada de delta. La sparkline pinta este color. */
+  trend: CardTrend;
+  /** Color final de la línea/area del sparkline (verde / rojo / gris). */
+  trendColor: string;
   status: CardStatus;
   value: number;
   /** null = no se muestra chip de delta (Nuevos / Recuperados). */
@@ -182,6 +200,53 @@ const COLOR_TIPO_A      = '#10b981'; // success
 const COLOR_TIPO_B      = '#228d9f'; // brand
 const COLOR_NUEVOS      = '#f59e0b'; // amber
 const COLOR_RECUPERADOS = '#6366f1'; // indigo
+
+/**
+ * Colores para la fila de "Nuevos por origen" — distintos entre sí y de los
+ * cuatro colores de la fila superior, manteniendo la paleta general del
+ * dashboard.
+ */
+const COLOR_NUEVOS_REFERIDO   = '#ec4899'; // pink — relacional, referidos
+const COLOR_NUEVOS_PUBLICIDAD = '#06b6d4'; // cyan — canal digital
+const COLOR_NUEVOS_DIRECTOS   = '#8b5cf6'; // violet — orgánico
+
+/**
+ * Meta visual de las cards "Nuevos por origen". Centraliza label, color del
+ * dot y prefijo único del id de gradiente — el maker `makeOrigenCard` solo
+ * lee de aquí.
+ */
+const ORIGEN_CARD_META: Record<
+  'nuevos_referido' | 'nuevos_publicidad' | 'nuevos_directos',
+  { label: string; color: string; gradId: string }
+> = {
+  nuevos_referido: {
+    label:  'Nuevos por Recomendación',
+    color:  COLOR_NUEVOS_REFERIDO,
+    gradId: 'cv2-spark-nuevos-referido'
+  },
+  nuevos_publicidad: {
+    label:  'Nuevos por Publicidad',
+    color:  COLOR_NUEVOS_PUBLICIDAD,
+    gradId: 'cv2-spark-nuevos-publicidad'
+  },
+  nuevos_directos: {
+    label:  'Nuevos Directos',
+    color:  COLOR_NUEVOS_DIRECTOS,
+    gradId: 'cv2-spark-nuevos-directos'
+  }
+};
+
+/**
+ * Colores semánticos de la sparkline comparativa (sección 01).
+ * up = la métrica creció vs el periodo de comparación → verde.
+ * down = la métrica bajó → rojo.
+ * flat = sin cambio (o sin datos para comparar) → gris.
+ */
+const TREND_COLORS: Record<'up' | 'down' | 'flat', string> = {
+  up:   '#10b981',
+  down: '#dc2626',
+  flat: '#9ca3af'
+};
 
 /** Colores del desglose de planes (tokens de marca). */
 const COLOR_PLAN_6D = '#228d9f';
@@ -593,6 +658,19 @@ export class ClientesDashboardComponent implements OnDestroy {
     this.retryQuincenal$.next();
   }
 
+  /**
+   * Decide qué stream re-intentar según el `key` de la card.
+   * Las cards alimentadas por `detalleState$` (nuevos / recuperados / nuevos
+   * por origen) reintentan el detalle; el resto reintenta el hero.
+   */
+  cardRetryFor(key: CardKey): void {
+    if (key === 'recuperados' || key.startsWith('nuevos')) {
+      this.retryDetalle();
+    } else {
+      this.retryHero();
+    }
+  }
+
   // ─── Ventana de tendencia (sección 04) ──────────────────────────────────────
 
   onVentanaTendenciaChange(n: VentanaTendencia): void {
@@ -813,139 +891,224 @@ export class ClientesDashboardComponent implements OnDestroy {
   }
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECCIÓN 01 — Movimiento del mes: 4 cards
+  // SECCIÓN 01 — Movimiento del mes (2 filas: 4 cards + 3 cards por origen)
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
-   * Construye las 4 cards (Tipo A, Tipo B, Nuevos, Recuperados) a partir de los
-   * tres streams de datos. Cada card lleva su propio status para que el template
-   * pueda renderizar skeleton/error/loaded de forma independiente.
+   * Fila superior: Tipo A, Tipo B, Nuevos, Recuperados.
+   * Cada card lleva su propio status para que el template pueda renderizar
+   * skeleton/error/loaded de forma independiente.
    */
   buildCards(
     cs: CardsState | null,
-    ts: SparklineState | null,
     ds: DetalleState | null
   ): CardVM[] {
     return [
-      this.makeTipoACard(cs, ts),
-      this.makeTipoBCard(cs, ts),
+      this.makeTipoACard(cs),
+      this.makeTipoBCard(cs),
       this.makeNuevosCard(ds),
       this.makeRecuperadosCard(ds)
     ];
   }
 
-  private makeTipoACard(
-    cs: CardsState | null,
-    ts: SparklineState | null
-  ): CardVM {
-    const status = this.deriveCardsStatus(cs);
-    const data = cs?.status === 'loaded' ? cs.data : null;
-    const value = data?.tipo_a.total ?? 0;
-    const delta = data?.tipo_a.delta ?? null;
-    const plan6d = data?.tipo_a.plan_6d ?? 0;
-    const plan3d = data?.tipo_a.plan_3d ?? 0;
+  /**
+   * Fila inferior: Nuevos por canal de captación (Recomendación, Publicidad,
+   * Directos). Subdivide la cohorte `nuevos` por `clients.origin` — totales
+   * suman a `nuevos.total`. Comparación: mismo rango día-a-día del mes anterior.
+   */
+  buildOrigenCards(ds: DetalleState | null): CardVM[] {
+    return [
+      this.makeOrigenCard(ds, 'nuevos_referido'),
+      this.makeOrigenCard(ds, 'nuevos_publicidad'),
+      this.makeOrigenCard(ds, 'nuevos_directos')
+    ];
+  }
 
-    // Aproximación: tendencia.total por mes ≈ Tipo A histórico (clientes que
-    // pagaron en cada mes). No tenemos serie exacta de Tipo A, pero es la
-    // métrica equivalente en la respuesta de stats-clients-tendencia.
-    const sparkVals = ts?.status === 'loaded'
-      ? ts.data.map((p) => p.total)
-      : [];
+  /**
+   * Maker genérico para las cards de "Nuevos por origen". El `key` determina
+   * el slot que se lee del response (`nuevos_por_origen.{referido | publicidad
+   * | llego_solo}`), el label visible y el color del dot.
+   */
+  private makeOrigenCard(
+    ds: DetalleState | null,
+    key: 'nuevos_referido' | 'nuevos_publicidad' | 'nuevos_directos'
+  ): CardVM {
+    const status = this.deriveDetalleStatus(ds);
+    const data   = ds?.status === 'loaded' ? ds.data : null;
+
+    const slot = data
+      ? this.pickOrigenSlot(data.nuevos_por_origen, key)
+      : null;
+
+    const value  = slot?.total   ?? 0;
+    const delta  = slot?.delta   ?? null;
+    const plan6d = slot?.plan_6d ?? 0;
+    const plan3d = slot?.plan_3d ?? 0;
+
+    const trend  = this.deriveTrend(data ? value : null, delta);
+    const trendColor = TREND_COLORS[trend];
+
+    const meta = ORIGEN_CARD_META[key];
 
     return {
-      key: 'tipo_a',
-      label: 'Pagaron este mes',
-      color: COLOR_TIPO_A,
+      key,
+      label: meta.label,
+      color: meta.color,
+      trend,
+      trendColor,
       status,
       value,
       delta,
       secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
-      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      sparkline: this.buildTrendSparkline(value, delta),
+      gradId: meta.gradId
+    };
+  }
+
+  /** Mapea el CardKey de origen al slot correspondiente del response. */
+  private pickOrigenSlot(
+    porOrigen: NuevosPorOrigen,
+    key: 'nuevos_referido' | 'nuevos_publicidad' | 'nuevos_directos'
+  ): CohortBreakdown {
+    if (key === 'nuevos_referido')   return porOrigen.referido;
+    if (key === 'nuevos_publicidad') return porOrigen.publicidad;
+    return porOrigen.llego_solo;
+  }
+
+  private makeTipoACard(cs: CardsState | null): CardVM {
+    const status = this.deriveCardsStatus(cs);
+    const data   = cs?.status === 'loaded' ? cs.data : null;
+    const value  = data?.tipo_a.total ?? 0;
+    const delta  = data?.tipo_a.delta ?? null;
+    const plan6d = data?.tipo_a.plan_6d ?? 0;
+    const plan3d = data?.tipo_a.plan_3d ?? 0;
+
+    const trend  = this.deriveTrend(data ? value : null, delta);
+    const trendColor = TREND_COLORS[trend];
+
+    return {
+      key: 'tipo_a',
+      label: 'Pagaron',
+      color: COLOR_TIPO_A,
+      trend,
+      trendColor,
+      status,
+      value,
+      delta,
+      secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
+      sparkline: this.buildTrendSparkline(value, delta),
       gradId: 'cv2-spark-tipo-a'
     };
   }
 
-  private makeTipoBCard(
-    cs: CardsState | null,
-    ts: SparklineState | null
-  ): CardVM {
+  private makeTipoBCard(cs: CardsState | null): CardVM {
     const status = this.deriveCardsStatus(cs);
-    const data = cs?.status === 'loaded' ? cs.data : null;
-    const value = data?.tipo_b.total ?? 0;
-    const delta = data?.tipo_b.delta ?? null;
+    const data   = cs?.status === 'loaded' ? cs.data : null;
+    const value  = data?.tipo_b.total ?? 0;
+    const delta  = data?.tipo_b.delta ?? null;
     const plan6d = data?.tipo_b.plan_6d ?? 0;
     const plan3d = data?.tipo_b.plan_3d ?? 0;
 
-    // Tipo B no tiene serie histórica directa en tendenciaState; usamos el
-    // total mensual como aproximación de orden de magnitud (mismo patrón
-    // que indica el plan de la fase). En la práctica Tipo B suele ser bajo,
-    // así que la sparkline acompañará la macrotendencia.
-    const sparkVals = ts?.status === 'loaded'
-      ? ts.data.map((p) => p.total)
-      : [];
+    const trend  = this.deriveTrend(data ? value : null, delta);
+    const trendColor = TREND_COLORS[trend];
 
     return {
       key: 'tipo_b',
       label: 'Vigentes mes anterior',
       color: COLOR_TIPO_B,
+      trend,
+      trendColor,
       status,
       value,
       delta,
       secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
-      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      sparkline: this.buildTrendSparkline(value, delta),
       gradId: 'cv2-spark-tipo-b'
     };
   }
 
   private makeNuevosCard(ds: DetalleState | null): CardVM {
     const status = this.deriveDetalleStatus(ds);
-    const data = ds?.status === 'loaded' ? ds.data : null;
-    const value = data?.nuevos.total ?? 0;
+    const data   = ds?.status === 'loaded' ? ds.data : null;
+    const value  = data?.nuevos.total ?? 0;
+    const delta  = data?.nuevos.delta ?? null;
     const plan6d = data?.nuevos.plan_6d ?? 0;
     const plan3d = data?.nuevos.plan_3d ?? 0;
 
-    // No hay serie histórica para nuevos — sparkline plana usando el valor
-    // actual como proxy visual (mantiene la consistencia del layout).
-    const sparkVals = data ? this.flatSeries(value) : [];
+    const trend  = this.deriveTrend(data ? value : null, delta);
+    const trendColor = TREND_COLORS[trend];
 
     return {
       key: 'nuevos',
-      label: 'Nuevos este mes',
+      label: 'Nuevos',
       color: COLOR_NUEVOS,
+      trend,
+      trendColor,
       status,
       value,
-      delta: null,
+      // El template suprime el chip de delta para nuevos/recuperados;
+      // mantenemos el valor en el VM para que la sparkline lo use.
+      delta,
       secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
-      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      sparkline: this.buildTrendSparkline(value, delta),
       gradId: 'cv2-spark-nuevos'
     };
   }
 
   private makeRecuperadosCard(ds: DetalleState | null): CardVM {
     const status = this.deriveDetalleStatus(ds);
-    const data = ds?.status === 'loaded' ? ds.data : null;
-    const value = data?.recuperados.total ?? 0;
+    const data   = ds?.status === 'loaded' ? ds.data : null;
+    const value  = data?.recuperados.total ?? 0;
+    const delta  = data?.recuperados.delta ?? null;
     const plan6d = data?.recuperados.plan_6d ?? 0;
     const plan3d = data?.recuperados.plan_3d ?? 0;
 
-    const sparkVals = data ? this.flatSeries(value) : [];
+    const trend  = this.deriveTrend(data ? value : null, delta);
+    const trendColor = TREND_COLORS[trend];
 
     return {
       key: 'recuperados',
-      label: 'Recuperados este mes',
+      label: 'Recuperados',
       color: COLOR_RECUPERADOS,
+      trend,
+      trendColor,
       status,
       value,
-      delta: null,
+      delta,
       secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
-      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      sparkline: this.buildTrendSparkline(value, delta),
       gradId: 'cv2-spark-recuperados'
     };
   }
 
-  /** Serie plana de 6 puntos al valor dado, para sparklines sin historia. */
-  private flatSeries(value: number): number[] {
-    return [value, value, value, value, value, value];
+  /**
+   * Tendencia de la card según el delta vs el periodo de comparación.
+   * Cuando aún no hay datos (delta=null), por defecto plana.
+   */
+  private deriveTrend(current: number | null, delta: number | null): CardTrend {
+    if (current === null || delta === null) return 'flat';
+    if (delta > 0) return 'up';
+    if (delta < 0) return 'down';
+    return 'flat';
+  }
+
+  /**
+   * Construye una sparkline de exactamente 2 puntos: [prev, current].
+   * El layout dibuja el primer punto a la izquierda y el segundo a la derecha
+   * (`buildSparkline` ya escala los valores entre min y max), por lo que la
+   * pendiente refleja directamente la dirección de la tendencia.
+   *
+   * Caso especial: si current === prev (delta=0) ambos puntos quedarían en el
+   * mismo nivel — `buildSparkline` produciría una línea recta a la mitad del
+   * viewBox, justo lo que queremos para la "línea gris" de "sin cambio".
+   */
+  private buildTrendSparkline(
+    current: number | null,
+    delta: number | null
+  ): SparklineGeometry | null {
+    if (current === null || delta === null) return null;
+    const prev = current - delta;
+    return this.buildSparkline([prev, current], 80, 40);
   }
 
   private deriveCardsStatus(cs: CardsState | null): CardStatus {

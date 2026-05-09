@@ -169,11 +169,33 @@ export interface RetencionMetric {
   repitieron_este_mes: number;
 }
 
-/** Desglose por plan sin delta (Nuevos y Recuperados). */
+/**
+ * Desglose por plan para cohortes (Nuevos y Recuperados).
+ * delta = total_actual - total_mismo_rango_mes_anterior (puede ser negativo).
+ */
 export interface CohortBreakdown {
   total: number;
   plan_6d: number;
   plan_3d: number;
+  delta: number;
+}
+
+/**
+ * Origen de captación del cliente (enum `client_origin` en BD).
+ *  - referido: vino por recomendación de otro cliente.
+ *  - publicidad: llegó por una campaña publicitaria.
+ *  - llego_solo: legacy → en UI se muestra como "Directos".
+ */
+export type ClientOrigin = 'referido' | 'publicidad' | 'llego_solo';
+
+/**
+ * Desglose de "nuevos este mes" agrupados por origen de captación.
+ * Cada slot es la misma cohorte que `nuevos` pero filtrada por `clients.origin`.
+ */
+export interface NuevosPorOrigen {
+  referido:   CohortBreakdown;
+  publicidad: CohortBreakdown;
+  llego_solo: CohortBreakdown;
 }
 
 /** Entrada de un cliente en riesgo (pago pendiente o por vencer). */
@@ -191,6 +213,8 @@ export interface EnRiesgoEntry {
 export interface DetalleResponse {
   retencion: RetencionMetric;
   nuevos: CohortBreakdown;
+  /** Subdivisión de `nuevos` por canal de captación (clients.origin). */
+  nuevos_por_origen: NuevosPorOrigen;
   recuperados: CohortBreakdown;
   en_riesgo: EnRiesgoEntry[];
 }

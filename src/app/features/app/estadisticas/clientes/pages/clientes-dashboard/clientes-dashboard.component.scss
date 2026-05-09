@@ -648,6 +648,18 @@
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  // Modificador para filas con 3 cards (ej: nuevos por origen).
+  &--3 {
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
+
+  // Separación entre filas dentro de la misma sección.
+  &--row-2 {
+    margin-top: 16px;
+  }
 }
 
 // ─── Card metric ──────────────────────────────────────────────────────────
