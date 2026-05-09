@@ -4,9 +4,27 @@ import {
   Component,
   OnDestroy
 } from '@angular/core';
-import { ChartConfiguration, ChartData } from 'chart.js';
-import { combineLatest, Observable, of, Subject } from 'rxjs';
-import { catchError, map, shareReplay, startWith } from 'rxjs/operators';
+import {
+  BehaviorSubject,
+  combineLatest,
+  Observable,
+  of,
+  Subject
+} from 'rxjs';
+import {
+  catchError,
+  map,
+  shareReplay,
+  startWith,
+  switchMap
+} from 'rxjs/operators';
+
+import {
+  ChartConfiguration,
+  ChartData,
+  Chart as ChartJS,
+  Plugin
+} from 'chart.js';
 
 import { EstadisticasService } from '../../../services/estadisticas.service';
 import {
@@ -17,31 +35,175 @@ import {
   EntrenadorFilter,
   EntrenadorOption,
   PlanFilter,
-  QuincenalTendenciaPoint,
+  QuincenaBreakdown,
   QuincenalTendenciaResponse,
   TendenciaResponse,
   VentanaQuincenal,
   VentanaTendencia
 } from '../../../models/estadisticas.model';
 
-/** Mes anterior abreviado en español (índice 0 = enero). */
-const MESES_ABREV = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'] as const;
+// ─── Estados ──────────────────────────────────────────────────────────────────
 
-/** Opciones disponibles de ventana temporal en el orden de las pills. */
-const VENTANAS: VentanaTendencia[] = [1, 2, 6, 12];
+interface CardsStateLoading {
+  status: 'loading';
+  data: null;
+}
+interface CardsStateLoaded {
+  status: 'loaded';
+  data: ClientesActivosCards;
+}
+interface CardsStateError {
+  status: 'error';
+  data: null;
+}
+type CardsState = CardsStateLoading | CardsStateLoaded | CardsStateError;
 
-/** Labels legibles para cada ventana temporal de tendencia. */
-const VENTANA_LABELS: Record<VentanaTendencia, string> = {
+interface SparklineStateLoading {
+  status: 'loading';
+  data: null;
+}
+interface SparklineStateLoaded {
+  status: 'loaded';
+  data: TendenciaResponse;
+}
+interface SparklineStateError {
+  status: 'error';
+  data: null;
+}
+type SparklineState =
+  | SparklineStateLoading
+  | SparklineStateLoaded
+  | SparklineStateError;
+
+interface DetalleStateLoading {
+  status: 'loading';
+  data: null;
+}
+interface DetalleStateLoaded {
+  status: 'loaded';
+  data: DetalleResponse;
+}
+interface DetalleStateError {
+  status: 'error';
+  data: null;
+}
+type DetalleState = DetalleStateLoading | DetalleStateLoaded | DetalleStateError;
+
+interface QuincenalStateLoading {
+  status: 'loading';
+  data: null;
+}
+interface QuincenalStateLoaded {
+  status: 'loaded';
+  data: ClientesQuincenalCards;
+}
+interface QuincenalStateError {
+  status: 'error';
+  data: null;
+}
+type QuincenalState =
+  | QuincenalStateLoading
+  | QuincenalStateLoaded
+  | QuincenalStateError;
+
+interface QuincenalTendStateLoading {
+  status: 'loading';
+  data: null;
+}
+interface QuincenalTendStateLoaded {
+  status: 'loaded';
+  data: QuincenalTendenciaResponse;
+}
+interface QuincenalTendStateError {
+  status: 'error';
+  data: null;
+}
+type QuincenalTendState =
+  | QuincenalTendStateLoading
+  | QuincenalTendStateLoaded
+  | QuincenalTendStateError;
+
+// ─── Geometrías SVG ───────────────────────────────────────────────────────────
+
+interface SparklineGeometry {
+  linePath: string;
+  areaPath: string;
+  lastX: number;
+  lastY: number;
+  width: number;
+  height: number;
+}
+
+interface GaugeGeometry {
+  trackD: string;
+  barD: string;
+  color: string;
+  grade: 'EXCELENTE' | 'BUENO' | 'REGULAR' | 'CRÍTICO';
+  description: string;
+  pctLabel: string;
+  cx: number;
+  cy: number;
+  r: number;
+  width: number;
+  height: number;
+  viewBox: string;
+}
+
+// ─── Card VM (Sección 01 — Movimiento del mes) ────────────────────────────────
+
+export type CardKey = 'tipo_a' | 'tipo_b' | 'nuevos' | 'recuperados';
+export type CardStatus = 'loading' | 'loaded' | 'error';
+
+export interface CardVM {
+  key: CardKey;
+  label: string;
+  /** Color del dot/línea del sparkline. */
+  color: string;
+  status: CardStatus;
+  value: number;
+  /** null = no se muestra chip de delta (Nuevos / Recuperados). */
+  delta: number | null;
+  /** "6d: X · 3d: X" */
+  secondaryText: string;
+  /** Geometría del sparkline o null si no hay datos suficientes. */
+  sparkline: SparklineGeometry | null;
+  /** Sufijo único del id del gradient SVG por card. */
+  gradId: string;
+}
+
+// ─── Constantes ───────────────────────────────────────────────────────────────
+
+const SPARKLINE_VB_WIDTH = 320;
+const SPARKLINE_VB_HEIGHT = 60;
+const SPARKLINE_PADDING_Y = 6;
+
+/** Colores semánticos por card. */
+const COLOR_TIPO_A      = '#10b981'; // success
+const COLOR_TIPO_B      = '#228d9f'; // brand
+const COLOR_NUEVOS      = '#f59e0b'; // amber
+const COLOR_RECUPERADOS = '#6366f1'; // indigo
+
+/** Colores del desglose de planes (tokens de marca). */
+const COLOR_PLAN_6D = '#228d9f';
+const COLOR_PLAN_3D = '#67e8f9';
+
+/** Sección 04 — colores de las series de la gráfica. */
+const COLOR_SERIE_TOTAL = '#228d9f'; // brand
+const COLOR_SERIE_6D    = '#1a7080'; // brand-dark (para diferenciarse de Total)
+const COLOR_SERIE_3D    = '#67e8f9'; // cyan-300
+
+/** Ventanas disponibles en la sección 04. */
+const VENTANAS_TENDENCIA: VentanaTendencia[] = [1, 2, 6, 12];
+
+const VENTANA_TENDENCIA_LABELS: Record<VentanaTendencia, string> = {
   1:  'Mes anterior',
   2:  'Últimos 2 meses',
   6:  'Últimos 6 meses',
   12: 'Últimos 12 meses'
 };
 
-/** Opciones disponibles de ventana quincenal en el orden de las pills. */
+/** Ventanas disponibles en la sección 05 (distribución quincenal). */
 const VENTANAS_QUINCENAL: VentanaQuincenal[] = [1, 2, 3, 6];
-
-/** Labels legibles para cada ventana quincenal. */
 const VENTANA_QUINCENAL_LABELS: Record<VentanaQuincenal, string> = {
   1: 'Mes anterior',
   2: 'Últimos 2 meses',
@@ -49,69 +211,197 @@ const VENTANA_QUINCENAL_LABELS: Record<VentanaQuincenal, string> = {
   6: 'Últimos 6 meses'
 };
 
-/** Opciones del toggle de plan para distribución. */
+/** Filtro local de plan (sección 05). */
 const PLANES: PlanFilter[] = ['todos', '6d', '3d'];
-
-/** Labels legibles para el toggle de plan. */
 const PLAN_LABELS: Record<PlanFilter, string> = {
   todos: 'Todos',
   '6d':  '6 días',
   '3d':  '3 días'
 };
 
-// ─── Colores de la gráfica de distribución ────────────────────────────────────
+/** Colores de las barras Q1 / Q2 (sección 05). */
+const COLOR_DIST_Q1 = '#228d9f';
+const COLOR_DIST_Q2 = 'rgba(34, 141, 159, 0.55)';
 
-/** Q1: color primario de marca. */
-const COLOR_Q1 = '#228d9f';
-/** Q2: variante más clara (cyan-300). */
-const COLOR_Q2 = '#67e8f9';
+/**
+ * Paleta de avatares para clientes en riesgo (sección 06).
+ * Cada entrada es un par [bg, fg] — fondo suave + foreground más oscuro
+ * del mismo tono. La selección por nombre es determinista.
+ */
+const AVATAR_PALETTE: ReadonlyArray<readonly [string, string]> = [
+  ['#dbeafe', '#1e3a8a'],
+  ['#dcfce7', '#14532d'],
+  ['#fef3c7', '#78350f'],
+  ['#fce7f3', '#831843'],
+  ['#ede9fe', '#4c1d95'],
+  ['#ffedd5', '#7c2d12'],
+  ['#cffafe', '#155e75']
+];
 
-// ─── Colores de las series de la gráfica ──────────────────────────────────────
-const COLOR_TOTAL  = '#228d9f'; // brand primary
-const COLOR_PLAN6D = '#0f766e'; // teal-700
-const COLOR_PLAN3D = '#67e8f9'; // cyan-300
+// ─── Quincena VM (Sección 02) ─────────────────────────────────────────────────
 
-// ─── Slices intermedios para combineLatest tipado ─────────────────────────────
+export type QuincenaKey = 'q1' | 'q2';
+export type QuincenaEstado = 'no_iniciada' | 'parcial' | 'completa';
 
-interface CardsSlice {
-  data: ClientesActivosCards | null;
-  error: boolean;
+/** Una columna del desglose por plan dentro de la card de quincena. */
+export interface QuincenaPlanCol {
+  /** Etiqueta visible: "Plan 6 días" / "Plan 3 días". */
+  label: string;
+  /** Color del dot/barra. */
+  color: string;
+  /** Cantidad de clientes en el plan. */
+  value: number;
+  /** Porcentaje sobre el total de la quincena (0-100). */
+  pct: number;
+  /** Width % de la barra (= pct, redondeado para evitar saltos). */
+  widthPct: number;
 }
 
-interface QuincenalSlice {
-  data: ClientesQuincenalCards | null;
-  error: boolean;
+export interface QuincenaCardVM {
+  key: QuincenaKey;
+  /** "PAGARON Q1" / "PAGARON Q2" */
+  label: string;
+  /** "1 — 15 may" / "16 — 31 may" — calculado contra el período actual. */
+  rangeBadge: string;
+  estado: QuincenaEstado;
+  /** Total + delta + planos: solo presentes si estado != 'no_iniciada'. */
+  total: number;
+  delta: number | null;
+  plan6d: QuincenaPlanCol;
+  plan3d: QuincenaPlanCol;
+  /** True si comparativa parcial (mostrar "· corte parcial"). */
+  isParcial: boolean;
+  /** Solo Q2 no_iniciada: información del countdown. */
+  inicio: QuincenaInicioInfo | null;
+}
+
+/** Info para la alerta "La quincena inicia el 16 de mayo · en X días". */
+export interface QuincenaInicioInfo {
+  /** "16 de mayo" — fecha de inicio en lenguaje natural. */
+  fechaLabel: string;
+  /** Días restantes hasta el día 16 (inclusive si hoy = 16). */
+  diasRestantes: number;
+  /** "en 8 días" / "en 1 día" / "hoy". */
+  countdownLabel: string;
+  /** 'default' | 'warn' (≤ 3 días). */
+  variant: 'default' | 'warn';
+}
+
+// ─── Sección 03 — Estado de cartera ───────────────────────────────────────────
+
+/** Pendientes: solo informativo, sin delta. */
+export interface PendientesVM {
+  total: number;
+  /** "6d: X · 3d: X" */
+  secondaryText: string;
 }
 
 /**
- * Estado unificado de la sección Resumen.
- * loading=true mientras cualquiera de las dos EFs esté pendiente.
+ * Perdidos: con delta INVERTIDO (más perdidos = peor).
+ * - Si delta > 0 → rojo (`fv2-pill--down` semántico, no por signo).
+ * - Si delta < 0 → verde.
  */
-export interface ResumenState {
-  loading: boolean;
-  cards: ClientesActivosCards | null;
-  quincenal: ClientesQuincenalCards | null;
-  cardsError: boolean;
-  quincenalError: boolean;
+export interface PerdidosVM {
+  total: number;
+  delta: number;
+  secondaryText: string;
+  /** Color del valor grande (rojo si total > 0). */
+  valueColorClass: 'cv2-perdidos__value--danger' | 'cv2-perdidos__value--neutral';
+  /** Clase del chip de delta ya con la inversión aplicada. */
+  pillClass: string;
+  /** Flecha: ↑ ↓ → */
+  pillArrow: string;
+  /** Magnitud absoluta del delta para el chip. */
+  pillAbs: number;
 }
 
-/** Estado de la sección Tendencia emitido por el observable. */
-export interface TendenciaState {
-  data: TendenciaResponse | null;
-  error: boolean;
+// ─── Sección 04 — Tendencia ───────────────────────────────────────────────────
+
+export interface VariacionVM {
+  /** "↑ 2,500%" / "↓ 12%" / "N/A" */
+  display: string;
+  /** Clase CSS del color del valor. */
+  cssClass:
+    | 'cv2-var--up'
+    | 'cv2-var--down'
+    | 'cv2-var--flat'
+    | 'cv2-var--null';
+  /** "Abr 26" — etiqueta del primer mes en la ventana, o '' si N/A. */
+  mesInicialLabel: string;
 }
 
-/** Estado de la sección Distribución emitido por el observable. */
-export interface QuincenalTendenciaState {
-  data: QuincenalTendenciaResponse | null;
-  error: boolean;
+export interface SeriesLegendRow {
+  key: 'total' | '6d' | '3d';
+  label: string;
+  color: string;
+  minLabel: string;
+  maxLabel: string;
+  /** ancho relativo de la barra 0-100 sobre el max global. */
+  widthPct: number;
 }
 
-/** Estado de la sección Detalle emitido por el observable. */
-export interface DetalleState {
-  data: DetalleResponse | null;
-  error: boolean;
+// ─── Sección 06 — Clientes en riesgo ──────────────────────────────────────────
+
+export interface RiesgoVM {
+  cliente_id: string;
+  nombre: string;
+  /** "JS" — derivadas del nombre. */
+  iniciales: string;
+  /** Color de fondo del avatar (paleta determinista por nombre). */
+  avatarBg: string;
+  /** Color del texto del avatar (versión más oscura del mismo tono). */
+  avatarFg: string;
+  entrenador: string;
+  plan: '6d' | '3d';
+  /** Etiqueta del plan: "6 días" / "3 días". */
+  planLabel: string;
+  /** Clase del badge de plan. */
+  planClass: 'cv2-plan-badge--6d' | 'cv2-plan-badge--3d';
+  ultimoPagoFmt: string;     // DD/MM/YYYY
+  venceElFmt: string;        // DD/MM/YYYY
+  /** Color de la fecha "vence_el" según urgencia. */
+  venceColorClass:
+    | 'cv2-vence--vencido'
+    | 'cv2-vence--proximo'
+    | 'cv2-vence--ok';
+  /** "Pendiente" / "Por vencer". */
+  estadoLabel: string;
+  /** Clase del badge de estado. */
+  estadoClass: 'cv2-estado-badge--pendiente' | 'cv2-estado-badge--por-vencer';
 }
+
+/** VM de la card oscura de retención. */
+export interface RetencionVM {
+  /** Texto del valor: "85.5%" o "—". */
+  tasaLabel: string;
+  /** Clase de color sobre fondo oscuro. */
+  tasaColorClass:
+    | 'cv2-retencion__value--good'
+    | 'cv2-retencion__value--ok'
+    | 'cv2-retencion__value--mid'
+    | 'cv2-retencion__value--bad'
+    | 'cv2-retencion__value--null';
+  /** Badge "X de Y" (X = repitieron, Y = activos mes anterior). */
+  ratioBadge: string;
+  /** "X de Y clientes repitieron" o variante para 0/1. */
+  primaryLine: string;
+  /** Línea contextual debajo (mes anterior / sin referencia). */
+  contextLine: string;
+  /** Si true, el valor es null y se muestra estado vacío. */
+  isNull: boolean;
+  /** Total de clientes recuperados (fila inferior). */
+  recuperadosTotal: number;
+}
+
+const MESES_CORTOS = [
+  'ene', 'feb', 'mar', 'abr', 'may', 'jun',
+  'jul', 'ago', 'sep', 'oct', 'nov', 'dic'
+];
+
+const MESES_COMPLETOS = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre'
+];
 
 @Component({
   selector: 'app-clientes-dashboard',
@@ -122,22 +412,11 @@ export interface DetalleState {
 export class ClientesDashboardComponent implements OnDestroy {
   private readonly destroy$ = new Subject<void>();
 
-  // ─── Constantes expuestas al template ────────────────────────────────────────
+  // ─── Filtros ────────────────────────────────────────────────────────────────
 
-  readonly ventanas              = VENTANAS;
-  readonly ventanaLabels         = VENTANA_LABELS;
-  readonly ventanasQuincenal     = VENTANAS_QUINCENAL;
-  readonly ventanaQuincenalLabels = VENTANA_QUINCENAL_LABELS;
-  readonly planes                = PLANES;
-  readonly planLabels            = PLAN_LABELS;
+  readonly selectedEntrenador$: Observable<EntrenadorFilter> =
+    this.svc.selectedEntrenador$;
 
-  // ─── Estado local — filtro de plan (solo UI, no va al servicio) ──────────────
-
-  planFilter: PlanFilter = 'todos';
-
-  // ─── Streams ──────────────────────────────────────────────────────────────────
-
-  /** Lista de entrenadores activos para el dropdown de filtro. */
   readonly entrenadores$: Observable<EntrenadorOption[]> = this.svc
     .getEntrenadores()
     .pipe(
@@ -145,353 +424,198 @@ export class ClientesDashboardComponent implements OnDestroy {
       shareReplay(1)
     );
 
-  /** Entrenador seleccionado actualmente en el filtro global. */
-  readonly selectedEntrenador$: Observable<EntrenadorFilter> =
-    this.svc.selectedEntrenador$;
+  // ─── Ventana de tendencia (sección 04) ──────────────────────────────────────
 
-  /** Ventana temporal activa — proxy del servicio para los bindings del template. */
+  readonly ventanasTendencia: VentanaTendencia[] = VENTANAS_TENDENCIA;
+  readonly ventanaTendenciaLabels: Record<VentanaTendencia, string> =
+    VENTANA_TENDENCIA_LABELS;
   readonly ventanaTendencia$: Observable<VentanaTendencia> =
     this.svc.ventanaTendencia$;
 
-  /**
-   * Estado unificado de la sección Resumen.
-   * combineLatest espera a que ambas EFs emitan al menos una vez.
-   * startWith garantiza el estado loading=true en el primer render.
-   * shareReplay(1) evita suscripciones duplicadas del async pipe.
-   */
-  readonly resumen$: Observable<ResumenState> = combineLatest([
-    this.svc.getClientesActivosCards().pipe(
-      map((data): CardsSlice => ({ data, error: false })),
-      catchError((): Observable<CardsSlice> => of({ data: null, error: true }))
-    ),
-    this.svc.getQuincenalCards().pipe(
-      map((data): QuincenalSlice => ({ data, error: false })),
-      catchError((): Observable<QuincenalSlice> => of({ data: null, error: true }))
-    )
-  ]).pipe(
-    map(([c, q]): ResumenState => ({
-      loading: false,
-      cards: c.data,
-      quincenal: q.data,
-      cardsError: c.error,
-      quincenalError: q.error
-    })),
-    startWith<ResumenState>({
-      loading: true,
-      cards: null,
-      quincenal: null,
-      cardsError: false,
-      quincenalError: false
-    }),
-    shareReplay(1)
-  );
+  // ─── Ventana + plan filter (sección 05) ────────────────────────────────────
 
-  /**
-   * Estado de la sección Tendencia.
-   * Reacciona a cambios de entrenador y de ventana temporal.
-   * No emite startWith — el template usa *ngIf con el patrón "as tstate":
-   * mientras no haya emitido, se muestra el skeleton.
-   */
-  readonly tendencia$: Observable<TendenciaState> = this.svc.getTendencia().pipe(
-    map((data): TendenciaState => ({ data, error: false })),
-    catchError((): Observable<TendenciaState> => of({ data: null, error: true })),
-    shareReplay(1)
-  );
-
-  /** Ventana quincenal activa — proxy del servicio para los bindings del template. */
+  readonly ventanasQuincenal: VentanaQuincenal[] = VENTANAS_QUINCENAL;
+  readonly ventanaQuincenalLabels: Record<VentanaQuincenal, string> =
+    VENTANA_QUINCENAL_LABELS;
   readonly ventanaQuincenal$: Observable<VentanaQuincenal> =
     this.svc.ventanaQuincenal$;
 
-  /**
-   * Estado de la sección Distribución.
-   * Reacciona a cambios de entrenador y de ventana quincenal.
-   * No emite startWith — mientras no haya emitido se muestra el skeleton.
-   * shareReplay(1) evita suscripciones duplicadas del async pipe.
-   */
-  readonly quincenalTendencia$: Observable<QuincenalTendenciaState> =
-    this.svc.getQuincenalTendencia().pipe(
-      map((data): QuincenalTendenciaState => ({ data, error: false })),
-      catchError((): Observable<QuincenalTendenciaState> => of({ data: null, error: true })),
+  readonly planes: PlanFilter[] = PLANES;
+  readonly planLabels: Record<PlanFilter, string> = PLAN_LABELS;
+
+  /** Estado local del filtro de plan (no llama EF). */
+  planFilter: PlanFilter = 'todos';
+
+  // ─── Estado de cards (cards EF) ─────────────────────────────────────────────
+
+  readonly cardsState$: Observable<CardsState> = this.svc
+    .getClientesActivosCards()
+    .pipe(
+      map((data): CardsState => ({ status: 'loaded', data })),
+      catchError((): Observable<CardsState> =>
+        of({ status: 'error', data: null })
+      ),
+      startWith<CardsState>({ status: 'loading', data: null }),
       shareReplay(1)
     );
 
-  /**
-   * Estado de la sección Detalle (cards de cohorte + tabla en riesgo).
-   * Reacciona solo a cambios de entrenador seleccionado.
-   * No emite startWith — mientras no haya emitido se muestra el skeleton.
-   * shareReplay(1) evita suscripciones duplicadas del async pipe.
-   */
-  readonly detalle$: Observable<DetalleState> =
-    this.svc.getDetalle().pipe(
-      map((data): DetalleState => ({ data, error: false })),
-      catchError((): Observable<DetalleState> => of({ data: null, error: true })),
+  // ─── Estado del sparkline (tendencia EF — meses_atras=6) ────────────────────
+
+  readonly sparklineState$: Observable<SparklineState> = this.svc
+    .getTendencia()
+    .pipe(
+      map((data): SparklineState => ({ status: 'loaded', data })),
+      catchError((): Observable<SparklineState> =>
+        of({ status: 'error', data: null })
+      ),
+      startWith<SparklineState>({ status: 'loading', data: null }),
       shareReplay(1)
     );
 
-  // ─── Labels de delta (calculados una sola vez en el constructor) ──────────────
+  // ─── Estado del detalle (nuevos / recuperados — sección 01) ─────────────────
 
-  /** "vs 1-X mmm" — usado por Tipo A, Tipo B, Total activos y Perdidos. */
+  private readonly retryDetalle$ = new BehaviorSubject<void>(undefined);
+
+  readonly detalleState$: Observable<DetalleState> = this.retryDetalle$.pipe(
+    switchMap(() =>
+      this.svc.getDetalle().pipe(
+        map((data): DetalleState => ({ status: 'loaded', data })),
+        catchError((): Observable<DetalleState> =>
+          of({ status: 'error', data: null })
+        ),
+        startWith<DetalleState>({ status: 'loading', data: null })
+      )
+    ),
+    shareReplay(1)
+  );
+
+  // ─── Estado de quincenas (sección 02) ──────────────────────────────────────
+
+  private readonly retryQuincenal$ = new BehaviorSubject<void>(undefined);
+
+  readonly quincenalState$: Observable<QuincenalState> = this.retryQuincenal$.pipe(
+    switchMap(() =>
+      this.svc.getQuincenalCards().pipe(
+        map((data): QuincenalState => ({ status: 'loaded', data })),
+        catchError((): Observable<QuincenalState> =>
+          of({ status: 'error', data: null })
+        ),
+        startWith<QuincenalState>({ status: 'loading', data: null })
+      )
+    ),
+    shareReplay(1)
+  );
+
+  // ─── Estado de la distribución quincenal (sección 05) ──────────────────────
+
+  private readonly retryQuincenalTend$ = new BehaviorSubject<void>(undefined);
+
+  readonly quincenalTendenciaState$: Observable<QuincenalTendState> =
+    this.retryQuincenalTend$.pipe(
+      switchMap(() =>
+        this.svc.getQuincenalTendencia().pipe(
+          map((data): QuincenalTendState => ({ status: 'loaded', data })),
+          catchError((): Observable<QuincenalTendState> =>
+            of({ status: 'error', data: null })
+          ),
+          startWith<QuincenalTendState>({ status: 'loading', data: null })
+        )
+      ),
+      shareReplay(1)
+    );
+
+  // ─── Stream combinado para la card derecha (gauge depende de cards) ─────────
+
+  readonly heroState$: Observable<{
+    cards: CardsState;
+    spark: SparklineState;
+  }> = combineLatest([this.cardsState$, this.sparklineState$]).pipe(
+    map(([cards, spark]) => ({ cards, spark }))
+  );
+
+  // ─── Labels precomputados ──────────────────────────────────────────────────
+
+  /** "vs 1-X mmm" para el delta pill del hero. */
   readonly deltaLabelMonth: string;
-  /** "vs 1-15 mmm" — Q1 completa (hoy >= 16). */
-  readonly deltaLabelQ1Completa: string;
-  /** "vs 1-{min(día,15)} mmm" — Q1 parcial (hoy <= 15). */
-  readonly deltaLabelQ1Parcial: string;
-  /** "vs 16-{día_clamped} mmm" — Q2 activo (hoy >= 16). */
-  readonly deltaLabelQ2: string;
-  /** Fecha de hoy en formato dd/mm/yyyy. */
-  readonly todayFormatted: string;
+  /** "Mayo 2026" — periodo en curso. */
+  readonly periodoLabel: string;
+  /** "DD/MM/YYYY" — fecha de hoy para el corte. */
+  readonly cortePeriodLabel: string;
+  /** "ESTADÍSTICAS — CLIENTES — MAYO 2026" */
+  readonly breadcrumbCurrent: string;
+  /** Subtítulo de la sección 01 — "Quiénes están aportando ... vs 1-X abr". */
+  readonly subtitleSeccion01: string;
 
   constructor(
     private readonly svc: EstadisticasService,
     private readonly cdr: ChangeDetectorRef
   ) {
     const today = new Date();
-    this.deltaLabelMonth      = this.buildDeltaLabelMonth(today);
-    this.deltaLabelQ1Completa = this.buildDeltaLabelQ1Completa(today);
-    this.deltaLabelQ1Parcial  = this.buildDeltaLabelQ1Parcial(today);
-    this.deltaLabelQ2         = this.buildDeltaLabelQ2(today);
-    this.todayFormatted       = this.buildTodayFormatted(today);
+    this.deltaLabelMonth = this.buildDeltaLabelMonth(today);
+    this.periodoLabel = this.buildPeriodoLabel(today);
+    this.cortePeriodLabel = this.buildCortePeriodLabel(today);
+    this.breadcrumbCurrent = this.periodoLabel.toUpperCase();
+    this.subtitleSeccion01 =
+      `Quiénes están aportando al activo del período · datos comparados ${this.deltaLabelMonth}`;
   }
 
   ngOnDestroy(): void {
+    // El servicio mantiene el filtro de entrenador a propósito (estado global).
+    // Solo cerramos el subject local.
     this.destroy$.next();
     this.destroy$.complete();
   }
 
-  // ─── Handlers ────────────────────────────────────────────────────────────────
+  // ─── Filtro de entrenador ───────────────────────────────────────────────────
 
-  onEntrenadorChange(value: EntrenadorFilter): void {
-    this.svc.setEntrenador(value);
+  onEntrenadorChange(value: string): void {
+    this.svc.setEntrenador((value || 'todos') as EntrenadorFilter);
   }
 
-  onVentanaChange(n: VentanaTendencia): void {
+  // ─── Retry ──────────────────────────────────────────────────────────────────
+
+  retryHero(): void {
+    // Re-asignar el mismo entrenador re-dispara los streams.
+    const current = this.snapshotEntrenador();
+    this.svc.setEntrenador('todos');
+    if (current !== 'todos') {
+      this.svc.setEntrenador(current);
+    } else {
+      this.svc.setEntrenador('todos');
+    }
+  }
+
+  retryDetalle(): void {
+    this.retryDetalle$.next();
+  }
+
+  retryQuincenal(): void {
+    this.retryQuincenal$.next();
+  }
+
+  // ─── Ventana de tendencia (sección 04) ──────────────────────────────────────
+
+  onVentanaTendenciaChange(n: VentanaTendencia): void {
     this.svc.setVentanaTendencia(n);
   }
+
+  trackByVentana(_i: number, v: VentanaTendencia): VentanaTendencia {
+    return v;
+  }
+
+  // ─── Sección 05 — handlers ────────────────────────────────────────────────
 
   onVentanaQuincenalChange(n: VentanaQuincenal): void {
     this.svc.setVentanaQuincenal(n);
   }
 
-  /**
-   * Cambia el filtro de plan para la gráfica de distribución.
-   * Es estado local: no va al servicio.  markForCheck() garantiza que
-   * OnPush detecte el cambio y re-evalúe buildQuincenalChartData() en el template.
-   */
-  setPlanFilter(p: PlanFilter): void {
+  onPlanFilterChange(p: PlanFilter): void {
     this.planFilter = p;
     this.cdr.markForCheck();
   }
 
-  // ─── Gráfica — datos y opciones ──────────────────────────────────────────────
-
-  /**
-   * Convierte la respuesta de la EF en el objeto `data` de Chart.js.
-   * Colores con opacidad reducida en el mes actual (es_mes_actual = true)
-   * para indicar visualmente que el período está en curso.
-   */
-  buildChartData(puntos: TendenciaResponse): ChartData<'bar'> {
-    const labels = puntos.map(p => p.es_mes_actual ? `${p.label} *` : p.label);
-
-    const bgTotal  = puntos.map(p => p.es_mes_actual ? this.withAlpha(COLOR_TOTAL,  0.65) : COLOR_TOTAL);
-    const bg6d     = puntos.map(p => p.es_mes_actual ? this.withAlpha(COLOR_PLAN6D, 0.65) : COLOR_PLAN6D);
-    const bg3d     = puntos.map(p => p.es_mes_actual ? this.withAlpha(COLOR_PLAN3D, 0.65) : COLOR_PLAN3D);
-
-    return {
-      labels,
-      datasets: [
-        { label: 'Total',   data: puntos.map(p => p.total),   backgroundColor: bgTotal },
-        { label: 'Plan 6d', data: puntos.map(p => p.plan_6d), backgroundColor: bg6d   },
-        { label: 'Plan 3d', data: puntos.map(p => p.plan_3d), backgroundColor: bg3d   }
-      ]
-    };
-  }
-
-  /** Opciones estáticas de Chart.js para la barra agrupada. */
-  readonly chartOptions: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { position: 'top' },
-      tooltip: { mode: 'index', intersect: false }
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: {
-        beginAtZero: true,
-        ticks: { precision: 0, stepSize: 1 }
-      }
-    }
-  };
-
-  /**
-   * Construye el ChartData para la gráfica de distribución quincenal.
-   *
-   * Cada QuincenalTendenciaPoint genera dos entradas en el eje X:
-   *   "{label} Q1" y "{label} Q2"
-   *
-   * Una sola serie (single dataset).  El valor depende del planFilter:
-   *   'todos' → q1_total / q2_total
-   *   '6d'    → q1_plan_6d / q2_plan_6d
-   *   '3d'    → q1_plan_3d / q2_plan_3d
-   *
-   * Color por barra (callback): Q1 → COLOR_Q1, Q2 → COLOR_Q2.
-   * Opacidad reducida (0.6) si la quincena es 'parcial'.
-   * Q2 'no_iniciada' → valor null (Chart.js omite la barra).
-   *
-   * Función pura — no tiene efectos laterales.  El template la llama
-   * directamente; markForCheck() en setPlanFilter() garantiza el re-render.
-   */
-  buildQuincenalChartData(
-    puntos: QuincenalTendenciaResponse,
-    plan: PlanFilter
-  ): ChartData<'bar'> {
-    const labels: string[] = [];
-    const values: (number | null)[] = [];
-    const bgColors: string[] = [];
-
-    for (const p of puntos) {
-      // ── Q1 ──
-      labels.push(`${p.label} Q1`);
-      const q1Val = plan === '6d' ? p.q1_plan_6d
-                  : plan === '3d' ? p.q1_plan_3d
-                  : p.q1_total;
-      values.push(q1Val);
-      bgColors.push(
-        p.q1_estado === 'parcial'
-          ? this.withAlpha(COLOR_Q1, 0.6)
-          : COLOR_Q1
-      );
-
-      // ── Q2 ──
-      labels.push(`${p.label} Q2`);
-      if (p.q2_estado === 'no_iniciada') {
-        // Chart.js salta barras con valor null
-        values.push(null);
-        bgColors.push(COLOR_Q2);
-      } else {
-        const q2Val = plan === '6d' ? p.q2_plan_6d
-                    : plan === '3d' ? p.q2_plan_3d
-                    : p.q2_total;
-        values.push(q2Val);
-        bgColors.push(
-          p.q2_estado === 'parcial'
-            ? this.withAlpha(COLOR_Q2, 0.6)
-            : COLOR_Q2
-        );
-      }
-    }
-
-    return {
-      labels,
-      datasets: [
-        {
-          label: 'Clientes',
-          data: values,
-          backgroundColor: bgColors
-        }
-      ]
-    };
-  }
-
-  /** Opciones estáticas de Chart.js para la gráfica de distribución quincenal. */
-  readonly chartOptionsQuincenal: ChartConfiguration<'bar'>['options'] = {
-    responsive: true,
-    maintainAspectRatio: false,
-    plugins: {
-      legend: { display: false },
-      tooltip: {
-        callbacks: {
-          title: (items) => items[0]?.label ?? '',
-          label: (item) => {
-            const value = item.raw as number | null;
-            return value === null ? 'Sin datos' : `Clientes: ${value}`;
-          },
-          afterLabel: (item) => {
-            // Recuperamos el estado de la quincena desde el dataset index.
-            // El índice del punto es par → Q1, impar → Q2.
-            const idx   = item.dataIndex;
-            const punto = this._lastQuincenalPuntos[Math.floor(idx / 2)];
-            if (!punto) return '';
-            const estado = idx % 2 === 0 ? punto.q1_estado : punto.q2_estado;
-            if (estado === 'parcial')     return 'En curso';
-            if (estado === 'no_iniciada') return 'No iniciada';
-            return '';
-          }
-        }
-      }
-    },
-    scales: {
-      x: { grid: { display: false } },
-      y: {
-        beginAtZero: true,
-        ticks: { precision: 0, stepSize: 1 }
-      }
-    }
-  };
-
-  /**
-   * Referencia al último array de puntos recibido.
-   * Usada exclusivamente por el callback afterLabel del tooltip para acceder
-   * al estado de cada quincena sin clausuras problemáticas.
-   * Se actualiza en quincenalMinWidth() — primer helper llamado en el template
-   * una vez que los datos están disponibles.
-   */
-  private _lastQuincenalPuntos: QuincenalTendenciaResponse = [];
-
-  // ─── Helpers de estado ────────────────────────────────────────────────────────
-
-  /**
-   * Devuelve true cuando hay menos de 2 meses con al menos un cliente.
-   * En ese caso no tiene sentido mostrar la gráfica de tendencia.
-   */
-  hasInsufficientData(puntos: TendenciaResponse): boolean {
-    return puntos.filter(p => p.total > 0).length < 2;
-  }
-
-  /** Devuelve true si algún punto de la serie corresponde al mes en curso. */
-  hasMesActual(puntos: TendenciaResponse): boolean {
-    return puntos.some(p => p.es_mes_actual);
-  }
-
-  /**
-   * Devuelve true cuando todos los valores a mostrar son 0 o null.
-   * Se usa para el estado vacío de la sección Distribución.
-   */
-  hasNoQuincenalData(puntos: QuincenalTendenciaResponse): boolean {
-    return puntos.every(p =>
-      p.q1_total === 0 && p.q2_total === 0 && p.q2_estado === 'no_iniciada'
-    );
-  }
-
-  /** Devuelve true si hay alguna quincena parcial (para mostrar el footnote). */
-  hasParcialBars(puntos: QuincenalTendenciaResponse): boolean {
-    return puntos.some(p => p.q1_estado === 'parcial' || p.q2_estado === 'parcial');
-  }
-
-  /**
-   * Calcula el min-width del contenedor del canvas para que cada par de barras
-   * tenga espacio suficiente en mobile (64px por barra × total de barras).
-   * Actualiza también _lastQuincenalPuntos para el tooltip callback.
-   */
-  quincenalMinWidth(puntos: QuincenalTendenciaResponse): string {
-    this._lastQuincenalPuntos = puntos;
-    const totalBars = puntos.length * 2;
-    const computed  = totalBars * 64;
-    return computed > 0 ? `max(100%, ${computed}px)` : '100%';
-  }
-
-  // ─── TrackBy ─────────────────────────────────────────────────────────────────
-
-  trackById(_index: number, option: EntrenadorOption): string {
-    return option.id;
-  }
-
-  trackByIndex(index: number, _item: unknown): number {
-    return index;
-  }
-
-  trackByVentana(_i: number, v: VentanaTendencia): VentanaTendencia {
-    return v;
+  retryQuincenalTendencia(): void {
+    this.retryQuincenalTend$.next();
   }
 
   trackByVentanaQ(_i: number, v: VentanaQuincenal): VentanaQuincenal {
@@ -502,100 +626,1060 @@ export class ClientesDashboardComponent implements OnDestroy {
     return p;
   }
 
-  trackByClienteId(_i: number, e: EnRiesgoEntry): string {
-    return e.cliente_id;
+  /** Snapshot sincrónico del entrenador seleccionado (para retry). */
+  private snapshotEntrenador(): EntrenadorFilter {
+    let value: EntrenadorFilter = 'todos';
+    this.selectedEntrenador$
+      .subscribe((v) => (value = v))
+      .unsubscribe();
+    return value;
+  }
+
+  // ─── Sparkline (igual patrón que finanzas-v2) ───────────────────────────────
+
+  buildSparkline(
+    values: number[],
+    width = SPARKLINE_VB_WIDTH,
+    height = SPARKLINE_VB_HEIGHT
+  ): SparklineGeometry | null {
+    if (!values || values.length < 2) return null;
+
+    const min = Math.min(...values, 0);
+    const max = Math.max(...values, 0);
+    const range = max - min || 1;
+
+    const pad = SPARKLINE_PADDING_Y;
+    const innerH = height - pad * 2;
+    const stepX = width / (values.length - 1);
+
+    const coords = values.map((v, i) => {
+      const x = i * stepX;
+      const y = pad + innerH - ((v - min) / range) * innerH;
+      return { x, y };
+    });
+
+    const linePath = coords
+      .map((c, i) => `${i === 0 ? 'M' : 'L'}${c.x.toFixed(2)},${c.y.toFixed(2)}`)
+      .join(' ');
+
+    const first = coords[0];
+    const last = coords[coords.length - 1];
+    const areaPath =
+      `${linePath} L${last.x.toFixed(2)},${height} L${first.x.toFixed(2)},${height} Z`;
+
+    return {
+      linePath,
+      areaPath,
+      lastX: last.x,
+      lastY: last.y,
+      width,
+      height
+    };
+  }
+
+  buildHeroSparkline(puntos: TendenciaResponse): SparklineGeometry | null {
+    return this.buildSparkline(puntos.map((p) => p.total));
+  }
+
+  /** Etiqueta de mes corta para los extremos del sparkline ("Dic 25" / "May 26"). */
+  shortMonthLabel(mes: string): string {
+    const parts = mes.split('-');
+    if (parts.length !== 2) return mes;
+    const [y, m] = parts.map(Number);
+    if (!m || m < 1 || m > 12) return mes;
+    const yy = String(y).slice(-2);
+    const ms = MESES_CORTOS[m - 1];
+    return `${ms.charAt(0).toUpperCase()}${ms.slice(1)} ${yy}`;
+  }
+
+  // ─── Gauge de salud de cartera ──────────────────────────────────────────────
+
+  readonly gaugeSize = 160;
+
+  buildGauge(cards: ClientesActivosCards): GaugeGeometry {
+    const activos = cards.total_activos_hoy.total;
+    const total = cards.total_clientes_sistema;
+
+    const rawRatio = total === 0 ? 0 : activos / total;
+    const ratio = Math.min(Math.max(rawRatio, 0), 1);
+    const pct = Math.round(ratio * 100);
+
+    const enMora = Math.max(0, total - activos);
+
+    let color: string;
+    let grade: GaugeGeometry['grade'];
+    let description: string;
+
+    if (pct >= 80) {
+      color = '#10b981';
+      grade = 'EXCELENTE';
+      description = `${activos} de ${total} clientes con pago al día. ${enMora} en mora.`;
+    } else if (pct >= 60) {
+      color = '#f59e0b';
+      grade = 'BUENO';
+      description = `Buen nivel de actividad. ${enMora} clientes requieren seguimiento.`;
+    } else if (pct >= 40) {
+      color = '#f97316';
+      grade = 'REGULAR';
+      description = 'Nivel ajustado. Revisar clientes pendientes.';
+    } else {
+      color = '#dc2626';
+      grade = 'CRÍTICO';
+      description = 'Nivel crítico. Muchos clientes sin renovar.';
+    }
+
+    const size = this.gaugeSize;
+    const stroke = 12;
+    const r = size / 2 - stroke - 8;
+    const cx = size / 2;
+    const cy = size / 2 + 4;
+
+    const startA = Math.PI;
+    const endA = Math.PI * 2;
+    const valA = startA + (endA - startA) * ratio;
+
+    const width = size;
+    const height = size / 2 + 12;
+
+    return {
+      trackD: this.arcPath(cx, cy, r, startA, endA),
+      barD: this.arcPath(cx, cy, r, startA, valA),
+      color,
+      grade,
+      description,
+      pctLabel: pct.toString(),
+      cx,
+      cy,
+      r,
+      width,
+      height,
+      viewBox: `0 0 ${width} ${height}`
+    };
+  }
+
+  private arcPath(
+    cx: number,
+    cy: number,
+    r: number,
+    a1: number,
+    a2: number
+  ): string {
+    const safeA2 = a2 <= a1 ? a1 + 0.001 : a2;
+    const x1 = cx + r * Math.cos(a1);
+    const y1 = cy + r * Math.sin(a1);
+    const x2 = cx + r * Math.cos(safeA2);
+    const y2 = cy + r * Math.sin(safeA2);
+    const large = safeA2 - a1 > Math.PI ? 1 : 0;
+    return `M${x1.toFixed(2)},${y1.toFixed(2)} A${r},${r} 0 ${large} 1 ${x2.toFixed(2)},${y2.toFixed(2)}`;
+  }
+
+  // ─── Delta pill helpers ─────────────────────────────────────────────────────
+
+  deltaPillClass(delta: number): string {
+    if (delta > 0) return 'cv2-pill cv2-pill--up';
+    if (delta < 0) return 'cv2-pill cv2-pill--down';
+    return 'cv2-pill cv2-pill--flat';
+  }
+
+  deltaPillArrow(delta: number): string {
+    if (delta > 0) return '↑';
+    if (delta < 0) return '↓';
+    return '→';
+  }
+
+  // ─── Etiqueta del delta del mes ("vs 1-X abr") ──────────────────────────────
+
+  private buildDeltaLabelMonth(today: Date): string {
+    const day = today.getDate();
+    const prevMonthIndex = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+    const prevMonthDays = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      0
+    ).getDate();
+    const dayClamped = Math.min(day, prevMonthDays);
+    return `vs 1-${dayClamped} ${MESES_CORTOS[prevMonthIndex]}`;
+  }
+
+  private buildPeriodoLabel(today: Date): string {
+    const m = MESES_COMPLETOS[today.getMonth()];
+    return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${today.getFullYear()}`;
+  }
+
+  private buildCortePeriodLabel(today: Date): string {
+    const dd = String(today.getDate()).padStart(2, '0');
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${today.getFullYear()}`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 01 — Movimiento del mes: 4 cards
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Construye las 4 cards (Tipo A, Tipo B, Nuevos, Recuperados) a partir de los
+   * tres streams de datos. Cada card lleva su propio status para que el template
+   * pueda renderizar skeleton/error/loaded de forma independiente.
+   */
+  buildCards(
+    cs: CardsState | null,
+    ts: SparklineState | null,
+    ds: DetalleState | null
+  ): CardVM[] {
+    return [
+      this.makeTipoACard(cs, ts),
+      this.makeTipoBCard(cs, ts),
+      this.makeNuevosCard(ds),
+      this.makeRecuperadosCard(ds)
+    ];
+  }
+
+  private makeTipoACard(
+    cs: CardsState | null,
+    ts: SparklineState | null
+  ): CardVM {
+    const status = this.deriveCardsStatus(cs);
+    const data = cs?.status === 'loaded' ? cs.data : null;
+    const value = data?.tipo_a.total ?? 0;
+    const delta = data?.tipo_a.delta ?? null;
+    const plan6d = data?.tipo_a.plan_6d ?? 0;
+    const plan3d = data?.tipo_a.plan_3d ?? 0;
+
+    // Aproximación: tendencia.total por mes ≈ Tipo A histórico (clientes que
+    // pagaron en cada mes). No tenemos serie exacta de Tipo A, pero es la
+    // métrica equivalente en la respuesta de stats-clients-tendencia.
+    const sparkVals = ts?.status === 'loaded'
+      ? ts.data.map((p) => p.total)
+      : [];
+
+    return {
+      key: 'tipo_a',
+      label: 'Pagaron este mes',
+      color: COLOR_TIPO_A,
+      status,
+      value,
+      delta,
+      secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
+      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      gradId: 'cv2-spark-tipo-a'
+    };
+  }
+
+  private makeTipoBCard(
+    cs: CardsState | null,
+    ts: SparklineState | null
+  ): CardVM {
+    const status = this.deriveCardsStatus(cs);
+    const data = cs?.status === 'loaded' ? cs.data : null;
+    const value = data?.tipo_b.total ?? 0;
+    const delta = data?.tipo_b.delta ?? null;
+    const plan6d = data?.tipo_b.plan_6d ?? 0;
+    const plan3d = data?.tipo_b.plan_3d ?? 0;
+
+    // Tipo B no tiene serie histórica directa en tendenciaState; usamos el
+    // total mensual como aproximación de orden de magnitud (mismo patrón
+    // que indica el plan de la fase). En la práctica Tipo B suele ser bajo,
+    // así que la sparkline acompañará la macrotendencia.
+    const sparkVals = ts?.status === 'loaded'
+      ? ts.data.map((p) => p.total)
+      : [];
+
+    return {
+      key: 'tipo_b',
+      label: 'Vigentes mes anterior',
+      color: COLOR_TIPO_B,
+      status,
+      value,
+      delta,
+      secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
+      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      gradId: 'cv2-spark-tipo-b'
+    };
+  }
+
+  private makeNuevosCard(ds: DetalleState | null): CardVM {
+    const status = this.deriveDetalleStatus(ds);
+    const data = ds?.status === 'loaded' ? ds.data : null;
+    const value = data?.nuevos.total ?? 0;
+    const plan6d = data?.nuevos.plan_6d ?? 0;
+    const plan3d = data?.nuevos.plan_3d ?? 0;
+
+    // No hay serie histórica para nuevos — sparkline plana usando el valor
+    // actual como proxy visual (mantiene la consistencia del layout).
+    const sparkVals = data ? this.flatSeries(value) : [];
+
+    return {
+      key: 'nuevos',
+      label: 'Nuevos este mes',
+      color: COLOR_NUEVOS,
+      status,
+      value,
+      delta: null,
+      secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
+      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      gradId: 'cv2-spark-nuevos'
+    };
+  }
+
+  private makeRecuperadosCard(ds: DetalleState | null): CardVM {
+    const status = this.deriveDetalleStatus(ds);
+    const data = ds?.status === 'loaded' ? ds.data : null;
+    const value = data?.recuperados.total ?? 0;
+    const plan6d = data?.recuperados.plan_6d ?? 0;
+    const plan3d = data?.recuperados.plan_3d ?? 0;
+
+    const sparkVals = data ? this.flatSeries(value) : [];
+
+    return {
+      key: 'recuperados',
+      label: 'Recuperados este mes',
+      color: COLOR_RECUPERADOS,
+      status,
+      value,
+      delta: null,
+      secondaryText: `6d: ${plan6d} · 3d: ${plan3d}`,
+      sparkline: this.buildSparkline(sparkVals, 80, 40),
+      gradId: 'cv2-spark-recuperados'
+    };
+  }
+
+  /** Serie plana de 6 puntos al valor dado, para sparklines sin historia. */
+  private flatSeries(value: number): number[] {
+    return [value, value, value, value, value, value];
+  }
+
+  private deriveCardsStatus(cs: CardsState | null): CardStatus {
+    if (!cs || cs.status === 'loading') return 'loading';
+    if (cs.status === 'error') return 'error';
+    return 'loaded';
+  }
+
+  private deriveDetalleStatus(ds: DetalleState | null): CardStatus {
+    if (!ds || ds.status === 'loading') return 'loading';
+    if (ds.status === 'error') return 'error';
+    return 'loaded';
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 02 — Quincenas en curso
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Construye los VMs de las dos cards Q1 y Q2 a partir del response de la EF
+   * `stats-clients-quincenal`. La EF garantiza que cuando Q2 aún no inició
+   * devuelve total=0, delta=null y comparativa='parcial' — convertimos eso a
+   * 'no_iniciada' acá para que el template tenga un único discriminante.
+   */
+  buildQuincenaCards(data: ClientesQuincenalCards): QuincenaCardVM[] {
+    const today = new Date();
+    return [
+      this.makeQuincenaCard('q1', data.q1, today),
+      this.makeQuincenaCard('q2', data.q2, today)
+    ];
+  }
+
+  private makeQuincenaCard(
+    key: QuincenaKey,
+    q: QuincenaBreakdown,
+    today: Date
+  ): QuincenaCardVM {
+    const estado = this.deriveQuincenaEstado(key, q, today);
+    const rangeBadge = this.buildQuincenaRange(key, today);
+
+    const total = estado === 'no_iniciada' ? 0 : q.total;
+    const plan6dValue = estado === 'no_iniciada' ? 0 : q.plan_6d;
+    const plan3dValue = estado === 'no_iniciada' ? 0 : q.plan_3d;
+
+    const pct6d = total > 0 ? Math.round((plan6dValue / total) * 100) : 0;
+    const pct3d = total > 0 ? Math.round((plan3dValue / total) * 100) : 0;
+
+    return {
+      key,
+      label: key === 'q1' ? 'Pagaron Q1' : 'Pagaron Q2',
+      rangeBadge,
+      estado,
+      total,
+      delta: estado === 'no_iniciada' ? null : q.delta,
+      plan6d: {
+        label: 'Plan 6 días',
+        color: COLOR_PLAN_6D,
+        value: plan6dValue,
+        pct: pct6d,
+        widthPct: pct6d
+      },
+      plan3d: {
+        label: 'Plan 3 días',
+        color: COLOR_PLAN_3D,
+        value: plan3dValue,
+        pct: pct3d,
+        widthPct: pct3d
+      },
+      isParcial: estado === 'parcial',
+      inicio: estado === 'no_iniciada' ? this.buildQuincenaInicio(today) : null
+    };
   }
 
   /**
-   * Clase CSS del chip de delta para la card "Perdidos este mes".
-   * Lógica INVERSA: más perdidos (delta > 0) = peor = rojo.
+   * Estado derivado:
+   *  - Q1 siempre tiene datos (1-15 ya transcurridos al menos un día).
+   *    Si hoy ≤ 15 → parcial; si hoy ≥ 16 → completa.
+   *  - Q2 'no_iniciada' cuando hoy ≤ 15 (la EF devuelve delta=null).
+   *    Si hoy ≥ 16 → parcial.
    */
-  perdidosDeltaClass(delta: number): string {
-    if (delta > 0) return 'stats-card__delta--up-bad';
-    if (delta < 0) return 'stats-card__delta--down-good';
-    return 'stats-card__delta--zero';
+  private deriveQuincenaEstado(
+    key: QuincenaKey,
+    q: QuincenaBreakdown,
+    today: Date
+  ): QuincenaEstado {
+    const day = today.getDate();
+    if (key === 'q1') {
+      return day >= 16 ? 'completa' : 'parcial';
+    }
+    // q2
+    if (day <= 15 || q.delta === null) return 'no_iniciada';
+    return 'parcial';
   }
 
-  // ─── Helpers de la sección Detalle ───────────────────────────────────────────
+  /** Devuelve "1 — 15 may" o "16 — 31 may" según la quincena y mes actual. */
+  private buildQuincenaRange(key: QuincenaKey, today: Date): string {
+    const mes = MESES_CORTOS[today.getMonth()];
+    if (key === 'q1') {
+      return `1 — 15 ${mes}`;
+    }
+    const ultimoDia = new Date(
+      today.getFullYear(),
+      today.getMonth() + 1,
+      0
+    ).getDate();
+    return `16 — ${ultimoDia} ${mes}`;
+  }
 
   /**
-   * Devuelve la clase semántica de color para el porcentaje de retención.
-   * Verde ≥70 %, ámbar 50–69 %, rojo <50 %, gris cuando tasa es null.
+   * Calcula el countdown hasta el día 16 del mes actual.
+   * Si hoy es ≥ 16, devuelve un "hoy" defensivo (nunca debería renderizarse
+   * en ese caso porque la card pasa a 'parcial').
    */
-  retencionColor(tasa: number | null): 'verde' | 'ambar' | 'rojo' | 'gris' {
-    if (tasa === null) return 'gris';
-    if (tasa >= 70)   return 'verde';
-    if (tasa >= 50)   return 'ambar';
-    return 'rojo';
+  private buildQuincenaInicio(today: Date): QuincenaInicioInfo {
+    const dia16 = new Date(today.getFullYear(), today.getMonth(), 16);
+    const todayMidnight = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const diffMs = dia16.getTime() - todayMidnight.getTime();
+    const dias = Math.max(0, Math.round(diffMs / 86_400_000));
+
+    let countdownLabel: string;
+    if (dias === 0) countdownLabel = 'hoy';
+    else if (dias === 1) countdownLabel = 'en 1 día';
+    else countdownLabel = `en ${dias} días`;
+
+    const variant: 'default' | 'warn' = dias <= 3 ? 'warn' : 'default';
+
+    return {
+      fechaLabel: `16 de ${MESES_COMPLETOS[today.getMonth()]}`,
+      diasRestantes: dias,
+      countdownLabel,
+      variant
+    };
   }
 
-  /** Convierte la abreviación de plan a etiqueta legible. */
-  planLabel(p: '6d' | '3d'): string {
-    return p === '6d' ? '6 días' : '3 días';
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 03 — Estado de cartera
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  buildPendientesVM(data: ClientesQuincenalCards): PendientesVM {
+    const p = data.pendientes;
+    return {
+      total: p.total,
+      secondaryText: `6d: ${p.plan_6d} · 3d: ${p.plan_3d}`
+    };
   }
 
   /**
-   * Formatea una fecha ISO "YYYY-MM-DD" a "dd/MM/yyyy".
-   * Operación puramente de string — no depende de Date ni de locale.
+   * Construye el VM de "Perdidos este mes" con la lógica de delta INVERTIDA:
+   * más perdidos respecto al período anterior es peor (rojo).
    */
-  formatDateDmy(iso: string): string {
+  buildPerdidosVM(data: ClientesQuincenalCards): PerdidosVM {
+    const p = data.perdidos;
+    const delta = p.delta;
+
+    // Inversión semántica: positivo = down (rojo), negativo = up (verde).
+    let pillClass: string;
+    let pillArrow: string;
+    if (delta > 0) {
+      pillClass = 'cv2-pill cv2-pill--down';
+      pillArrow = '↑';
+    } else if (delta < 0) {
+      pillClass = 'cv2-pill cv2-pill--up';
+      pillArrow = '↓';
+    } else {
+      pillClass = 'cv2-pill cv2-pill--flat';
+      pillArrow = '→';
+    }
+
+    return {
+      total: p.total,
+      delta,
+      secondaryText: `6d: ${p.plan_6d} · 3d: ${p.plan_3d}`,
+      valueColorClass: p.total > 0
+        ? 'cv2-perdidos__value--danger'
+        : 'cv2-perdidos__value--neutral',
+      pillClass,
+      pillArrow,
+      pillAbs: Math.abs(delta)
+    };
+  }
+
+  /**
+   * Construye el VM de la card oscura de retención.
+   * tasa null → estado vacío con leyenda "Sin datos del mes anterior".
+   */
+  buildRetencionVM(data: DetalleResponse, today: Date): RetencionVM {
+    const ret = data.retencion;
+    const recuperadosTotal = data.recuperados.total;
+
+    if (ret.tasa === null) {
+      return {
+        tasaLabel: '—',
+        tasaColorClass: 'cv2-retencion__value--null',
+        ratioBadge: `${ret.repitieron_este_mes} de ${ret.activos_mes_anterior}`,
+        primaryLine: 'Sin datos del mes anterior',
+        contextLine: 'No había clientes activos para comparar.',
+        isNull: true,
+        recuperadosTotal
+      };
+    }
+
+    // tasa viene en 0–100; formateamos con un decimal.
+    const tasaPct = ret.tasa;
+    const tasaLabel = `${tasaPct.toFixed(1)}%`;
+
+    let tasaColorClass: RetencionVM['tasaColorClass'];
+    if (tasaPct >= 80)      tasaColorClass = 'cv2-retencion__value--good';
+    else if (tasaPct >= 60) tasaColorClass = 'cv2-retencion__value--ok';
+    else if (tasaPct >= 40) tasaColorClass = 'cv2-retencion__value--mid';
+    else                    tasaColorClass = 'cv2-retencion__value--bad';
+
+    const primaryLine =
+      `${ret.repitieron_este_mes} de ${ret.activos_mes_anterior} clientes repitieron`;
+
+    let contextLine: string;
+    if (ret.activos_mes_anterior === 1) {
+      contextLine = 'Solo había 1 cliente vigente en ' + this.prevMonthName(today);
+    } else if (ret.activos_mes_anterior === 0) {
+      contextLine = 'Sin referencia del mes anterior';
+    } else {
+      contextLine = `De los ${ret.activos_mes_anterior} activos en ${this.prevMonthName(today)}`;
+    }
+
+    return {
+      tasaLabel,
+      tasaColorClass,
+      ratioBadge: `${ret.repitieron_este_mes} de ${ret.activos_mes_anterior}`,
+      primaryLine,
+      contextLine,
+      isNull: false,
+      recuperadosTotal
+    };
+  }
+
+  /** Nombre completo del mes anterior al `today` recibido. */
+  private prevMonthName(today: Date): string {
+    const idx = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+    return MESES_COMPLETOS[idx];
+  }
+
+  /** Wrapper para que el template pueda llamar buildRetencionVM con `today`. */
+  buildRetencionFromData(data: DetalleResponse): RetencionVM {
+    return this.buildRetencionVM(data, new Date());
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 04 — Tendencia
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Calcula la variación entre el primer y último punto de la serie de Total.
+   * - Si solo hay 1 punto o el primer total es 0: N/A.
+   * - El % se redondea a entero si no tiene parte decimal significativa.
+   */
+  buildVariacion(puntos: TendenciaResponse): VariacionVM {
+    if (!puntos || puntos.length < 2) {
+      return {
+        display: 'N/A',
+        cssClass: 'cv2-var--null',
+        mesInicialLabel: ''
+      };
+    }
+    const prev = puntos[0].total;
+    const curr = puntos[puntos.length - 1].total;
+    const mesInicialLabel = puntos[0].label;
+
+    if (prev === 0) {
+      return { display: 'N/A', cssClass: 'cv2-var--null', mesInicialLabel };
+    }
+
+    const pct = ((curr - prev) / Math.abs(prev)) * 100;
+    const arrow = pct > 0 ? '↑' : pct < 0 ? '↓' : '→';
+    const cssClass: VariacionVM['cssClass'] =
+      pct > 0 ? 'cv2-var--up'
+      : pct < 0 ? 'cv2-var--down'
+      : 'cv2-var--flat';
+
+    const abs = Math.abs(pct);
+    const formatted = Number.isInteger(abs)
+      ? abs.toLocaleString('es-CO', { maximumFractionDigits: 0 })
+      : abs.toLocaleString('es-CO', { maximumFractionDigits: 1 });
+
+    return {
+      display: `${arrow} ${formatted}%`,
+      cssClass,
+      mesInicialLabel
+    };
+  }
+
+  /**
+   * Mini leyenda con barras min→max relativas al máximo global de las 3 series.
+   * Las barras visualizan el techo de cada serie en la ventana.
+   */
+  buildSeriesLegend(puntos: TendenciaResponse): SeriesLegendRow[] {
+    if (!puntos || puntos.length === 0) return [];
+
+    const totalVals = puntos.map((p) => p.total);
+    const sixVals   = puntos.map((p) => p.plan_6d);
+    const threeVals = puntos.map((p) => p.plan_3d);
+
+    const tMin = Math.min(...totalVals);
+    const tMax = Math.max(...totalVals);
+    const sMin = Math.min(...sixVals);
+    const sMax = Math.max(...sixVals);
+    const eMin = Math.min(...threeVals);
+    const eMax = Math.max(...threeVals);
+
+    const globalMax = Math.max(tMax, sMax, eMax) || 1;
+
+    return [
+      {
+        key: 'total',
+        label: 'Total',
+        color: COLOR_SERIE_TOTAL,
+        minLabel: tMin.toString(),
+        maxLabel: tMax.toString(),
+        widthPct: (tMax / globalMax) * 100
+      },
+      {
+        key: '6d',
+        label: 'Plan 6 días',
+        color: COLOR_SERIE_6D,
+        minLabel: sMin.toString(),
+        maxLabel: sMax.toString(),
+        widthPct: (sMax / globalMax) * 100
+      },
+      {
+        key: '3d',
+        label: 'Plan 3 días',
+        color: COLOR_SERIE_3D,
+        minLabel: eMin.toString(),
+        maxLabel: eMax.toString(),
+        widthPct: (eMax / globalMax) * 100
+      }
+    ];
+  }
+
+  /** True si el último punto está marcado como mes en curso. */
+  ultimoEsMesActual(puntos: TendenciaResponse): boolean {
+    if (!puntos || puntos.length === 0) return false;
+    return puntos[puntos.length - 1].es_mes_actual === true;
+  }
+
+  /**
+   * Construye el ChartData para la gráfica de barras agrupadas (Total / 6d / 3d).
+   * Mes actual: opacidad 0.65 + asterisco en label.
+   */
+  buildTendenciaChartData(puntos: TendenciaResponse): ChartData<'bar'> {
+    const labels = puntos.map((p) =>
+      p.es_mes_actual ? `${p.label} *` : p.label
+    );
+
+    const bgFor = (color: string, esActual: boolean): string =>
+      esActual ? this.withAlpha(color, 0.65) : color;
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Total',
+          data: puntos.map((p) => p.total),
+          backgroundColor: puntos.map((p) =>
+            bgFor(COLOR_SERIE_TOTAL, p.es_mes_actual)
+          ),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        },
+        {
+          label: 'Plan 6d',
+          data: puntos.map((p) => p.plan_6d),
+          backgroundColor: puntos.map((p) =>
+            bgFor(COLOR_SERIE_6D, p.es_mes_actual)
+          ),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        },
+        {
+          label: 'Plan 3d',
+          data: puntos.map((p) => p.plan_3d),
+          backgroundColor: puntos.map((p) =>
+            bgFor(COLOR_SERIE_3D, p.es_mes_actual)
+          ),
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.85,
+          categoryPercentage: 0.7
+        }
+      ]
+    };
+  }
+
+  /**
+   * Plugin Chart.js que dibuja el valor encima de cada barra del último mes.
+   * Solo afecta al index = labels.length - 1 (el más reciente).
+   */
+  private readonly lastMonthValuePlugin: Plugin<'bar'> = {
+    id: 'cv2-last-month-values',
+    afterDatasetsDraw: (chart: ChartJS<'bar'>) => {
+      const { ctx, data } = chart;
+      const labels = (data.labels ?? []) as string[];
+      if (labels.length === 0) return;
+      const lastIdx = labels.length - 1;
+
+      ctx.save();
+      ctx.font = '600 11px Inter, system-ui, sans-serif';
+      ctx.fillStyle = '#6b7280';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'bottom';
+
+      data.datasets.forEach((ds, dsIdx) => {
+        const meta = chart.getDatasetMeta(dsIdx);
+        const bar = meta.data[lastIdx] as
+          | { x: number; y: number; tooltipPosition?: (useFinalPosition: boolean) => { x: number; y: number } }
+          | undefined;
+        if (!bar) return;
+        const value = ds.data[lastIdx] as number | undefined;
+        if (value === undefined || value === null) return;
+
+        const tip = bar.tooltipPosition
+          ? bar.tooltipPosition(false)
+          : { x: bar.x, y: bar.y };
+        ctx.fillText(`${value}`, tip.x, tip.y - 4);
+      });
+
+      ctx.restore();
+    }
+  };
+
+  /** Plugins inyectados al canvas vía baseChart. */
+  readonly tendenciaPlugins: Plugin<'bar'>[] = [this.lastMonthValuePlugin];
+
+  /** Opciones Chart.js — minimalistas, mismo estilo finanzas-v2. */
+  readonly tendenciaChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        mode: 'index',
+        intersect: false,
+        callbacks: {
+          label: (ctx) => {
+            const v = ctx.parsed.y ?? 0;
+            return `${ctx.dataset.label}: ${v} cliente${v === 1 ? '' : 's'}`;
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 11 }
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 11 },
+          precision: 0,
+          stepSize: 1,
+          callback: (value) =>
+            typeof value === 'number' && Number.isInteger(value) ? `${value}` : ''
+        }
+      }
+    },
+    layout: {
+      padding: { top: 18 } // espacio para los labels de valor del último mes
+    }
+  };
+
+  /** Convierte un hex color a rgba con alpha. */
+  private withAlpha(hex: string, alpha: number): string {
+    const m = hex.replace('#', '');
+    const r = parseInt(m.slice(0, 2), 16);
+    const g = parseInt(m.slice(2, 4), 16);
+    const b = parseInt(m.slice(4, 6), 16);
+    return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 05 — Distribución por quincena
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Construye el ChartData para la gráfica de distribución quincenal.
+   * Cada punto produce dos barras (Q1 y Q2). Una sola serie cuyo valor
+   * depende del filtro de plan local. Q2 'no_iniciada' → null (espacio vacío).
+   */
+  buildDistribucionChartData(
+    puntos: QuincenalTendenciaResponse,
+    plan: PlanFilter
+  ): ChartData<'bar'> {
+    const labels: string[] = [];
+    const values: (number | null)[] = [];
+    const bgColors: string[] = [];
+
+    const pickValue = (
+      total: number,
+      p6d: number,
+      p3d: number
+    ): number => (plan === '6d' ? p6d : plan === '3d' ? p3d : total);
+
+    for (const p of puntos) {
+      // Q1
+      const q1Label = p.q1_estado === 'parcial' ? `${p.label} Q1 *` : `${p.label} Q1`;
+      labels.push(q1Label);
+      values.push(pickValue(p.q1_total, p.q1_plan_6d, p.q1_plan_3d));
+      bgColors.push(
+        p.q1_estado === 'parcial'
+          ? this.withAlpha(COLOR_DIST_Q1, 0.65)
+          : COLOR_DIST_Q1
+      );
+
+      // Q2
+      const q2Label = p.q2_estado === 'parcial' ? `${p.label} Q2 *` : `${p.label} Q2`;
+      labels.push(q2Label);
+      if (p.q2_estado === 'no_iniciada') {
+        values.push(null);
+        bgColors.push(COLOR_DIST_Q2);
+      } else {
+        values.push(pickValue(p.q2_total, p.q2_plan_6d, p.q2_plan_3d));
+        bgColors.push(
+          p.q2_estado === 'parcial'
+            ? COLOR_DIST_Q2.replace('0.55)', '0.4)')
+            : COLOR_DIST_Q2
+        );
+      }
+    }
+
+    return {
+      labels,
+      datasets: [
+        {
+          label: 'Clientes',
+          data: values,
+          backgroundColor: bgColors,
+          borderRadius: 6,
+          borderSkipped: false,
+          barPercentage: 0.8,
+          categoryPercentage: 0.85
+        }
+      ]
+    };
+  }
+
+  /** Devuelve true si algún punto tiene Q1 o Q2 en estado parcial. */
+  distribucionTieneEnCurso(puntos: QuincenalTendenciaResponse): boolean {
+    return puntos.some(
+      (p) => p.q1_estado === 'parcial' || p.q2_estado === 'parcial'
+    );
+  }
+
+  /** Opciones Chart.js para la distribución quincenal. */
+  readonly distribucionChartOptions: ChartConfiguration<'bar'>['options'] = {
+    responsive: true,
+    maintainAspectRatio: false,
+    plugins: {
+      legend: { display: false },
+      tooltip: {
+        callbacks: {
+          label: (ctx) => {
+            const v = (ctx.parsed.y ?? 0) as number;
+            return `${v} cliente${v === 1 ? '' : 's'}`;
+          },
+          afterLabel: (ctx) => {
+            const lbl = (ctx.label ?? '') as string;
+            const isParcial = lbl.endsWith(' *');
+            return isParcial ? 'En curso · corte parcial' : '';
+          }
+        }
+      }
+    },
+    scales: {
+      x: {
+        grid: { display: false },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 10 },
+          maxRotation: 0,
+          autoSkip: false
+        }
+      },
+      y: {
+        beginAtZero: true,
+        grid: { color: 'rgba(0, 0, 0, 0.06)' },
+        border: { display: false },
+        ticks: {
+          color: '#6b7280',
+          font: { size: 11 },
+          precision: 0,
+          stepSize: 1,
+          callback: (value) =>
+            typeof value === 'number' && Number.isInteger(value) ? `${value}` : ''
+        }
+      }
+    }
+  };
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // SECCIÓN 06 — Clientes en riesgo
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /** Construye los VMs de la tabla de clientes en riesgo. */
+  buildRiesgoVMs(entries: EnRiesgoEntry[]): RiesgoVM[] {
+    const today = new Date();
+    return entries.map((e) => this.buildRiesgoVM(e, today));
+  }
+
+  private buildRiesgoVM(e: EnRiesgoEntry, today: Date): RiesgoVM {
+    const iniciales = this.extractInitials(e.nombre);
+    const [bg, fg] = this.pickAvatarColor(e.nombre);
+
+    const planLabel = e.plan === '6d' ? '6 días' : '3 días';
+    const planClass: RiesgoVM['planClass'] =
+      e.plan === '6d' ? 'cv2-plan-badge--6d' : 'cv2-plan-badge--3d';
+
+    const venceColorClass = this.deriveVenceColor(e.vence_el, today);
+
+    const estadoLabel = e.estado === 'pendiente' ? 'Pendiente' : 'Por vencer';
+    const estadoClass: RiesgoVM['estadoClass'] =
+      e.estado === 'pendiente'
+        ? 'cv2-estado-badge--pendiente'
+        : 'cv2-estado-badge--por-vencer';
+
+    return {
+      cliente_id: e.cliente_id,
+      nombre: e.nombre,
+      iniciales,
+      avatarBg: bg,
+      avatarFg: fg,
+      entrenador: e.entrenador || '—',
+      plan: e.plan,
+      planLabel,
+      planClass,
+      ultimoPagoFmt: this.formatIsoDmy(e.ultimo_pago),
+      venceElFmt: this.formatIsoDmy(e.vence_el),
+      venceColorClass,
+      estadoLabel,
+      estadoClass
+    };
+  }
+
+  /**
+   * Extrae iniciales del nombre. "Jefry Salgado" → "JS",
+   * "Maria del Carmen Lopez" → "ML", "Juan" → "J".
+   */
+  private extractInitials(nombre: string): string {
+    const parts = nombre.trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return '?';
+    if (parts.length === 1) return parts[0].charAt(0).toUpperCase();
+    const first = parts[0].charAt(0);
+    const last = parts[parts.length - 1].charAt(0);
+    return `${first}${last}`.toUpperCase();
+  }
+
+  /** Color determinista basado en el primer charCode del nombre. */
+  private pickAvatarColor(nombre: string): readonly [string, string] {
+    const code = nombre.length > 0 ? nombre.charCodeAt(0) : 0;
+    const idx = code % AVATAR_PALETTE.length;
+    return AVATAR_PALETTE[idx];
+  }
+
+  /**
+   * Color de la fecha "vence_el":
+   *  - Vencido (< hoy)              → cv2-vence--vencido (rojo bold)
+   *  - ≤ 7 días desde hoy            → cv2-vence--proximo (amber)
+   *  - > 7 días desde hoy            → cv2-vence--ok (gris)
+   */
+  private deriveVenceColor(
+    venceIso: string,
+    today: Date
+  ): RiesgoVM['venceColorClass'] {
+    const parts = venceIso.split('-');
+    if (parts.length !== 3) return 'cv2-vence--ok';
+    const [y, m, d] = parts.map(Number);
+    if (!y || !m || !d) return 'cv2-vence--ok';
+
+    const vence = new Date(y, m - 1, d);
+    const hoyMid = new Date(
+      today.getFullYear(),
+      today.getMonth(),
+      today.getDate()
+    );
+    const diffDays = Math.round(
+      (vence.getTime() - hoyMid.getTime()) / 86_400_000
+    );
+
+    if (diffDays < 0) return 'cv2-vence--vencido';
+    if (diffDays <= 7) return 'cv2-vence--proximo';
+    return 'cv2-vence--ok';
+  }
+
+  /** Convierte ISO YYYY-MM-DD → DD/MM/YYYY. */
+  formatIsoDmy(iso: string): string {
     const parts = iso.split('-');
     if (parts.length !== 3) return iso;
     const [yyyy, mm, dd] = parts;
     return `${dd}/${mm}/${yyyy}`;
   }
 
-  // ─── Helpers privados ─────────────────────────────────────────────────────────
-
-  /**
-   * Convierte un color hex a rgba con el alpha dado.
-   * Usado para reducir opacidad en las barras del mes actual.
-   */
-  private withAlpha(hex: string, alpha: number): string {
-    const r = parseInt(hex.slice(1, 3), 16);
-    const g = parseInt(hex.slice(3, 5), 16);
-    const b = parseInt(hex.slice(5, 7), 16);
-    return `rgba(${r},${g},${b},${alpha})`;
+  trackByRiesgo(_i: number, r: RiesgoVM): string {
+    return r.cliente_id;
   }
 
-  private buildDeltaLabelMonth(today: Date): string {
-    const dayToday = today.getDate();
-    const monthIndex = today.getMonth();
-    const prevMonthIndex = monthIndex === 0 ? 11 : monthIndex - 1;
-    const prevMonthYear  = monthIndex === 0 ? today.getFullYear() - 1 : today.getFullYear();
-    const lastDayOfPrevMonth = new Date(prevMonthYear, prevMonthIndex + 1, 0).getDate();
-    const clampedDay = Math.min(dayToday, lastDayOfPrevMonth);
-    return `vs 1-${clampedDay} ${MESES_ABREV[prevMonthIndex]}`;
+  // ─── trackBy ────────────────────────────────────────────────────────────────
+
+  trackById(_i: number, t: EntrenadorOption): string {
+    return t.id;
   }
 
-  private buildDeltaLabelQ1Completa(today: Date): string {
-    const monthIndex = today.getMonth();
-    const prevMonthIndex = monthIndex === 0 ? 11 : monthIndex - 1;
-    return `vs 1-15 ${MESES_ABREV[prevMonthIndex]}`;
+  trackByCardKey(_i: number, c: CardVM): CardKey {
+    return c.key;
   }
 
-  private buildDeltaLabelQ1Parcial(today: Date): string {
-    const dayToday = today.getDate();
-    const monthIndex = today.getMonth();
-    const prevMonthIndex = monthIndex === 0 ? 11 : monthIndex - 1;
-    const clampedDay = Math.min(dayToday, 15);
-    return `vs 1-${clampedDay} ${MESES_ABREV[prevMonthIndex]}`;
+  trackByQuincenaKey(_i: number, q: QuincenaCardVM): QuincenaKey {
+    return q.key;
   }
 
-  private buildDeltaLabelQ2(today: Date): string {
-    const dayToday = today.getDate();
-    const monthIndex = today.getMonth();
-    const prevMonthIndex = monthIndex === 0 ? 11 : monthIndex - 1;
-    const prevMonthYear  = monthIndex === 0 ? today.getFullYear() - 1 : today.getFullYear();
-    const lastDayOfPrevMonth = new Date(prevMonthYear, prevMonthIndex + 1, 0).getDate();
-    const clampedDay = Math.max(16, Math.min(dayToday, lastDayOfPrevMonth));
-    return `vs 16-${clampedDay} ${MESES_ABREV[prevMonthIndex]}`;
-  }
-
-  private buildTodayFormatted(today: Date): string {
-    const d = String(today.getDate()).padStart(2, '0');
-    const m = String(today.getMonth() + 1).padStart(2, '0');
-    const y = today.getFullYear();
-    return `${d}/${m}/${y}`;
+  trackByIndex(i: number): number {
+    return i;
   }
 }

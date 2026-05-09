@@ -1,686 +1,1127 @@
-<div class="stats-page">
+<div class="cv2-page">
 
-  <!-- ── Sticky header con título y filtro ── -->
-  <header class="stats-page__header">
-    <div class="stats-page__header-content">
-      <div class="stats-page__title-row">
-        <h1 class="stats-page__title">Estadísticas — Clientes</h1>
+  <!-- ════════════════════════════════════════════════════════════════
+       HERO SECTION — dos zonas (60/40 desktop, apiladas en mobile)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-hero">
+
+    <!-- ─── ZONA IZQUIERDA ───────────────────────────────────────── -->
+    <div class="cv2-hero__left">
+
+      <!-- Breadcrumb -->
+      <div class="cv2-breadcrumb">
+        <span>ESTADÍSTICAS</span>
+        <span class="cv2-breadcrumb__sep">—</span>
+        <span>CLIENTES</span>
+        <span class="cv2-breadcrumb__sep">—</span>
+        <span class="cv2-breadcrumb__current">{{ breadcrumbCurrent }}</span>
+
+        <span class="cv2-status-chip">
+          <span class="cv2-status-chip__dot"></span>
+          corte al {{ cortePeriodLabel }}
+        </span>
       </div>
 
-      <!-- Filtro de entrenador -->
-      <div class="stats-page__filter">
-        <label for="entrenador-filter" class="stats-page__filter-label">Entrenador</label>
-        <select
-          id="entrenador-filter"
-          class="stats-page__filter-select"
-          [value]="(selectedEntrenador$ | async) ?? 'todos'"
-          (change)="onEntrenadorChange($any($event.target).value)"
-        >
-          <option value="todos">Todos los entrenadores</option>
-          <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById" [value]="t.id">
-            {{ t.fullName }}
-          </option>
-        </select>
-      </div>
-    </div>
-  </header>
+      <ng-container *ngIf="cardsState$ | async as cs">
 
-  <main class="stats-page__main">
+        <!-- ── Loading skeleton ──────────────────────────────────── -->
+        <div *ngIf="cs.status === 'loading'" class="cv2-skeleton-block">
+          <div class="cv2-skeleton cv2-skeleton--label"></div>
+          <div class="cv2-skeleton cv2-skeleton--hero"></div>
+          <div class="cv2-skeleton cv2-skeleton--meta"></div>
+          <div class="cv2-skeleton cv2-skeleton--formula"></div>
+          <div class="cv2-spark-skeleton"></div>
+        </div>
 
-    <!-- ── Cards row — Resumen ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Resumen</h2>
+        <!-- ── Error ─────────────────────────────────────────────── -->
+        <div *ngIf="cs.status === 'error'" class="cv2-error-block">
+          <p class="cv2-muted">No pudimos cargar los datos del período.</p>
+          <button type="button" class="cv2-link-btn" (click)="retryHero()">
+            Reintentar
+          </button>
+        </div>
 
-      <ng-container *ngIf="(resumen$ | async) as state">
+        <!-- ── Loaded ────────────────────────────────────────────── -->
+        <ng-container *ngIf="cs.status === 'loaded' && cs.data as c">
 
-        <!-- LOADING: todos los skeletons mientras cualquier EF esté pendiente -->
-        <div *ngIf="state.loading" class="stats-cards-grid">
-          <!-- 1 skeleton highlight (ancho completo) -->
-          <div class="skeleton-card skeleton-card--highlight" aria-hidden="true">
-            <div class="skeleton skeleton--line-sm" style="width:40%"></div>
-            <div class="skeleton skeleton--line-lg" style="width:30%; height: 48px; margin-top: 4px;"></div>
-            <div class="skeleton skeleton--line-md"></div>
-            <div class="skeleton skeleton--line-sm"></div>
-            <div class="skeleton skeleton--line-sm"></div>
+          <p class="cv2-caption">Clientes activos hoy</p>
+
+          <!-- Hero number + delta pill -->
+          <div class="cv2-hero__number-row">
+            <span class="cv2-hero__number">
+              {{ c.total_activos_hoy.total }}
+            </span>
+
+            <span [ngClass]="deltaPillClass(c.total_activos_hoy.delta)">
+              {{ deltaPillArrow(c.total_activos_hoy.delta) }}
+              <ng-container *ngIf="c.total_activos_hoy.delta !== 0">
+                {{ c.total_activos_hoy.delta < 0
+                    ? -c.total_activos_hoy.delta
+                    : c.total_activos_hoy.delta }}
+              </ng-container>
+              <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+            </span>
           </div>
-          <!-- 6 skeletons normales -->
-          <div *ngFor="let i of [1,2,3,4,5,6]; trackBy: trackByIndex" class="skeleton-card" aria-hidden="true">
-            <div class="skeleton skeleton--line-sm"></div>
-            <div class="skeleton skeleton--line-lg"></div>
-            <div class="skeleton skeleton--line-md"></div>
+
+          <!-- Desglose A/B + parciales -->
+          <p class="cv2-hero__meta">
+            {{ c.tipo_a.total }} pagaron
+            <ng-container *ngIf="c.parciales_mes > 0">
+              <span class="cv2-faint">·</span>
+              <span class="cv2-hero__parciales">
+                {{ c.parciales_mes }} pago{{ c.parciales_mes === 1 ? '' : 's' }} parcial{{ c.parciales_mes === 1 ? '' : 'es' }}
+              </span>
+            </ng-container>
+            <span class="cv2-faint">·</span>
+            {{ c.tipo_b.total }} vigentes mes ant.
+          </p>
+
+          <!-- Desglose por planes -->
+          <p class="cv2-hero__formula">
+            <span class="cv2-plan-dot cv2-plan-dot--6d"></span>
+            Plan 6 días <strong>{{ c.total_activos_hoy.plan_6d }}</strong>
+            <span class="cv2-faint">·</span>
+            <span class="cv2-plan-dot cv2-plan-dot--3d"></span>
+            Plan 3 días <strong>{{ c.total_activos_hoy.plan_3d }}</strong>
+            <span class="cv2-faint">·</span>
+            Total <strong>{{ c.total_activos_hoy.total }}</strong>
+          </p>
+
+          <!-- Sparkline (depende del estado de tendencia) -->
+          <ng-container *ngIf="sparklineState$ | async as ss">
+
+            <div *ngIf="ss.status === 'loading'" class="cv2-spark-skeleton"></div>
+
+            <div *ngIf="ss.status === 'error'" class="cv2-spark-error">
+              <span class="cv2-muted">No se pudo cargar la tendencia.</span>
+            </div>
+
+            <ng-container *ngIf="ss.status === 'loaded' && ss.data as puntos">
+              <ng-container *ngIf="buildHeroSparkline(puntos) as g">
+                <div class="cv2-spark">
+                  <svg
+                    [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
+                    preserveAspectRatio="none"
+                    class="cv2-spark__svg"
+                    aria-hidden="true">
+                    <defs>
+                      <linearGradient
+                        id="cv2SparkGrad"
+                        x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stop-color="#228d9f" stop-opacity="0.18" />
+                        <stop offset="100%" stop-color="#228d9f" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      [attr.d]="g.areaPath"
+                      fill="url(#cv2SparkGrad)"
+                      stroke="none" />
+                    <path
+                      [attr.d]="g.linePath"
+                      fill="none"
+                      stroke="#228d9f"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <circle
+                      [attr.cx]="g.lastX"
+                      [attr.cy]="g.lastY"
+                      r="3.5"
+                      fill="#228d9f"
+                      stroke="#ffffff"
+                      stroke-width="2" />
+                  </svg>
+                </div>
+
+                <!-- Labels primer / último mes -->
+                <div class="cv2-spark__labels" *ngIf="puntos.length >= 2">
+                  <span>{{ shortMonthLabel(puntos[0].mes) }}</span>
+                  <span>{{ shortMonthLabel(puntos[puntos.length - 1].mes) }}</span>
+                </div>
+              </ng-container>
+            </ng-container>
+          </ng-container>
+
+        </ng-container>
+
+      </ng-container>
+    </div>
+
+    <!-- ─── ZONA DERECHA — card flotante ────────────────────────── -->
+    <div class="cv2-hero__right">
+
+      <ng-container *ngIf="cardsState$ | async as cs">
+
+        <!-- Skeleton -->
+        <div *ngIf="cs.status === 'loading'" class="cv2-card cv2-card--floating cv2-card-skeleton">
+          <div class="cv2-skeleton cv2-skeleton--gauge"></div>
+          <div class="cv2-card-skeleton__text">
+            <div class="cv2-skeleton cv2-skeleton--line"></div>
+            <div class="cv2-skeleton cv2-skeleton--line"></div>
+            <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
           </div>
         </div>
 
-        <!-- LOADED: grilla de 7 cards -->
-        <div *ngIf="!state.loading" class="stats-cards-grid">
+        <!-- Error -->
+        <div *ngIf="cs.status === 'error'" class="cv2-card cv2-card--floating cv2-card-error">
+          <p class="cv2-muted">Error al cargar la salud de cartera.</p>
+          <button type="button" class="cv2-link-btn" (click)="retryHero()">
+            Reintentar
+          </button>
+        </div>
 
-          <!-- ══ FASE 4: Card TOTAL ACTIVOS HOY (ancho completo, primera) ══ -->
+        <!-- Loaded -->
+        <div *ngIf="cs.status === 'loaded' && cs.data as c"
+             class="cv2-card cv2-card--floating">
 
-          <!-- Error state para la highlight card -->
-          <div *ngIf="state.cardsError" class="stats-card stats-card--highlight" role="status">
-            <p class="stats-card__title">Total activos hoy</p>
-            <div class="stats-card__error" aria-live="polite">
-              <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
-              </svg>
-              <span>No se pudo cargar</span>
+          <!-- Body: gauge + contexto -->
+          <div class="cv2-card__body">
+
+            <!-- Columna izquierda: gauge -->
+            <div class="cv2-gauge-col">
+              <ng-container *ngIf="buildGauge(c) as gg">
+                <div class="cv2-gauge"
+                     [attr.style]="'--cv2-gauge-color: ' + gg.color">
+                  <svg
+                    [attr.viewBox]="gg.viewBox"
+                    [attr.width]="gg.width"
+                    [attr.height]="gg.height"
+                    class="cv2-gauge__svg"
+                    aria-hidden="true">
+                    <path
+                      [attr.d]="gg.trackD"
+                      stroke="#e5e7eb"
+                      stroke-width="12"
+                      stroke-linecap="round"
+                      fill="none" />
+                    <path
+                      [attr.d]="gg.barD"
+                      [attr.stroke]="gg.color"
+                      stroke-width="12"
+                      stroke-linecap="round"
+                      fill="none"
+                      class="cv2-gauge__bar" />
+                  </svg>
+                  <div class="cv2-gauge__center">
+                    <span class="cv2-gauge__pct">{{ gg.pctLabel }}<span class="cv2-gauge__suffix">%</span></span>
+                    <span class="cv2-gauge__grade" [style.color]="gg.color">{{ gg.grade }}</span>
+                  </div>
+                </div>
+              </ng-container>
             </div>
+
+            <!-- Columna derecha: contexto -->
+            <div class="cv2-context-col">
+              <span class="cv2-context__label">SALUD DE CARTERA</span>
+              <h3 class="cv2-context__title">Activos al día / total</h3>
+              <ng-container *ngIf="buildGauge(c) as gg">
+                <p class="cv2-context__desc">{{ gg.description }}</p>
+              </ng-container>
+            </div>
+
           </div>
 
-          <!-- Éxito: highlight card -->
-          <ng-container *ngIf="!state.cardsError && state.cards as c">
-            <div class="stats-card stats-card--highlight" role="region" aria-label="Total activos hoy">
+          <!-- Separador -->
+          <div class="cv2-card__sep"></div>
 
-              <!-- Header: tag + fecha -->
-              <div class="stats-card--highlight__header">
-                <span class="stats-card--highlight__tag">Total activos hoy</span>
-                <span class="stats-card--highlight__date">{{ todayFormatted }}</span>
-              </div>
+          <!-- Footer: badge período + filtro entrenador -->
+          <div class="cv2-card__footer">
 
-              <!-- Total grande + delta -->
-              <div class="stats-card__total-row">
-                <span class="stats-card__total stats-card__total--highlight">
-                  {{ c.total_activos_hoy.total }}
-                </span>
-                <span
-                  class="stats-card__delta"
-                  [class.stats-card__delta--up]="c.total_activos_hoy.delta > 0"
-                  [class.stats-card__delta--down]="c.total_activos_hoy.delta < 0"
-                  [class.stats-card__delta--zero]="c.total_activos_hoy.delta === 0"
-                  [attr.aria-label]="'Variación total activos: ' + c.total_activos_hoy.delta"
-                >
-                  <ng-container *ngIf="c.total_activos_hoy.delta > 0">&#8593;{{ c.total_activos_hoy.delta }}</ng-container>
-                  <ng-container *ngIf="c.total_activos_hoy.delta < 0">&#8595;{{ c.total_activos_hoy.delta * -1 }}</ng-container>
-                  <ng-container *ngIf="c.total_activos_hoy.delta === 0">=</ng-container>
-                  {{ deltaLabelMonth }}
-                </span>
-              </div>
+            <!-- Badge de período (sin navegación: dashboard de clientes es siempre "hoy") -->
+            <span class="cv2-period-badge">
+              <span class="cv2-period-badge__dot"></span>
+              {{ periodoLabel }}
+            </span>
 
-              <!-- Breakdown 6d / 3d -->
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ c.total_activos_hoy.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ c.total_activos_hoy.plan_3d }}</span>
-              </div>
-
-              <!-- Divisor horizontal -->
-              <div class="stats-card--highlight__divider" aria-hidden="true"></div>
-
-              <!-- Subdivisión A / B -->
-              <div class="stats-card--highlight__sub">
-                <p>Pagaron este mes: <strong>{{ c.tipo_a.total }}</strong></p>
-                <p>Vigentes mes anterior: <strong>{{ c.tipo_b.total }}</strong></p>
-              </div>
-
-            </div>
-          </ng-container>
-
-          <!-- ══ FASE 2: Cards Tipo A y Tipo B ══ -->
-
-          <!-- Error: Cards A y B -->
-          <ng-container *ngIf="state.cardsError">
-            <div class="stats-card" role="status">
-              <p class="stats-card__title">Pagaron este mes</p>
-              <div class="stats-card__error" aria-live="polite">
-                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
-                </svg>
-                <span>No se pudo cargar</span>
-              </div>
-            </div>
-            <div class="stats-card" role="status">
-              <p class="stats-card__title">Vigentes de mes anterior</p>
-              <div class="stats-card__error" aria-live="polite">
-                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
-                </svg>
-                <span>No se pudo cargar</span>
-              </div>
-            </div>
-          </ng-container>
-
-          <!-- Éxito: Cards A y B -->
-          <ng-container *ngIf="!state.cardsError && state.cards as c">
-
-            <!-- Card A: Pagaron este mes -->
-            <div class="stats-card" role="region" aria-label="Pagaron este mes">
-              <p class="stats-card__title">Pagaron este mes</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ c.tipo_a.total }}</span>
-                <span
-                  class="stats-card__delta"
-                  [class.stats-card__delta--up]="c.tipo_a.delta > 0"
-                  [class.stats-card__delta--down]="c.tipo_a.delta < 0"
-                  [class.stats-card__delta--zero]="c.tipo_a.delta === 0"
-                  [attr.aria-label]="'Variación: ' + c.tipo_a.delta"
-                >
-                  <ng-container *ngIf="c.tipo_a.delta > 0">&#8593;{{ c.tipo_a.delta }}</ng-container>
-                  <ng-container *ngIf="c.tipo_a.delta < 0">&#8595;{{ c.tipo_a.delta * -1 }}</ng-container>
-                  <ng-container *ngIf="c.tipo_a.delta === 0">=</ng-container>
-                  {{ deltaLabelMonth }}
-                </span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ c.tipo_a.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ c.tipo_a.plan_3d }}</span>
-              </div>
+            <!-- Filtro entrenador compacto sincronizado -->
+            <div class="cv2-trainer-select cv2-trainer-select--compact">
+              <label for="cv2-entrenador-footer" class="cv2-trainer-select__label">
+                ENTRENADOR
+              </label>
+              <select
+                id="cv2-entrenador-footer"
+                class="cv2-trainer-select__input"
+                [value]="(selectedEntrenador$ | async) ?? 'todos'"
+                (change)="onEntrenadorChange($any($event.target).value)">
+                <option value="todos">Todos</option>
+                <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById"
+                        [value]="t.id">
+                  {{ t.fullName }}
+                </option>
+              </select>
             </div>
 
-            <!-- Card B: Vigentes de mes anterior -->
-            <div class="stats-card" role="region" aria-label="Vigentes de mes anterior">
-              <p class="stats-card__title">Vigentes de mes anterior</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ c.tipo_b.total }}</span>
-                <span
-                  class="stats-card__delta"
-                  [class.stats-card__delta--up]="c.tipo_b.delta > 0"
-                  [class.stats-card__delta--down]="c.tipo_b.delta < 0"
-                  [class.stats-card__delta--zero]="c.tipo_b.delta === 0"
-                  [attr.aria-label]="'Variación: ' + c.tipo_b.delta"
-                >
-                  <ng-container *ngIf="c.tipo_b.delta > 0">&#8593;{{ c.tipo_b.delta }}</ng-container>
-                  <ng-container *ngIf="c.tipo_b.delta < 0">&#8595;{{ c.tipo_b.delta * -1 }}</ng-container>
-                  <ng-container *ngIf="c.tipo_b.delta === 0">=</ng-container>
-                  {{ deltaLabelMonth }}
-                </span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ c.tipo_b.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ c.tipo_b.plan_3d }}</span>
-              </div>
-            </div>
-
-          </ng-container>
-
-          <!-- ══ FASE 3: Cards Q1, Q2, Pendientes, Perdidos ══ -->
-
-          <!-- Error: 4 cards quincenales -->
-          <ng-container *ngIf="state.quincenalError">
-            <div *ngFor="let i of [1,2,3,4]; trackBy: trackByIndex" class="stats-card" role="status">
-              <ng-container [ngSwitch]="i">
-                <p *ngSwitchCase="1" class="stats-card__title">Pagaron Q1</p>
-                <p *ngSwitchCase="2" class="stats-card__title">Pagaron Q2</p>
-                <p *ngSwitchCase="3" class="stats-card__title">Pendientes de pago</p>
-                <p *ngSwitchCase="4" class="stats-card__title">Perdidos este mes</p>
-              </ng-container>
-              <div class="stats-card__error" aria-live="polite">
-                <svg class="stats-card__error-icon" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fill-rule="evenodd" d="M18 10A8 8 0 1 1 2 10a8 8 0 0 1 16 0zm-8-4a.75.75 0 0 1 .75.75v4a.75.75 0 0 1-1.5 0v-4A.75.75 0 0 1 10 6zm0 7a1 1 0 1 1 0-2 1 1 0 0 1 0 2z" clip-rule="evenodd"/>
-                </svg>
-                <span>No se pudo cargar</span>
-              </div>
-            </div>
-          </ng-container>
-
-          <!-- Éxito: 4 cards quincenales -->
-          <ng-container *ngIf="!state.quincenalError && state.quincenal as q">
-
-            <!-- Card Q1: Pagaron Q1 -->
-            <div class="stats-card" role="region" aria-label="Pagaron primera quincena">
-              <p class="stats-card__title">Pagaron Q1</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ q.q1.total }}</span>
-                <span
-                  class="stats-card__delta"
-                  [class.stats-card__delta--up]="(q.q1.delta ?? 0) > 0"
-                  [class.stats-card__delta--down]="(q.q1.delta ?? 0) < 0"
-                  [class.stats-card__delta--zero]="(q.q1.delta ?? 0) === 0"
-                  [attr.aria-label]="'Variación Q1: ' + (q.q1.delta ?? 0)"
-                >
-                  <ng-container *ngIf="(q.q1.delta ?? 0) > 0">&#8593;{{ q.q1.delta }}</ng-container>
-                  <ng-container *ngIf="(q.q1.delta ?? 0) < 0">&#8595;{{ (q.q1.delta ?? 0) * -1 }}</ng-container>
-                  <ng-container *ngIf="(q.q1.delta ?? 0) === 0">=</ng-container>
-                  <ng-container *ngIf="q.q1.comparativa === 'completa'">{{ deltaLabelQ1Completa }} &#10003;</ng-container>
-                  <ng-container *ngIf="q.q1.comparativa === 'parcial'">{{ deltaLabelQ1Parcial }} ~</ng-container>
-                </span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ q.q1.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ q.q1.plan_3d }}</span>
-              </div>
-            </div>
-
-            <!-- Card Q2: Pagaron Q2 -->
-            <div class="stats-card" role="region" aria-label="Pagaron segunda quincena">
-              <p class="stats-card__title">Pagaron Q2</p>
-
-              <!-- Caso A: Q2 aún no ha comenzado (delta es null) -->
-              <ng-container *ngIf="q.q2.delta === null; else q2Active">
-                <div class="stats-card__total-row">
-                  <span
-                    class="stats-card__total stats-card__total--placeholder"
-                    title="La quincena aún no ha comenzado"
-                    aria-label="Segunda quincena sin datos"
-                  >&mdash;</span>
-                </div>
-                <p class="stats-card__legend">La quincena aún no ha comenzado</p>
-              </ng-container>
-
-              <!-- Caso B: Q2 en curso -->
-              <ng-template #q2Active>
-                <div class="stats-card__total-row">
-                  <span class="stats-card__total">{{ q.q2.total }}</span>
-                  <span
-                    class="stats-card__delta"
-                    [class.stats-card__delta--up]="(q.q2.delta ?? 0) > 0"
-                    [class.stats-card__delta--down]="(q.q2.delta ?? 0) < 0"
-                    [class.stats-card__delta--zero]="(q.q2.delta ?? 0) === 0"
-                    [attr.aria-label]="'Variación Q2: ' + (q.q2.delta ?? 0)"
-                  >
-                    <ng-container *ngIf="(q.q2.delta ?? 0) > 0">&#8593;{{ q.q2.delta }}</ng-container>
-                    <ng-container *ngIf="(q.q2.delta ?? 0) < 0">&#8595;{{ (q.q2.delta ?? 0) * -1 }}</ng-container>
-                    <ng-container *ngIf="(q.q2.delta ?? 0) === 0">=</ng-container>
-                    {{ deltaLabelQ2 }} ~
-                  </span>
-                </div>
-                <p class="stats-card__legend">en curso</p>
-                <div class="stats-card__breakdown">
-                  <span>6 días: {{ q.q2.plan_6d }}</span>
-                  <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                  <span>3 días: {{ q.q2.plan_3d }}</span>
-                </div>
-              </ng-template>
-            </div>
-
-            <!-- Card Pendientes: Pendientes de pago -->
-            <div class="stats-card" role="region" aria-label="Pendientes de pago">
-              <p class="stats-card__title">Pendientes de pago</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total stats-card__total--ambar">{{ q.pendientes.total }}</span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ q.pendientes.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ q.pendientes.plan_3d }}</span>
-              </div>
-            </div>
-
-            <!-- Card Perdidos: Perdidos este mes (lógica de color INVERTIDA) -->
-            <div class="stats-card" role="region" aria-label="Perdidos este mes">
-              <p class="stats-card__title">Perdidos este mes</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ q.perdidos.total }}</span>
-                <span
-                  class="stats-card__delta"
-                  [ngClass]="perdidosDeltaClass(q.perdidos.delta)"
-                  [attr.aria-label]="'Variación perdidos: ' + q.perdidos.delta"
-                >
-                  <ng-container *ngIf="q.perdidos.delta > 0">&#8593;{{ q.perdidos.delta }}</ng-container>
-                  <ng-container *ngIf="q.perdidos.delta < 0">&#8595;{{ q.perdidos.delta * -1 }}</ng-container>
-                  <ng-container *ngIf="q.perdidos.delta === 0">=</ng-container>
-                  {{ deltaLabelMonth }}
-                </span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ q.perdidos.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ q.perdidos.plan_3d }}</span>
-              </div>
-            </div>
-
-          </ng-container>
-
-        </div><!-- /.stats-cards-grid (loaded) -->
+          </div>
+        </div>
 
       </ng-container>
+    </div>
 
-    </section>
+  </section>
 
-    <!-- ── Tendencia ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Tendencia</h2>
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 01 — Movimiento del mes (4 cards con sparklines)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
 
-      <!-- Selector de ventana temporal (pills) -->
-      <div class="stats-pills" role="group" aria-label="Ventana temporal">
-        <button
-          *ngFor="let v of ventanas; trackBy: trackByVentana"
-          type="button"
-          class="stats-pill"
-          [class.stats-pill--active]="(ventanaTendencia$ | async) === v"
-          (click)="onVentanaChange(v)"
-          [attr.aria-pressed]="(ventanaTendencia$ | async) === v"
-        >
-          {{ ventanaLabels[v] }}
+    <header class="cv2-section__header">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">01 /</span>
+          <h2 class="cv2-section__title">Movimiento del mes</h2>
+        </div>
+        <p class="cv2-section__subtitle">{{ subtitleSeccion01 }}</p>
+      </div>
+    </header>
+
+    <ng-container *ngIf="{
+      cs: (cardsState$ | async),
+      ts: (sparklineState$ | async),
+      ds: (detalleState$ | async)
+    } as st">
+      <div class="cv2-cards-grid">
+        <ng-container *ngFor="let c of buildCards(st.cs, st.ts, st.ds); trackBy: trackByCardKey">
+
+          <article class="cv2-card cv2-card--metric">
+
+            <!-- Loading -->
+            <div *ngIf="c.status === 'loading'" class="cv2-card-metric__skeleton">
+              <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+              <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+              <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+            </div>
+
+            <!-- Error -->
+            <div *ngIf="c.status === 'error'" class="cv2-card-metric__error">
+              <div class="cv2-card-metric__top">
+                <div class="cv2-card-metric__label-row">
+                  <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
+                  <span class="cv2-card-metric__label">{{ c.label }}</span>
+                </div>
+              </div>
+              <p class="cv2-muted">No se pudo cargar.</p>
+              <button
+                type="button"
+                class="cv2-link-btn"
+                (click)="c.key === 'nuevos' || c.key === 'recuperados' ? retryDetalle() : retryHero()">
+                Reintentar
+              </button>
+            </div>
+
+            <!-- Loaded -->
+            <ng-container *ngIf="c.status === 'loaded'">
+
+              <!-- Top: dot + label + sparkline -->
+              <div class="cv2-card-metric__top">
+                <div class="cv2-card-metric__label-row">
+                  <span class="cv2-card-metric__dot" [style.background]="c.color"></span>
+                  <span class="cv2-card-metric__label">{{ c.label }}</span>
+                </div>
+
+                <ng-container *ngIf="c.sparkline as g">
+                  <svg
+                    [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
+                    preserveAspectRatio="none"
+                    class="cv2-card-metric__spark"
+                    aria-hidden="true">
+                    <defs>
+                      <linearGradient
+                        [attr.id]="c.gradId"
+                        x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" [attr.stop-color]="c.color" stop-opacity="0.18" />
+                        <stop offset="100%" [attr.stop-color]="c.color" stop-opacity="0" />
+                      </linearGradient>
+                    </defs>
+                    <path
+                      [attr.d]="g.areaPath"
+                      [attr.fill]="'url(#' + c.gradId + ')'"
+                      stroke="none" />
+                    <path
+                      [attr.d]="g.linePath"
+                      fill="none"
+                      [attr.stroke]="c.color"
+                      stroke-width="1.8"
+                      stroke-linecap="round"
+                      stroke-linejoin="round" />
+                    <circle
+                      [attr.cx]="g.lastX"
+                      [attr.cy]="g.lastY"
+                      r="2.5"
+                      [attr.fill]="c.color"
+                      stroke="#ffffff"
+                      stroke-width="1.5" />
+                  </svg>
+                </ng-container>
+              </div>
+
+              <!-- Valor -->
+              <div class="cv2-card-metric__value">{{ c.value }}</div>
+
+              <!-- Delta pill (solo cards con delta) -->
+              <div class="cv2-card-metric__meta">
+                <span
+                  *ngIf="c.delta !== null"
+                  [ngClass]="deltaPillClass(c.delta)">
+                  {{ deltaPillArrow(c.delta) }}
+                  <ng-container *ngIf="c.delta !== 0">
+                    {{ c.delta < 0 ? -c.delta : c.delta }}
+                  </ng-container>
+                  <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+                </span>
+              </div>
+
+              <!-- Texto secundario: 6d / 3d -->
+              <p class="cv2-card-metric__secondary">{{ c.secondaryText }}</p>
+
+            </ng-container>
+
+          </article>
+
+        </ng-container>
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 02 — Quincenas en curso (Q1 + Q2)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <header class="cv2-section__header">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">02 /</span>
+          <h2 class="cv2-section__title">Quincenas en curso</h2>
+        </div>
+        <p class="cv2-section__subtitle">
+          Pagos consolidados por quincena del mes
+        </p>
+      </div>
+    </header>
+
+    <ng-container *ngIf="quincenalState$ | async as qs">
+
+      <!-- Loading: skeleton de ambas cards -->
+      <div *ngIf="qs.status === 'loading'" class="cv2-quincenas-grid">
+        <div *ngFor="let i of [1,2]; trackBy: trackByIndex"
+             class="cv2-card cv2-quincena-card cv2-quincena-card--skeleton">
+          <div class="cv2-quincena-card__head">
+            <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+            <div class="cv2-skeleton cv2-skeleton--badge"></div>
+          </div>
+          <div class="cv2-skeleton cv2-skeleton--big-value"></div>
+          <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+          <div class="cv2-skeleton cv2-skeleton--plan-grid"></div>
+        </div>
+      </div>
+
+      <!-- Error: mensaje + retry centrado -->
+      <div *ngIf="qs.status === 'error'" class="cv2-card cv2-quincena-error">
+        <p class="cv2-muted">No pudimos cargar las quincenas.</p>
+        <button type="button" class="cv2-link-btn" (click)="retryQuincenal()">
+          Reintentar
         </button>
       </div>
 
-      <!-- Loading: skeleton mientras tendencia$ no haya emitido -->
-      <ng-container *ngIf="(tendencia$ | async) as tstate; else tendenciaLoading">
+      <!-- Loaded: dos cards Q1 / Q2 -->
+      <div *ngIf="qs.status === 'loaded' && qs.data as data"
+           class="cv2-quincenas-grid">
+        <ng-container *ngFor="let q of buildQuincenaCards(data); trackBy: trackByQuincenaKey">
 
-        <!-- Error -->
-        <div *ngIf="tstate.error" class="tendencia-message" role="alert">
-          No se pudo cargar la tendencia.
-        </div>
+          <article class="cv2-card cv2-quincena-card"
+                   [class.cv2-quincena-card--empty]="q.estado === 'no_iniciada'">
 
-        <!-- Datos insuficientes -->
-        <ng-container *ngIf="!tstate.error && tstate.data !== null">
-          <div *ngIf="hasInsufficientData(tstate.data)" class="tendencia-message">
-            No hay suficientes datos para mostrar tendencia.
-          </div>
-
-          <!-- Gráfica -->
-          <ng-container *ngIf="!hasInsufficientData(tstate.data)">
-            <div class="tendencia-chart-wrapper">
-              <div
-                class="tendencia-chart-scroll"
-                [style.min-width]="tstate.data.length > 3 ? tstate.data.length * 88 + 'px' : '100%'"
-              >
-                <div class="tendencia-chart-canvas">
-                  <canvas
-                    baseChart
-                    [type]="'bar'"
-                    [data]="buildChartData(tstate.data)"
-                    [options]="chartOptions"
-                    aria-label="Gráfica de tendencia de clientes por mes"
-                    role="img"
-                  ></canvas>
-                </div>
-              </div>
+            <!-- Header: label + badge de rango -->
+            <div class="cv2-quincena-card__head">
+              <span class="cv2-quincena-card__label">{{ q.label | uppercase }}</span>
+              <span class="cv2-quincena-card__range">{{ q.rangeBadge }}</span>
             </div>
 
-            <!-- Nota pie: mes en curso -->
-            <p *ngIf="hasMesActual(tstate.data)" class="tendencia-footnote">
-              * Mes en curso — corte al día de hoy
-            </p>
+            <!-- ── Estado vacío para Q2 no iniciada ── -->
+            <ng-container *ngIf="q.estado === 'no_iniciada'; else conDatos">
+
+              <div class="cv2-quincena-card__empty">
+                <div class="cv2-quincena-empty__line"></div>
+                <p class="cv2-quincena-empty__text">
+                  La quincena aún no ha comenzado
+                </p>
+              </div>
+
+              <!-- Alerta de inicio al fondo -->
+              <div *ngIf="q.inicio as info"
+                   class="cv2-inicio-alert">
+                <span class="cv2-inicio-alert__main">
+                  <span class="cv2-inicio-alert__dot"></span>
+                  <span class="cv2-inicio-alert__text">
+                    La quincena inicia el {{ info.fechaLabel }}
+                  </span>
+                </span>
+                <span
+                  class="cv2-countdown"
+                  [class.cv2-countdown--warn]="info.variant === 'warn'">
+                  {{ info.countdownLabel }}
+                </span>
+              </div>
+
+            </ng-container>
+
+            <!-- ── Card con datos (Q1 siempre, Q2 cuando inició) ── -->
+            <ng-template #conDatos>
+
+              <!-- Valor principal -->
+              <div class="cv2-quincena-card__value">{{ q.total }}</div>
+
+              <!-- Delta + parcial badge -->
+              <div class="cv2-quincena-card__meta">
+                <span
+                  *ngIf="q.delta !== null"
+                  [ngClass]="deltaPillClass(q.delta)">
+                  {{ deltaPillArrow(q.delta) }}
+                  <ng-container *ngIf="q.delta !== 0">
+                    {{ q.delta < 0 ? -q.delta : q.delta }}
+                  </ng-container>
+                  <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+                </span>
+                <span *ngIf="q.isParcial" class="cv2-quincena-parcial">
+                  · corte parcial
+                </span>
+              </div>
+
+              <!-- Desglose por plan (dos columnas con barra) -->
+              <div class="cv2-plan-grid">
+                <div class="cv2-plan-col">
+                  <div class="cv2-plan-col__head">
+                    <span class="cv2-plan-col__dot"
+                          [style.background]="q.plan6d.color"></span>
+                    <span class="cv2-plan-col__label">{{ q.plan6d.label }}</span>
+                  </div>
+                  <div class="cv2-plan-col__value">{{ q.plan6d.value }}</div>
+                  <div class="cv2-plan-col__pct">{{ q.plan6d.pct }}%</div>
+                  <div class="cv2-plan-col__bar-track">
+                    <div
+                      class="cv2-plan-col__bar"
+                      [style.width.%]="q.plan6d.widthPct"
+                      [style.background]="q.plan6d.color">
+                    </div>
+                  </div>
+                </div>
+
+                <div class="cv2-plan-col__sep" aria-hidden="true"></div>
+
+                <div class="cv2-plan-col">
+                  <div class="cv2-plan-col__head">
+                    <span class="cv2-plan-col__dot"
+                          [style.background]="q.plan3d.color"></span>
+                    <span class="cv2-plan-col__label">{{ q.plan3d.label }}</span>
+                  </div>
+                  <div class="cv2-plan-col__value">{{ q.plan3d.value }}</div>
+                  <div class="cv2-plan-col__pct">{{ q.plan3d.pct }}%</div>
+                  <div class="cv2-plan-col__bar-track">
+                    <div
+                      class="cv2-plan-col__bar"
+                      [style.width.%]="q.plan3d.widthPct"
+                      [style.background]="q.plan3d.color">
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+            </ng-template>
+
+          </article>
+
+        </ng-container>
+      </div>
+
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 03 — Estado de cartera (pendientes / perdidos / retención)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <header class="cv2-section__header">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">03 /</span>
+          <h2 class="cv2-section__title">Estado de cartera</h2>
+        </div>
+        <p class="cv2-section__subtitle">
+          Pendientes, perdidos y retención del período
+        </p>
+      </div>
+    </header>
+
+    <div class="cv2-cartera-grid">
+
+      <!-- ═══ ZONA IZQUIERDA — dos cards apiladas ═══ -->
+      <div class="cv2-cartera-left">
+
+        <!-- ── CARD PENDIENTES ── -->
+        <ng-container *ngIf="quincenalState$ | async as qs">
+
+          <article *ngIf="qs.status === 'loading'"
+                   class="cv2-card cv2-cartera-card cv2-cartera-card--skeleton">
+            <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+            <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+            <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+          </article>
+
+          <article *ngIf="qs.status === 'error'" class="cv2-card cv2-cartera-card">
+            <div class="cv2-cartera-card__head">
+              <span class="cv2-cartera-card__dot" style="background: #f59e0b"></span>
+              <span class="cv2-cartera-card__label">Pendientes de pago</span>
+            </div>
+            <p class="cv2-muted">No se pudo cargar.</p>
+            <button type="button" class="cv2-link-btn" (click)="retryQuincenal()">
+              Reintentar
+            </button>
+          </article>
+
+          <ng-container *ngIf="qs.status === 'loaded' && qs.data as qd">
+            <ng-container *ngIf="buildPendientesVM(qd) as p">
+              <article class="cv2-card cv2-cartera-card cv2-cartera-card--pendientes">
+                <div class="cv2-cartera-card__head">
+                  <span class="cv2-cartera-card__dot" style="background: #f59e0b"></span>
+                  <span class="cv2-cartera-card__label">Pendientes de pago</span>
+                </div>
+
+                <div class="cv2-pendientes__value">{{ p.total }}</div>
+
+                <p class="cv2-cartera-card__breakdown">{{ p.secondaryText }}</p>
+
+                <p class="cv2-cartera-card__desc">
+                  Clientes con cuota vencida o por vencer en los próximos 7 días.
+                </p>
+              </article>
+            </ng-container>
           </ng-container>
+
         </ng-container>
 
-      </ng-container>
+        <!-- ── CARD PERDIDOS ── -->
+        <ng-container *ngIf="quincenalState$ | async as qs2">
 
-      <!-- Skeleton mientras el observable no ha emitido -->
-      <ng-template #tendenciaLoading>
-        <div class="skeleton-chart skeleton-chart--lg" aria-hidden="true">
-          <div class="skeleton skeleton--block"></div>
-        </div>
-      </ng-template>
+          <article *ngIf="qs2.status === 'loading'"
+                   class="cv2-card cv2-cartera-card cv2-cartera-card--skeleton">
+            <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+            <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+            <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+          </article>
 
-    </section>
-
-    <!-- ── Distribución — barras por quincena ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Distribución</h2>
-
-      <!-- Header: pills de ventana (izq) + toggle de plan (der) -->
-      <div class="distribucion-header">
-
-        <!-- Pills de ventana quincenal -->
-        <div class="distribucion-header__ventana">
-          <div class="stats-pills" role="group" aria-label="Ventana de distribución">
-            <button
-              *ngFor="let v of ventanasQuincenal; trackBy: trackByVentanaQ"
-              type="button"
-              class="stats-pill"
-              [class.stats-pill--active]="(ventanaQuincenal$ | async) === v"
-              (click)="onVentanaQuincenalChange(v)"
-              [attr.aria-pressed]="(ventanaQuincenal$ | async) === v"
-            >
-              {{ ventanaQuincenalLabels[v] }}
+          <article *ngIf="qs2.status === 'error'" class="cv2-card cv2-cartera-card">
+            <div class="cv2-cartera-card__head">
+              <span class="cv2-cartera-card__dot" style="background: var(--fv2-danger)"></span>
+              <span class="cv2-cartera-card__label">Perdidos este mes</span>
+            </div>
+            <p class="cv2-muted">No se pudo cargar.</p>
+            <button type="button" class="cv2-link-btn" (click)="retryQuincenal()">
+              Reintentar
             </button>
-          </div>
-        </div>
+          </article>
 
-        <!-- Toggle de plan -->
-        <div class="distribucion-header__plan">
-          <div class="stats-pills" role="group" aria-label="Filtro de plan">
-            <button
-              *ngFor="let p of planes; trackBy: trackByPlan"
-              type="button"
-              class="stats-pill stats-pill--sm"
-              [class.stats-pill--active]="planFilter === p"
-              (click)="setPlanFilter(p)"
-              [attr.aria-pressed]="planFilter === p"
-            >
-              {{ planLabels[p] }}
-            </button>
-          </div>
-        </div>
+          <ng-container *ngIf="qs2.status === 'loaded' && qs2.data as qd2">
+            <ng-container *ngIf="buildPerdidosVM(qd2) as pe">
+              <article class="cv2-card cv2-cartera-card cv2-cartera-card--perdidos">
+                <div class="cv2-cartera-card__head">
+                  <span class="cv2-cartera-card__dot" style="background: var(--fv2-danger)"></span>
+                  <span class="cv2-cartera-card__label">Perdidos este mes</span>
+                </div>
+
+                <div class="cv2-perdidos__row">
+                  <div class="cv2-perdidos__value" [ngClass]="pe.valueColorClass">
+                    {{ pe.total }}
+                  </div>
+
+                  <span [ngClass]="pe.pillClass">
+                    {{ pe.pillArrow }}
+                    <ng-container *ngIf="pe.delta !== 0">{{ pe.pillAbs }}</ng-container>
+                    <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+                  </span>
+                </div>
+
+                <p class="cv2-cartera-card__breakdown">{{ pe.secondaryText }}</p>
+
+                <p class="cv2-cartera-card__desc">
+                  Clientes que estaban activos y no renovaron este período.
+                </p>
+              </article>
+            </ng-container>
+          </ng-container>
+
+        </ng-container>
 
       </div>
 
-      <!-- Estado: loading / error / vacío / gráfica -->
-      <ng-container *ngIf="(quincenalTendencia$ | async) as qstate; else distribucionLoading">
+      <!-- ═══ ZONA DERECHA — Card oscura de retención ═══ -->
+      <div class="cv2-cartera-right">
 
-        <!-- Error -->
-        <div *ngIf="qstate.error" class="distribucion-message" role="alert">
-          No se pudo cargar la distribución.
-        </div>
+        <ng-container *ngIf="detalleState$ | async as ds">
 
-        <ng-container *ngIf="!qstate.error && qstate.data !== null">
-
-          <!-- Sin datos suficientes -->
-          <div *ngIf="hasNoQuincenalData(qstate.data)" class="distribucion-message">
-            No hay suficientes datos para mostrar la distribución.
-          </div>
-
-          <!-- Gráfica -->
-          <ng-container *ngIf="!hasNoQuincenalData(qstate.data)">
-            <div class="distribucion-chart-wrapper">
-              <div
-                class="distribucion-chart-scroll"
-                [style.min-width]="quincenalMinWidth(qstate.data)"
-              >
-                <div class="distribucion-chart-canvas">
-                  <canvas
-                    baseChart
-                    [type]="'bar'"
-                    [data]="buildQuincenalChartData(qstate.data, planFilter)"
-                    [options]="chartOptionsQuincenal"
-                    aria-label="Gráfica de distribución quincenal de clientes"
-                    role="img"
-                  ></canvas>
-                </div>
-              </div>
+          <!-- Skeleton oscuro -->
+          <article *ngIf="ds.status === 'loading'"
+                   class="cv2-retencion-card cv2-retencion-card--skeleton">
+            <div class="cv2-retencion-card__head">
+              <div class="cv2-skeleton-dark cv2-skeleton--label-sm"></div>
+              <div class="cv2-skeleton-dark cv2-skeleton--badge"></div>
             </div>
+            <div class="cv2-skeleton-dark cv2-skeleton--big-value"></div>
+            <div class="cv2-skeleton-dark cv2-skeleton--line"></div>
+            <div class="cv2-skeleton-dark cv2-skeleton--line cv2-skeleton--short"></div>
+            <div class="cv2-skeleton-dark cv2-skeleton--block-sm"></div>
+          </article>
 
-            <!-- Nota: quincena en curso -->
-            <p *ngIf="hasParcialBars(qstate.data)" class="distribucion-footnote">
-              * Quincena en curso — corte al día de hoy
+          <!-- Error oscuro -->
+          <article *ngIf="ds.status === 'error'"
+                   class="cv2-retencion-card cv2-retencion-card--error">
+            <p class="cv2-retencion-card__error-text">
+              No se pudo cargar la retención.
             </p>
+            <button type="button" class="cv2-link-btn cv2-link-btn--dark"
+                    (click)="retryDetalle()">
+              Reintentar
+            </button>
+          </article>
+
+          <!-- Loaded -->
+          <ng-container *ngIf="ds.status === 'loaded' && ds.data as dd">
+            <ng-container *ngIf="buildRetencionFromData(dd) as r">
+
+              <article class="cv2-retencion-card">
+
+                <!-- Header: label + badge "X de Y" -->
+                <div class="cv2-retencion-card__head">
+                  <span class="cv2-retencion-card__label">RETENCIÓN ESTE MES</span>
+                  <span class="cv2-retencion-card__badge">{{ r.ratioBadge }}</span>
+                </div>
+
+                <!-- Valor principal -->
+                <div class="cv2-retencion__value" [ngClass]="r.tasaColorClass">
+                  {{ r.tasaLabel }}
+                </div>
+
+                <!-- Línea primaria -->
+                <p class="cv2-retencion-card__primary">{{ r.primaryLine }}</p>
+
+                <!-- Línea contextual -->
+                <p class="cv2-retencion-card__context">{{ r.contextLine }}</p>
+
+                <!-- Divisor -->
+                <div class="cv2-retencion-card__divider"></div>
+
+                <!-- Fila de recuperados -->
+                <div class="cv2-recuperados-row">
+                  <span class="cv2-recuperados-row__main">
+                    <span class="cv2-recuperados-row__dot"></span>
+                    <span class="cv2-recuperados-row__text">
+                      <strong>{{ r.recuperadosTotal }}</strong> clientes recuperados
+                    </span>
+                  </span>
+                  <span class="cv2-recuperados-row__sub">de meses anteriores</span>
+                </div>
+
+              </article>
+
+            </ng-container>
           </ng-container>
 
         </ng-container>
 
-      </ng-container>
+      </div>
 
-      <!-- Skeleton mientras el observable no ha emitido -->
-      <ng-template #distribucionLoading>
-        <div class="skeleton-chart skeleton-chart--md" aria-hidden="true">
-          <div class="skeleton skeleton--block"></div>
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 04 — Tendencia (variación + gráfica de barras)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <header class="cv2-section__header cv2-section__header--with-actions">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">04 /</span>
+          <h2 class="cv2-section__title">Tendencia</h2>
         </div>
-      </ng-template>
+        <p class="cv2-section__subtitle">
+          Comparativa de activos por plan en el tiempo
+        </p>
+      </div>
 
-    </section>
+      <!-- Pills de ventana -->
+      <div class="cv2-pills" role="tablist" aria-label="Ventana temporal">
+        <button
+          *ngFor="let v of ventanasTendencia; trackBy: trackByVentana"
+          type="button"
+          role="tab"
+          class="cv2-pill-tab"
+          [class.cv2-pill-tab--active]="(ventanaTendencia$ | async) === v"
+          [attr.aria-selected]="(ventanaTendencia$ | async) === v"
+          (click)="onVentanaTendenciaChange(v)">
+          {{ ventanaTendenciaLabels[v] }}
+        </button>
+      </div>
+    </header>
 
-    <!-- ── Detalle — cohorte + clientes en riesgo ── -->
-    <section class="stats-section">
-      <h2 class="stats-section__title">Detalle</h2>
+    <ng-container *ngIf="sparklineState$ | async as ts">
 
-      <ng-container *ngIf="(detalle$ | async) as dstate; else detalleLoading">
+      <div class="cv2-card cv2-tendencia-card">
+
+        <!-- Loading -->
+        <div *ngIf="ts.status === 'loading'" class="cv2-tendencia__skeleton">
+          <div class="cv2-skeleton cv2-skeleton--block cv2-skeleton--tendencia-left"></div>
+          <div class="cv2-skeleton cv2-skeleton--block cv2-skeleton--tendencia-right"></div>
+        </div>
 
         <!-- Error -->
-        <div *ngIf="dstate.error" class="detalle-message" role="alert">
-          No se pudo cargar el detalle.
+        <div *ngIf="ts.status === 'error'" class="cv2-tendencia__error">
+          <p class="cv2-muted">No se pudo cargar la tendencia.</p>
+          <button type="button" class="cv2-link-btn" (click)="retryHero()">
+            Reintentar
+          </button>
         </div>
 
-        <ng-container *ngIf="!dstate.error && dstate.data as d">
+        <!-- Loaded -->
+        <ng-container *ngIf="ts.status === 'loaded' && ts.data as puntos">
 
-          <!-- ── SUBSECCIÓN A: cards de cohorte ── -->
-          <div class="stats-cards-grid stats-cards-grid--3col">
+          <div class="cv2-tendencia__body">
 
-            <!-- Card Retención -->
-            <div class="stats-card stats-card--compact" role="region" aria-label="Retención este mes">
-              <p class="stats-card__title">Retención este mes</p>
+            <!-- ── Zona izquierda: variación + leyenda ── -->
+            <div class="cv2-tendencia__left">
+              <span class="cv2-tendencia__label">VARIACIÓN</span>
 
-              <!-- Sin base de comparación -->
-              <ng-container *ngIf="d.retencion.tasa === null; else retencionConDatos">
-                <div class="stats-card__total-row">
-                  <span class="stats-card__total stats-card__total--placeholder">Sin datos</span>
+              <ng-container *ngIf="buildVariacion(puntos) as varia">
+                <div class="cv2-var" [ngClass]="varia.cssClass">
+                  {{ varia.display }}
                 </div>
-                <p class="stats-card__legend">No hubo activos el mes anterior</p>
+                <p
+                  *ngIf="varia.mesInicialLabel"
+                  class="cv2-tendencia__sub">
+                  en activos vs {{ varia.mesInicialLabel }}
+                </p>
+                <p
+                  *ngIf="!varia.mesInicialLabel"
+                  class="cv2-tendencia__sub">
+                  Agrega más meses para ver la tendencia.
+                </p>
               </ng-container>
 
-              <!-- Con porcentaje -->
-              <ng-template #retencionConDatos>
-                <div class="stats-card__total-row">
-                  <span
-                    class="stats-card__total"
-                    [class.stats-card__total--verde]="retencionColor(d.retencion.tasa) === 'verde'"
-                    [class.stats-card__total--ambar]="retencionColor(d.retencion.tasa) === 'ambar'"
-                    [class.stats-card__total--rojo]="retencionColor(d.retencion.tasa) === 'rojo'"
-                  >{{ d.retencion.tasa!.toFixed(1) }}%</span>
-                </div>
-                <p class="stats-card__legend">{{ d.retencion.repitieron_este_mes }} de {{ d.retencion.activos_mes_anterior }} repitieron</p>
-              </ng-template>
-            </div>
+              <div class="cv2-tendencia__divider"></div>
 
-            <!-- Card Nuevos -->
-            <div class="stats-card stats-card--compact" role="region" aria-label="Nuevos este mes">
-              <p class="stats-card__title">Nuevos este mes</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ d.nuevos.total }}</span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ d.nuevos.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ d.nuevos.plan_3d }}</span>
-              </div>
-            </div>
-
-            <!-- Card Recuperados -->
-            <div class="stats-card stats-card--compact" role="region" aria-label="Recuperados este mes">
-              <p class="stats-card__title">Recuperados este mes</p>
-              <div class="stats-card__total-row">
-                <span class="stats-card__total">{{ d.recuperados.total }}</span>
-              </div>
-              <div class="stats-card__breakdown">
-                <span>6 días: {{ d.recuperados.plan_6d }}</span>
-                <span class="stats-card__breakdown-divider" aria-hidden="true"></span>
-                <span>3 días: {{ d.recuperados.plan_3d }}</span>
-              </div>
-            </div>
-
-          </div><!-- /.stats-cards-grid--3col -->
-
-          <!-- ── SUBSECCIÓN B: tabla clientes en riesgo ── -->
-          <div class="riesgo-section">
-
-            <!-- Header con badge contador -->
-            <div class="riesgo-header">
-              <h3 class="riesgo-header__title">Clientes en riesgo</h3>
-              <span
-                *ngIf="d.en_riesgo.length > 0"
-                class="riesgo-header__badge"
-                [attr.aria-label]="d.en_riesgo.length + ' clientes en riesgo'"
-              >{{ d.en_riesgo.length }}</span>
-            </div>
-
-            <!-- Estado vacío -->
-            <div *ngIf="d.en_riesgo.length === 0" class="riesgo-empty" role="status">
-              🎉 Sin clientes en riesgo
-            </div>
-
-            <!-- ── Desktop: tabla ── -->
-            <table
-              *ngIf="d.en_riesgo.length > 0"
-              class="risk-table-desktop"
-              aria-label="Clientes en riesgo"
-            >
-              <thead>
-                <tr>
-                  <th scope="col">Cliente</th>
-                  <th scope="col">Entrenador</th>
-                  <th scope="col">Plan</th>
-                  <th scope="col">Último pago</th>
-                  <th scope="col">Vence el</th>
-                  <th scope="col">Estado</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr
-                  *ngFor="let entry of d.en_riesgo; trackBy: trackByClienteId"
-                >
-                  <td>{{ entry.nombre }}</td>
-                  <td>{{ entry.entrenador || '—' }}</td>
-                  <td>{{ planLabel(entry.plan) }}</td>
-                  <td>{{ formatDateDmy(entry.ultimo_pago) }}</td>
-                  <td>{{ formatDateDmy(entry.vence_el) }}</td>
-                  <td>
+              <!-- Mini leyenda con barras min→max -->
+              <ul class="cv2-legend">
+                <li
+                  *ngFor="let row of buildSeriesLegend(puntos); trackBy: trackByIndex"
+                  class="cv2-legend__row">
+                  <div class="cv2-legend__head">
                     <span
-                      class="riesgo-chip"
-                      [class.riesgo-chip--pendiente]="entry.estado === 'pendiente'"
-                      [class.riesgo-chip--por-vencer]="entry.estado === 'por_vencer'"
-                    >
-                      {{ entry.estado === 'pendiente' ? 'Pendiente' : 'Por vencer' }}
+                      class="cv2-legend__dot"
+                      [style.background]="row.color"></span>
+                    <span class="cv2-legend__label">{{ row.label }}</span>
+                    <span class="cv2-legend__range">
+                      {{ row.minLabel }}
+                      <span class="cv2-legend__arrow">→</span>
+                      {{ row.maxLabel }}
                     </span>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </div>
+                  <div class="cv2-legend__bar-track">
+                    <div
+                      class="cv2-legend__bar"
+                      [style.width.%]="row.widthPct"
+                      [style.background]="row.color">
+                    </div>
+                  </div>
+                </li>
+              </ul>
 
-            <!-- ── Mobile: lista de cards ── -->
-            <div
-              *ngIf="d.en_riesgo.length > 0"
-              class="risk-cards-mobile"
-              role="list"
-            >
-              <div
-                *ngFor="let entry of d.en_riesgo; trackBy: trackByClienteId"
-                class="risk-card-mobile"
-                role="listitem"
-              >
-                <div class="risk-card-mobile__top">
-                  <span class="risk-card-mobile__name">{{ entry.nombre }}</span>
-                  <span
-                    class="riesgo-chip"
-                    [class.riesgo-chip--pendiente]="entry.estado === 'pendiente'"
-                    [class.riesgo-chip--por-vencer]="entry.estado === 'por_vencer'"
-                  >
-                    {{ entry.estado === 'pendiente' ? 'Pendiente' : 'Por vencer' }}
-                  </span>
-                </div>
-                <p class="risk-card-mobile__sub">
-                  {{ entry.entrenador || '—' }} · {{ planLabel(entry.plan) }}
-                </p>
-                <p class="risk-card-mobile__vence">
-                  Vence el {{ formatDateDmy(entry.vence_el) }}
-                </p>
-                <p class="risk-card-mobile__pago">
-                  Último pago: {{ formatDateDmy(entry.ultimo_pago) }}
-                </p>
-              </div>
+              <p
+                *ngIf="ultimoEsMesActual(puntos)"
+                class="cv2-tendencia__footnote">
+                * Mes en curso — corte al día de hoy
+              </p>
             </div>
 
-          </div><!-- /.riesgo-section -->
+            <!-- ── Zona derecha: chart ── -->
+            <div class="cv2-tendencia__right">
+
+              <div class="cv2-chart-canvas-wrap">
+                <canvas
+                  baseChart
+                  [type]="'bar'"
+                  [data]="buildTendenciaChartData(puntos)"
+                  [options]="tendenciaChartOptions"
+                  [plugins]="tendenciaPlugins"
+                  aria-label="Gráfica de tendencia mensual de clientes"
+                  role="img"></canvas>
+              </div>
+
+              <div class="cv2-chart-legend">
+                <span class="cv2-chart-legend__item">
+                  <span class="cv2-chart-legend__sw" style="background:#228d9f"></span>
+                  Total
+                </span>
+                <span class="cv2-chart-legend__item">
+                  <span class="cv2-chart-legend__sw" style="background:#1a7080"></span>
+                  Plan 6 días
+                </span>
+                <span class="cv2-chart-legend__item">
+                  <span class="cv2-chart-legend__sw" style="background:#67e8f9"></span>
+                  Plan 3 días
+                </span>
+              </div>
+
+            </div>
+
+          </div>
 
         </ng-container>
 
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 05 — Distribución por quincena
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <header class="cv2-section__header cv2-section__header--with-actions">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">05 /</span>
+          <h2 class="cv2-section__title">Distribución por quincena</h2>
+        </div>
+        <p class="cv2-section__subtitle">
+          Histórico de pagos consolidados por quincena
+        </p>
+      </div>
+
+      <div class="cv2-section__actions">
+        <!-- Plan filter (local) -->
+        <div class="cv2-pills" role="tablist" aria-label="Filtro de plan">
+          <button
+            *ngFor="let p of planes; trackBy: trackByPlan"
+            type="button"
+            role="tab"
+            class="cv2-pill-tab"
+            [class.cv2-pill-tab--active]="planFilter === p"
+            [attr.aria-selected]="planFilter === p"
+            (click)="onPlanFilterChange(p)">
+            {{ planLabels[p] }}
+          </button>
+        </div>
+
+        <!-- Ventana quincenal -->
+        <div class="cv2-pills" role="tablist" aria-label="Ventana temporal quincenal">
+          <button
+            *ngFor="let v of ventanasQuincenal; trackBy: trackByVentanaQ"
+            type="button"
+            role="tab"
+            class="cv2-pill-tab"
+            [class.cv2-pill-tab--active]="(ventanaQuincenal$ | async) === v"
+            [attr.aria-selected]="(ventanaQuincenal$ | async) === v"
+            (click)="onVentanaQuincenalChange(v)">
+            {{ ventanaQuincenalLabels[v] }}
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <ng-container *ngIf="quincenalTendenciaState$ | async as qt">
+
+      <div class="cv2-card cv2-distribucion-card">
+
+        <!-- Loading -->
+        <div *ngIf="qt.status === 'loading'" class="cv2-distribucion__skeleton">
+          <div class="cv2-skeleton cv2-skeleton--block cv2-skeleton--distribucion"></div>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="qt.status === 'error'" class="cv2-distribucion__error">
+          <p class="cv2-muted">No se pudo cargar la distribución.</p>
+          <button type="button" class="cv2-link-btn" (click)="retryQuincenalTendencia()">
+            Reintentar
+          </button>
+        </div>
+
+        <!-- Loaded -->
+        <ng-container *ngIf="qt.status === 'loaded' && qt.data as puntos">
+
+          <div class="cv2-chart-canvas-wrap cv2-chart-canvas-wrap--tall">
+            <canvas
+              baseChart
+              [type]="'bar'"
+              [data]="buildDistribucionChartData(puntos, planFilter)"
+              [options]="distribucionChartOptions"
+              aria-label="Gráfica de distribución por quincena"
+              role="img"></canvas>
+          </div>
+
+          <!-- Mini leyenda Q1/Q2 -->
+          <div class="cv2-chart-legend">
+            <span class="cv2-chart-legend__item">
+              <span class="cv2-chart-legend__sw" style="background:#228d9f"></span>
+              Q1
+            </span>
+            <span class="cv2-chart-legend__item">
+              <span class="cv2-chart-legend__sw" style="background:rgba(34,141,159,0.55)"></span>
+              Q2
+            </span>
+          </div>
+
+          <p
+            *ngIf="distribucionTieneEnCurso(puntos)"
+            class="cv2-tendencia__footnote">
+            * Quincena en curso — corte al día de hoy
+          </p>
+
+        </ng-container>
+
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 06 — Clientes en riesgo
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <ng-container *ngIf="detalleState$ | async as ds">
+
+      <header class="cv2-section__header cv2-section__header--with-actions">
+        <div class="cv2-section__heading">
+          <div class="cv2-section__title-row">
+            <span class="cv2-section__num">06 /</span>
+            <h2 class="cv2-section__title">Clientes en riesgo</h2>
+          </div>
+          <p class="cv2-section__subtitle">
+            Pagos vencidos o próximos a vencer · seguimiento individual
+          </p>
+        </div>
+
+        <span
+          *ngIf="ds.status === 'loaded' && ds.data && ds.data.en_riesgo.length > 0"
+          class="cv2-riesgo-badge">
+          <span class="cv2-riesgo-badge__dot"></span>
+          {{ ds.data.en_riesgo.length }} requieren atención
+        </span>
+      </header>
+
+      <!-- Loading: skeleton de filas -->
+      <div *ngIf="ds.status === 'loading'" class="cv2-card cv2-riesgo-table">
+        <div class="cv2-riesgo-row cv2-riesgo-row--skeleton"
+             *ngFor="let i of [1,2,3]; trackBy: trackByIndex">
+          <div class="cv2-skeleton cv2-skeleton--avatar"></div>
+          <div class="cv2-skeleton cv2-skeleton--line"></div>
+        </div>
+      </div>
+
+      <!-- Error -->
+      <div *ngIf="ds.status === 'error'" class="cv2-card cv2-riesgo-error">
+        <p class="cv2-muted">No se pudo cargar la lista de clientes en riesgo.</p>
+        <button type="button" class="cv2-link-btn" (click)="retryDetalle()">
+          Reintentar
+        </button>
+      </div>
+
+      <!-- Loaded: empty state o tabla -->
+      <ng-container *ngIf="ds.status === 'loaded' && ds.data as dd">
+
+        <!-- Empty state -->
+        <div *ngIf="dd.en_riesgo.length === 0" class="cv2-riesgo-empty">
+          <div class="cv2-riesgo-empty__icon" aria-hidden="true">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.5"
+                 stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="20 6 9 17 4 12"></polyline>
+            </svg>
+          </div>
+          <h3 class="cv2-riesgo-empty__title">Sin clientes en riesgo</h3>
+          <p class="cv2-riesgo-empty__subtitle">
+            Todos los clientes están al día.
+          </p>
+        </div>
+
+        <!-- Tabla / cards -->
+        <div *ngIf="dd.en_riesgo.length > 0" class="cv2-card cv2-riesgo-table">
+
+          <!-- Header desktop -->
+          <div class="cv2-riesgo-thead">
+            <span class="cv2-riesgo-th cv2-riesgo-th--cliente">Cliente</span>
+            <span class="cv2-riesgo-th">Entrenador</span>
+            <span class="cv2-riesgo-th">Plan</span>
+            <span class="cv2-riesgo-th">Último pago</span>
+            <span class="cv2-riesgo-th">Vence el</span>
+            <span class="cv2-riesgo-th">Estado</span>
+          </div>
+
+          <!-- Filas (desktop) / Cards (mobile) -->
+          <ng-container
+            *ngFor="let r of buildRiesgoVMs(dd.en_riesgo); trackBy: trackByRiesgo">
+
+            <div class="cv2-riesgo-row">
+
+              <!-- Cliente: avatar + nombre -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--cliente">
+                <span class="cv2-riesgo-avatar"
+                      [style.background]="r.avatarBg"
+                      [style.color]="r.avatarFg">
+                  {{ r.iniciales }}
+                </span>
+                <span class="cv2-riesgo-nombre">{{ r.nombre }}</span>
+              </div>
+
+              <!-- Entrenador -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--entrenador">
+                <span class="cv2-riesgo-th-mobile">Entrenador</span>
+                <span class="cv2-riesgo-entrenador">{{ r.entrenador }}</span>
+              </div>
+
+              <!-- Plan -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--plan">
+                <span class="cv2-plan-badge" [ngClass]="r.planClass">
+                  {{ r.planLabel }}
+                </span>
+              </div>
+
+              <!-- Último pago -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--ultimo">
+                <span class="cv2-riesgo-th-mobile">Último pago</span>
+                <span class="cv2-riesgo-date">{{ r.ultimoPagoFmt }}</span>
+              </div>
+
+              <!-- Vence el -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--vence">
+                <span class="cv2-riesgo-th-mobile">Vence el</span>
+                <span class="cv2-vence" [ngClass]="r.venceColorClass">
+                  {{ r.venceElFmt }}
+                </span>
+              </div>
+
+              <!-- Estado -->
+              <div class="cv2-riesgo-cell cv2-riesgo-cell--estado">
+                <span class="cv2-estado-badge" [ngClass]="r.estadoClass">
+                  <span class="cv2-estado-badge__dot"></span>
+                  {{ r.estadoLabel }}
+                </span>
+              </div>
+
+            </div>
+
+          </ng-container>
+
+        </div>
+
       </ng-container>
 
-      <!-- Skeleton mientras detalle$ no ha emitido -->
-      <ng-template #detalleLoading>
-        <!-- 3 skeleton-cards compactas -->
-        <div class="stats-cards-grid stats-cards-grid--3col">
-          <div *ngFor="let i of [1,2,3]; trackBy: trackByIndex" class="skeleton-card skeleton-card--compact" aria-hidden="true">
-            <div class="skeleton skeleton--line-sm" style="width:55%"></div>
-            <div class="skeleton skeleton--line-lg" style="width:35%; height:28px; margin-top:2px;"></div>
-            <div class="skeleton skeleton--line-sm"></div>
-          </div>
-        </div>
-        <!-- Skeleton tabla -->
-        <div class="skeleton-table" aria-hidden="true">
-          <div *ngFor="let i of [1,2,3,4,5]; trackBy: trackByIndex" class="skeleton-table__row">
-            <div class="skeleton skeleton--line-md"></div>
-            <div class="skeleton skeleton--line-sm"></div>
-            <div class="skeleton skeleton--line-sm"></div>
-          </div>
-        </div>
-      </ng-template>
+    </ng-container>
 
-    </section>
-
-  </main>
+  </section>
 
 </div>

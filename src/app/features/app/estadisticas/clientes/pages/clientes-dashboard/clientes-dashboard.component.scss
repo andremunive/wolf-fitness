@@ -1,949 +1,1922 @@
+// ─── Tokens locales (mismos que finanzas-dashboard, prefijo --fv2-*) ─────────
 :host {
+  --fv2-bg:           var(--wf-surface-muted);
+  --fv2-bg-card:      #ffffff;
+  --fv2-bg-dark:      #1a3a3a;
+  --fv2-brand:        #228d9f;
+  --fv2-brand-dark:   #1a7080;
+  --fv2-success:      #10b981;
+  --fv2-success-soft: rgba(16, 185, 129, 0.12);
+  --fv2-danger:       #dc2626;
+  --fv2-danger-soft:  rgba(220, 38, 38, 0.12);
+  --fv2-indigo:       #6366f1;
+  --fv2-text-primary:   #111827;
+  --fv2-text-secondary: #6b7280;
+  --fv2-text-muted:     #9ca3af;
+  --fv2-border:       #e5e7eb;
+  --fv2-radius:       12px;
+  --fv2-radius-lg:    16px;
+  --fv2-shadow:       0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.04);
+  --fv2-shadow-lg:    0 8px 24px rgba(0, 0, 0, 0.08), 0 2px 6px rgba(0, 0, 0, 0.04);
+
+  // Tokens específicos de clientes
+  --fv2-teal-light:   rgba(34, 141, 159, 0.08);
+  --fv2-plan-6d:      #228d9f;
+  --fv2-plan-3d:      #67e8f9;
+
   display: block;
+  background: var(--fv2-bg);
+  color: var(--fv2-text-primary);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 
   @media (min-width: 768px) {
     height: 100%;
-  }
-}
-
-// ─── Page shell ────────────────────────────────────────────────────────────────
-
-.stats-page {
-  min-height: 100%;
-  background: #f7f8fa;
-  display: flex;
-  flex-direction: column;
-
-  @media (min-width: 768px) {
-    height: 100%;
-    min-height: 0;
     overflow-y: auto;
   }
 }
 
-// ─── Sticky header ─────────────────────────────────────────────────────────────
-
-.stats-page__header {
-  position: sticky;
-  top: 0;
-  z-index: 10;
-  background: #ffffff;
-  padding: 16px 16px 12px;
-  border-bottom: 1px solid #e5e7eb;
-
-  @media (min-width: 640px) {
-    padding: 20px 24px 14px;
-  }
-}
-
-.stats-page__header-content {
-  max-width: 1200px;
+// ─── Page ────────────────────────────────────────────────────────────────────
+.cv2-page {
+  max-width: 1280px;
   margin: 0 auto;
-}
-
-.stats-page__title-row {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  flex-wrap: wrap;
-  margin-bottom: 12px;
+  padding: 16px 16px 48px;
 
   @media (min-width: 768px) {
-    margin-bottom: 0;
+    padding: 24px 24px 56px;
+  }
+
+  @media (min-width: 1024px) {
+    padding: 32px 32px 64px;
   }
 }
 
-.stats-page__title {
-  font-size: 22px;
-  font-weight: 700;
-  color: #111827;
-  line-height: 1.2;
+// ─── Hero section ───────────────────────────────────────────────────────────
+.cv2-hero {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 20px;
+  align-items: stretch;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 60% 1fr;
+    gap: 28px;
+  }
+}
+
+.cv2-hero__left {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  min-width: 0;
+}
+
+.cv2-hero__right {
+  display: flex;
+  min-width: 0;
+}
+
+// ─── Breadcrumb ─────────────────────────────────────────────────────────────
+.cv2-breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  color: var(--fv2-text-muted);
+  font-weight: 500;
+}
+
+.cv2-breadcrumb__sep {
+  color: var(--fv2-text-muted);
+  opacity: 0.6;
+}
+
+.cv2-breadcrumb__current {
+  color: var(--fv2-text-secondary);
+  font-weight: 600;
+}
+
+.cv2-status-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--fv2-teal-light);
+  color: var(--fv2-brand);
+  font-size: 0.65rem;
+  letter-spacing: 0.04em;
+  font-weight: 600;
+  text-transform: none;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--fv2-brand);
+    animation: cv2-pulse 1.6s ease-in-out infinite;
+  }
+}
+
+@keyframes cv2-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.4; }
+}
+
+// ─── Hero typography ────────────────────────────────────────────────────────
+.cv2-caption {
+  font-size: 0.875rem;
+  color: var(--fv2-text-secondary);
+  font-weight: 500;
   margin: 0;
-  flex: 1;
+}
 
-  @media (min-width: 640px) {
-    font-size: 26px;
+.cv2-muted {
+  color: var(--fv2-text-muted);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+.cv2-faint {
+  color: var(--fv2-text-muted);
+  margin: 0 4px;
+}
+
+.cv2-link-btn {
+  background: none;
+  border: none;
+  color: var(--fv2-brand);
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 0;
+  font-size: 0.85rem;
+
+  &:hover { color: var(--fv2-brand-dark); }
+}
+
+.cv2-hero__number-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.cv2-hero__number {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: clamp(2.5rem, 5vw, 3.5rem);
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fv2-text-primary);
+}
+
+.cv2-hero__meta {
+  font-size: 0.875rem;
+  color: var(--fv2-text-secondary);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-hero__parciales {
+  color: #f59e0b;
+  font-weight: 600;
+}
+
+.cv2-hero__formula {
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.6;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+
+  strong {
+    color: var(--fv2-text-primary);
+    font-weight: 700;
   }
 }
 
-// ─── Filter row ────────────────────────────────────────────────────────────────
+.cv2-plan-dot {
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  margin-right: 4px;
+  vertical-align: -1px;
 
-// Mobile: stacks below the title.
-// ≥768px: sits on the same row as the title (flex row via header-content).
+  &--6d { background: var(--fv2-plan-6d); }
+  &--3d { background: var(--fv2-plan-3d); }
+}
 
-.stats-page__filter {
+// ─── Delta pill ─────────────────────────────────────────────────────────────
+.cv2-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  &__label {
+    color: inherit;
+    opacity: 0.7;
+    font-weight: 500;
+    margin-left: 2px;
+  }
+
+  &--up {
+    background: var(--fv2-success-soft);
+    color: var(--fv2-success);
+  }
+  &--down {
+    background: var(--fv2-danger-soft);
+    color: var(--fv2-danger);
+  }
+  &--flat {
+    background: rgba(107, 114, 128, 0.12);
+    color: var(--fv2-text-secondary);
+  }
+}
+
+// ─── Sparkline ──────────────────────────────────────────────────────────────
+.cv2-spark {
+  width: 100%;
+  height: 60px;
+  margin-top: 8px;
+}
+
+.cv2-spark__svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+
+.cv2-spark__labels {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 4px;
+  font-size: 0.7rem;
+  color: var(--fv2-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.cv2-spark-skeleton {
+  width: 100%;
+  height: 60px;
+  margin-top: 8px;
+  border-radius: 8px;
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: cv2-shimmer 1.4s ease-in-out infinite;
+}
+
+.cv2-spark-error {
+  margin-top: 8px;
+}
+
+// ─── Card flotante ──────────────────────────────────────────────────────────
+.cv2-card {
+  background: var(--fv2-bg-card);
+  border-radius: var(--fv2-radius);
+  border: 1px solid var(--fv2-border);
+  width: 100%;
+
+  &--floating {
+    border-radius: var(--fv2-radius-lg);
+    box-shadow: var(--fv2-shadow-lg);
+    border-color: rgba(229, 231, 235, 0.6);
+  }
+}
+
+.cv2-card__body {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 20px;
+  padding: 20px;
+  align-items: center;
+
+  @media (max-width: 480px) {
+    grid-template-columns: 1fr;
+    text-align: center;
+    padding: 18px;
+  }
+}
+
+.cv2-card__sep {
+  height: 1px;
+  background: var(--fv2-border);
+  margin: 0 20px;
+}
+
+.cv2-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 20px;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+// ─── Gauge column ───────────────────────────────────────────────────────────
+.cv2-gauge-col {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cv2-gauge {
+  position: relative;
+  width: 160px;
+  height: 92px;
+  flex-shrink: 0;
+
+  @media (max-width: 480px) {
+    width: 130px;
+    height: 77px;
+
+    .cv2-gauge__svg {
+      width: 130px !important;
+      height: 77px !important;
+    }
+  }
+}
+
+.cv2-gauge__svg {
+  display: block;
+}
+
+.cv2-gauge__bar {
+  transform-origin: center;
+  animation: cv2-gauge-fill 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes cv2-gauge-fill {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+
+.cv2-gauge__center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+  padding-bottom: 6px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.cv2-gauge__pct {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: var(--fv2-text-primary);
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.cv2-gauge__suffix {
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+  font-weight: 600;
+  margin-left: 1px;
+}
+
+.cv2-gauge__grade {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin-top: 4px;
+  line-height: 1;
+}
+
+// ─── Context column ─────────────────────────────────────────────────────────
+.cv2-context-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cv2-context__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fv2-text-muted);
+  text-transform: uppercase;
+}
+
+.cv2-context__title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--fv2-text-primary);
+  margin: 0;
+}
+
+.cv2-context__desc {
+  font-size: 0.8rem;
+  color: var(--fv2-text-secondary);
+  line-height: 1.5;
+  margin: 0;
+}
+
+// ─── Period badge (footer izquierda) ────────────────────────────────────────
+.cv2-period-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: var(--fv2-teal-light);
+  color: var(--fv2-brand);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--fv2-brand);
+  }
+}
+
+// ─── Trainer select ─────────────────────────────────────────────────────────
+.cv2-trainer-select {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 
-  @media (min-width: 768px) {
-    // On desktop we pull this into the title row — done via the parent becoming
-    // a flex row with space-between at that breakpoint.
+  &--compact {
     flex-direction: row;
     align-items: center;
     gap: 8px;
   }
 }
 
-// Make header-content a flex column on mobile and flex row on desktop so the
-// filter can share the same line as the title at larger viewports.
-.stats-page__header-content {
-  @media (min-width: 768px) {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
+.cv2-trainer-select__label {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fv2-text-muted);
+  text-transform: uppercase;
 }
 
-// Remove the bottom margin on the title-row when they share a row on desktop.
-@media (min-width: 768px) {
-  .stats-page__title-row {
-    margin-bottom: 0;
-    flex: 1;
-  }
-}
-
-.stats-page__filter-label {
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  white-space: nowrap;
-}
-
-.stats-page__filter-select {
-  width: 100%;
-  min-height: 44px; // táctil mínimo
-  border: 1px solid #e5e7eb;
+.cv2-trainer-select__input {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 1px solid var(--fv2-border);
   border-radius: 8px;
-  font-size: 14px;
-  padding: 8px 12px;
-  color: #111827;
-  background-color: #ffffff;
-  appearance: auto;
+  background: var(--fv2-bg-card);
+  color: var(--fv2-text-primary);
+  font-size: 0.82rem;
+  font-weight: 500;
+  padding: 6px 28px 6px 10px;
   cursor: pointer;
+  min-width: 0;
+  max-width: 200px;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6' fill='none'%3e%3cpath d='M1 1l4 4 4-4' stroke='%236b7280' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+  &:hover {
+    border-color: var(--fv2-brand);
+  }
 
   &:focus {
     outline: none;
-    border-color: #228d9f;
-    box-shadow: 0 0 0 3px rgba(34, 141, 159, 0.2);
-  }
-
-  @media (min-width: 768px) {
-    width: auto;
-    min-width: 220px;
+    border-color: var(--fv2-brand);
+    box-shadow: 0 0 0 3px var(--fv2-teal-light);
   }
 }
 
-// ─── Main ──────────────────────────────────────────────────────────────────────
-
-.stats-page__main {
-  flex: 1;
-  padding: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-  max-width: 1200px;
-  margin: 0 auto;
-  width: 100%;
-  box-sizing: border-box;
-
-  @media (min-width: 640px) {
-    padding: 20px 24px;
-  }
-}
-
-// ─── Sections ──────────────────────────────────────────────────────────────────
-
-.stats-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.stats-section__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #9ca3af;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  margin: 0;
-}
-
-// ─── Skeletons ─────────────────────────────────────────────────────────────────
-
-.skeleton {
-  background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
+// ─── Skeletons ──────────────────────────────────────────────────────────────
+.cv2-skeleton {
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
   background-size: 200% 100%;
-  animation: shimmer 1.4s infinite;
+  animation: cv2-shimmer 1.4s ease-in-out infinite;
   border-radius: 6px;
-
-  &--line-lg  { height: 16px; width: 80%; }
-  &--line-md  { height: 14px; width: 60%; }
-  &--line-sm  { height: 12px; width: 40%; }
-
-  // Full-size variant used inside skeleton-chart and skeleton-table wrappers.
-  &--block {
-    width: 100%;
-    height: 100%;
-    min-height: 100%;
-    border-radius: 4px;
-  }
 }
 
-@keyframes shimmer {
+@keyframes cv2-shimmer {
   0%   { background-position: 200% 0; }
   100% { background-position: -200% 0; }
 }
 
-// ─── Stats cards grid ──────────────────────────────────────────────────────────
-
-.stats-cards-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 10px;
-
-  @media (min-width: 640px) {
-    grid-template-columns: repeat(2, 1fr);
-  }
-}
-
-// ─── Stats card base ───────────────────────────────────────────────────────────
-
-.stats-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
+.cv2-skeleton-block {
   display: flex;
   flex-direction: column;
   gap: 10px;
-  // min-height normaliza las 6 cards normales para que cards con menos contenido
-  // (Pendientes, sin delta) no queden visualmente más cortas.
-  min-height: 112px;
-  box-sizing: border-box;
 }
 
-.stats-card__title {
-  font-size: 12px;
-  font-weight: 500;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  margin: 0;
+.cv2-skeleton--label   { width: 200px; height: 12px; }
+.cv2-skeleton--hero    { width: 280px; height: 56px; }
+.cv2-skeleton--meta    { width: 160px; height: 14px; }
+.cv2-skeleton--formula { width: 320px; height: 12px; }
+.cv2-skeleton--line    { width: 100%; height: 12px; }
+.cv2-skeleton--short   { width: 60%; }
+.cv2-skeleton--gauge   {
+  width: 120px;
+  height: 70px;
+  border-radius: 12px 12px 0 0;
 }
 
-.stats-card__total-row {
+.cv2-card-skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+}
+
+.cv2-card-skeleton__text {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+// ─── Error blocks ───────────────────────────────────────────────────────────
+.cv2-error-block,
+.cv2-card-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+.cv2-card-error { padding: 24px; }
+
+// ─── Responsive ─────────────────────────────────────────────────────────────
+@media (max-width: 767px) {
+  .cv2-hero__number { font-size: clamp(2rem, 8vw, 2.5rem) !important; }
+
+  .cv2-gauge,
+  .cv2-gauge .cv2-gauge__svg {
+    width: 110px !important;
+    height: 67px !important;
+  }
+  .cv2-gauge .cv2-gauge__pct { font-size: 1.3rem; }
+
+  .cv2-hero__number-row { gap: 8px; }
+  .cv2-card__footer { justify-content: center; }
+
+  .cv2-trainer-select__input { max-width: 160px; }
+
+  .cv2-section { margin-top: 24px; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 01 — Movimiento del mes (4 cards)
+// ═══════════════════════════════════════════════════════════════════════════
+
+.cv2-section {
+  margin-top: 32px;
+
+  @media (min-width: 1024px) {
+    margin-top: 44px;
+  }
+}
+
+.cv2-section__header {
+  margin-bottom: 16px;
+}
+
+.cv2-section__heading {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.cv2-section__title-row {
   display: flex;
   align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.stats-card__total {
-  font-size: 32px;
-  font-weight: 700;
-  color: #228d9f;
-  line-height: 1;
-
-  @media (min-width: 640px) {
-    font-size: 40px;
-  }
-}
-
-.stats-card__delta {
-  font-size: 12px;
-  font-weight: 600;
-  line-height: 1.2;
-  padding: 2px 6px;
-  border-radius: 4px;
-  white-space: nowrap;
-
-  // Default (zero state, overridden below)
-  color: #6b7280;
-  background-color: #f3f4f6;
-
-  &--up {
-    color: #16a34a;
-    background-color: #f0fdf4;
-  }
-
-  &--down {
-    color: #dc2626;
-    background-color: #fef2f2;
-  }
-
-  &--zero {
-    color: #6b7280;
-    background-color: #f3f4f6;
-  }
-}
-
-.stats-card__breakdown {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 13px;
-  color: #6b7280;
-  flex-wrap: wrap;
-}
-
-.stats-card__breakdown-divider {
-  display: inline-block;
-  width: 1px;
-  height: 14px;
-  background-color: #d1d5db;
-  flex-shrink: 0;
-}
-
-.stats-card__error {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  font-size: 13px;
-  color: #dc2626;
-  padding: 8px 0;
-}
-
-.stats-card__error-icon {
-  width: 16px;
-  height: 16px;
-  flex-shrink: 0;
-}
-
-// ─── FASE 3: variantes de color y texto secundario ─────────────────────────────
-
-/** Total en ámbar para Pendientes — estado, no conteo exitoso. */
-.stats-card__total--ambar {
-  color: #d97706;
-}
-
-/** Total placeholder para Q2 inactivo (em dash). */
-.stats-card__total--placeholder {
-  color: #9ca3af;
-}
-
-/**
- * Delta invertido para "Perdidos este mes":
- * más perdidos (↑) = peor = rojo; menos perdidos (↓) = mejor = verde.
- */
-.stats-card__delta--up-bad {
-  color: #dc2626;
-  background-color: #fef2f2;
-}
-
-.stats-card__delta--down-good {
-  color: #16a34a;
-  background-color: #f0fdf4;
-}
-
-/** Texto secundario de contexto: "en curso", "La quincena aún no ha comenzado". */
-.stats-card__legend {
-  font-size: 12px;
-  color: #6b7280;
-  margin: 0;
-  padding-top: 2px;
-  line-height: 1.3;
-}
-
-// ─── FASE 4: Card highlight — Total activos hoy ────────────────────────────────
-
-/**
- * La highlight card ocupa el ancho completo de la grilla en todos los breakpoints.
- * En mobile es natural (grid es 1 col); en desktop el span explícito garantiza
- * que salte a la siguiente fila si los ítems anteriores no la ocupan.
- */
-.stats-card--highlight {
-  grid-column: 1 / -1; // ancho completo en cualquier número de columnas
-  padding: 20px;
-  min-height: 0; // la highlight tiene más contenido; no necesita min-height forzado
-  gap: 12px;
-}
-
-/** Fila superior: tag izquierda + fecha derecha. */
-.stats-card--highlight__header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.stats-card--highlight__tag {
-  font-size: 11px;
-  font-weight: 600;
-  color: #6b7280;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.stats-card--highlight__date {
-  font-size: 12px;
-  font-weight: 400;
-  color: #6b7280;
-}
-
-/**
- * Número total más grande que las otras cards.
- * 40px en mobile, 48px en desktop.
- */
-.stats-card__total--highlight {
-  font-size: 40px;
-
-  @media (min-width: 640px) {
-    font-size: 48px;
-  }
-}
-
-/** Divisor horizontal sutil entre breakdown y subdivisión A/B. */
-.stats-card--highlight__divider {
-  border-top: 1px solid #e5e7eb;
-  margin: 0; // el gap del flex parent ya aporta el spacing (12px arriba y abajo)
-}
-
-/**
- * Subdivisión A/B: dos líneas de texto secundario que desglosan el total.
- */
-.stats-card--highlight__sub {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-
-  p {
-    font-size: 13px;
-    color: #6b7280;
-    line-height: 1.6;
-    margin: 0;
-
-    strong {
-      font-weight: 600;
-      color: #374151;
-    }
-  }
-}
-
-// ─── Skeleton highlight ────────────────────────────────────────────────────────
-
-/** Skeleton de la highlight card: misma lógica de span completo. */
-.skeleton-card--highlight {
-  grid-column: 1 / -1;
-  padding: 20px;
-  gap: 14px;
-}
-
-// ─── Skeleton grid (cards) ─────────────────────────────────────────────────────
-
-.skeleton-grid {
-  display: grid;
   gap: 10px;
-
-  // Base (shared with closures pattern)
-  grid-template-columns: 1fr;
-
-  @media (min-width: 480px) {
-    grid-template-columns: 1fr 1fr;
-  }
+  flex-wrap: wrap;
 }
 
-.skeleton-grid--cards {
-  grid-template-columns: 1fr;
+.cv2-section__num {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 300;
+  color: var(--fv2-brand);
+  letter-spacing: -0.02em;
+  line-height: 1;
+}
 
-  @media (min-width: 480px) {
+.cv2-section__title {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--fv2-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1.2;
+  margin: 0;
+}
+
+.cv2-section__subtitle {
+  font-size: 0.875rem;
+  color: var(--fv2-text-secondary);
+  margin: 4px 0 0 0;
+}
+
+// ─── Grid de cards ────────────────────────────────────────────────────────
+.cv2-cards-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+
+  @media (min-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
-  @media (min-width: 768px) {
+  @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
 }
 
-.skeleton-card {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
+// ─── Card metric ──────────────────────────────────────────────────────────
+.cv2-card--metric {
+  background: var(--fv2-bg-card);
+  border-radius: var(--fv2-radius);
+  border: 1px solid var(--fv2-border);
+  box-shadow: var(--fv2-shadow);
+  padding: 20px;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
+  min-height: 140px;
+  position: relative;
+  transition: box-shadow 0.18s ease, transform 0.18s ease;
+
+  &:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
+    transform: translateY(-1px);
+  }
+}
+
+.cv2-card-metric__top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
   gap: 12px;
-  min-height: 112px;
-  box-sizing: border-box;
+  margin-bottom: 12px;
 }
 
-// ─── Skeleton charts ───────────────────────────────────────────────────────────
-
-.skeleton-chart {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
+.cv2-card-metric__label-row {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
 }
 
-.skeleton-chart--lg {
-  height: 220px;
-
-  @media (min-width: 768px) {
-    height: 280px;
-  }
-}
-
-.skeleton-chart--md {
-  height: 160px;
-
-  @media (min-width: 768px) {
-    height: 200px;
-  }
-}
-
-// ─── Stats — pills (compartido por Tendencia y Distribución) ──────────────────
-
-/**
- * Contenedor de pills: en mobile hace scroll horizontal cuando las pills no
- * caben en una sola línea.  En desktop caben sin scroll.
- * Usado en las secciones Tendencia y Distribución.
- */
-.stats-pills {
-  display: flex;
-  flex-wrap: nowrap;
-  gap: 8px;
-  overflow-x: auto;
-  // Oculta la barra de scroll en WebKit/Gecko sin quitar funcionalidad.
-  scrollbar-width: none;
-  &::-webkit-scrollbar { display: none; }
-  // Padding lateral mínimo para que el último pill no quede pegado al borde.
-  padding-bottom: 2px;
-
-  @media (min-width: 640px) {
-    flex-wrap: wrap;
-    overflow-x: visible;
-  }
-}
-
-.stats-pill {
+.cv2-card-metric__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
   flex-shrink: 0;
-  min-height: 36px; // área táctil mobile
-  padding: 8px 16px;
-  border-radius: 999px;
-  border: none;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  background-color: #f3f4f6;
-  color: #374151;
-  transition: background-color 0.15s ease;
-  line-height: 1;
+}
+
+.cv2-card-metric__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fv2-text-secondary);
   white-space: nowrap;
-
-  &:hover:not(.stats-pill--active) {
-    background-color: #e5e7eb;
-  }
-
-  &--active {
-    background-color: #228d9f;
-    color: #ffffff;
-  }
-
-  &:focus-visible {
-    outline: 2px solid #228d9f;
-    outline-offset: 2px;
-  }
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-// Pills más pequeñas para el toggle de plan dentro de la sección Distribución.
-.stats-pill--sm {
-  min-height: 32px;
-  padding: 6px 12px;
-  font-size: 12px;
-}
-
-// ─── Tendencia — gráfica ───────────────────────────────────────────────────────
-
-/**
- * Wrapper externo con scroll horizontal en mobile.
- * Tiene borde/fondo para que parezca una "card" consistente con el resto.
- */
-.tendencia-chart-wrapper {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
-}
-
-/**
- * Elemento intermedio que fuerza el ancho mínimo dinámico pasado por binding.
- * Cuando la ventana es 1 ó 2 meses el min-width cede a 100% (el binding lo decide).
- */
-.tendencia-chart-scroll {
-  // min-width se aplica via [style.min-width] binding en el template.
-}
-
-/**
- * Canvas wrapper: altura fija en mobile, mayor en desktop.
- * Chart.js necesita un contenedor con height explícita cuando
- * maintainAspectRatio=false.
- */
-.tendencia-chart-canvas {
-  position: relative;
-  height: 260px;
-  min-height: 260px;
-
-  @media (min-width: 768px) {
-    height: 320px;
-    min-height: 320px;
-  }
-
-  canvas {
-    width: 100% !important;
-    height: 100% !important;
-  }
-}
-
-// ─── Tendencia — estados de texto ─────────────────────────────────────────────
-
-.tendencia-message {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px 16px;
-  font-size: 14px;
-  color: #6b7280;
-  text-align: center;
-}
-
-.tendencia-footnote {
-  font-size: 11px;
-  color: #9ca3af;
-  margin: 4px 0 0;
-  line-height: 1.4;
-}
-
-// ─── Distribución — header con pills de ventana y toggle de plan ──────────────
-
-/**
- * En mobile: pills de ventana arriba, toggle de plan debajo (column).
- * En desktop (≥640px): ambos en la misma fila con space-between (row).
- */
-.distribucion-header {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-
-  @media (min-width: 640px) {
-    flex-direction: row;
-    align-items: center;
-    justify-content: space-between;
-    gap: 16px;
-  }
-}
-
-.distribucion-header__ventana {
-  flex: 1;
-  min-width: 0; // permite que las pills hagan scroll si es necesario
-}
-
-.distribucion-header__plan {
+.cv2-card-metric__spark {
+  width: 80px;
+  height: 40px;
   flex-shrink: 0;
+  display: block;
+  overflow: visible;
 }
 
-// ─── Distribución — gráfica ────────────────────────────────────────────────────
-
-/**
- * Mismo aspecto de card que la sección Tendencia.
- * overflow-x: auto permite scroll horizontal en mobile cuando hay muchas barras.
- */
-.distribucion-chart-wrapper {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
-  box-sizing: border-box;
-  overflow-x: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #d1d5db transparent;
+.cv2-card-metric__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--fv2-text-primary);
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
 }
 
-.distribucion-chart-scroll {
-  // min-width se aplica via [style.min-width] binding en el template.
-}
-
-/**
- * Canvas wrapper: altura fija en mobile (260px), mayor en desktop (320px).
- * Chart.js requiere un contenedor con height explícita cuando
- * maintainAspectRatio = false.
- */
-.distribucion-chart-canvas {
-  position: relative;
-  height: 260px;
-  min-height: 260px;
-
-  @media (min-width: 768px) {
-    height: 320px;
-    min-height: 320px;
-  }
-
-  canvas {
-    width: 100% !important;
-    height: 100% !important;
-  }
-}
-
-// ─── Distribución — estados de texto ──────────────────────────────────────────
-
-.distribucion-message {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px 16px;
-  font-size: 14px;
-  color: #6b7280;
-  text-align: center;
-}
-
-.distribucion-footnote {
-  font-size: 11px;
-  color: #9ca3af;
-  margin: 4px 0 0;
-  line-height: 1.4;
-}
-
-// ─── DETALLE — grid de 3 columnas (cohorte) ───────────────────────────────────
-
-/**
- * Variante de 3 columnas para las cards de cohorte.
- * Mobile: 1 col. Tablet (≥480px): 3 col directamente (cards compactas caben).
- */
-.stats-cards-grid--3col {
-  @media (min-width: 480px) {
-    grid-template-columns: repeat(3, 1fr);
-  }
-}
-
-// ─── DETALLE — card compacta ──────────────────────────────────────────────────
-
-/**
- * Modificador compacto para las cards de cohorte.
- * Reduce padding y min-height respecto a .stats-card base.
- */
-.stats-card--compact {
-  padding: 12px;
-  min-height: 96px;
-}
-
-.skeleton-card--compact {
-  padding: 12px;
-  min-height: 96px;
-}
-
-// ─── DETALLE — colores de retención ──────────────────────────────────────────
-
-.stats-card__total--verde {
-  color: #16a34a;
-}
-
-.stats-card__total--rojo {
-  color: #dc2626;
-}
-
-// (--ambar ya está definido arriba como stats-card__total--ambar)
-
-// ─── DETALLE — sección en riesgo ─────────────────────────────────────────────
-
-.riesgo-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.riesgo-header {
+.cv2-card-metric__meta {
+  margin-top: 8px;
+  min-height: 24px;
   display: flex;
   align-items: center;
-  gap: 8px;
 }
 
-.riesgo-header__title {
-  font-size: 13px;
-  font-weight: 600;
-  color: #374151;
-  margin: 0;
+.cv2-card-metric__secondary {
+  margin: 10px 0 0 0;
+  font-size: 0.78rem;
+  color: var(--fv2-text-secondary);
+  font-variant-numeric: tabular-nums;
 }
 
-.riesgo-header__badge {
-  background-color: #f3f4f6;
-  color: #374151;
-  font-size: 12px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: 999px;
-  line-height: 1.4;
+// ─── Skeleton + error de card ────────────────────────────────────────────
+.cv2-card-metric__skeleton {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 4px 0;
 }
 
-.riesgo-empty {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 32px 16px;
-  font-size: 14px;
-  color: #6b7280;
-  text-align: center;
-}
-
-// ─── DETALLE — chip de estado ──────────────────────────────────────────────────
-
-.riesgo-chip {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 12px;
-  font-weight: 500;
-  line-height: 1.6;
-  white-space: nowrap;
-}
-
-.riesgo-chip--pendiente {
-  background-color: #fef3c7;
-  color: #92400e;
-}
-
-.riesgo-chip--por-vencer {
-  background-color: #fee2e2;
-  color: #991b1b;
-}
-
-// ─── DETALLE — tabla desktop ──────────────────────────────────────────────────
-
-.risk-table-desktop {
-  display: none; // oculta en mobile — visible desde ≥768px
-
-  width: 100%;
-  border-collapse: collapse;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  overflow: hidden;
-  background: #ffffff;
-
-  thead tr {
-    background: #f9fafb;
-  }
-
-  th {
-    padding: 10px 16px;
-    font-size: 12px;
-    font-weight: 600;
-    color: #6b7280;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    text-align: left;
-    border-bottom: 1px solid #e5e7eb;
-  }
-
-  td {
-    padding: 12px 16px;
-    font-size: 14px;
-    color: #374151;
-    border-bottom: 1px solid #f3f4f6;
-  }
-
-  tbody tr:last-child td {
-    border-bottom: none;
-  }
-
-  tbody tr:hover {
-    background: #f9fafb;
-  }
-
-  @media (min-width: 768px) {
-    display: table;
-  }
-}
-
-// ─── DETALLE — cards mobile ───────────────────────────────────────────────────
-
-.risk-cards-mobile {
+.cv2-card-metric__error {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  align-items: flex-start;
+}
 
-  @media (min-width: 768px) {
-    display: none; // oculta en desktop — la tabla toma el relevo
+.cv2-skeleton--label-sm {
+  width: 100px;
+  height: 10px;
+}
+
+.cv2-skeleton--card-value {
+  width: 70%;
+  height: 28px;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 02 — Quincenas en curso (Q1 + Q2)
+// ═══════════════════════════════════════════════════════════════════════════
+
+.cv2-quincenas-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
   }
 }
 
-.risk-card-mobile {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 12px 16px;
+.cv2-quincena-card {
+  background: var(--fv2-bg-card);
+  border: 1px solid var(--fv2-border);
+  border-radius: var(--fv2-radius);
+  box-shadow: var(--fv2-shadow);
+  padding: 24px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  box-sizing: border-box;
+  gap: 12px;
+  min-height: 240px;
+
+  &--empty {
+    justify-content: space-between;
+  }
+
+  &--skeleton {
+    gap: 14px;
+  }
 }
 
-.risk-card-mobile__top {
+.cv2-quincena-card__head {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
-.risk-card-mobile__name {
-  font-size: 14px;
+.cv2-quincena-card__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fv2-text-muted);
+  text-transform: uppercase;
+}
+
+.cv2-quincena-card__range {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: var(--fv2-teal-light);
+  color: var(--fv2-brand);
+  font-size: 0.75rem;
   font-weight: 600;
-  color: #111827;
+  letter-spacing: 0.01em;
+  font-variant-numeric: tabular-nums;
 }
 
-.risk-card-mobile__sub {
-  font-size: 13px;
-  color: #6b7280;
+.cv2-quincena-card__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1;
+  color: var(--fv2-text-primary);
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.cv2-quincena-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-height: 24px;
+}
+
+.cv2-quincena-parcial {
+  font-size: 0.75rem;
+  color: var(--fv2-text-muted);
+  font-style: italic;
+}
+
+// ─── Estado vacío (Q2 no_iniciada) ─────────────────────────────────────────
+.cv2-quincena-card__empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 28px 8px 24px;
+  flex: 1;
+}
+
+.cv2-quincena-empty__line {
+  width: 100%;
+  height: 1px;
+  background: repeating-linear-gradient(
+    to right,
+    var(--fv2-border) 0,
+    var(--fv2-border) 6px,
+    transparent 6px,
+    transparent 12px
+  );
+}
+
+.cv2-quincena-empty__text {
   margin: 0;
-}
-
-.risk-card-mobile__vence {
-  font-size: 13px;
-  font-weight: 500;
-  color: #374151;
-  margin: 0;
-}
-
-.risk-card-mobile__pago {
-  font-size: 12px;
-  color: #9ca3af;
-  margin: 0;
-}
-
-// ─── DETALLE — mensaje de error ────────────────────────────────────────────────
-
-.detalle-message {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 24px 16px;
-  font-size: 14px;
-  color: #6b7280;
+  font-size: 0.9rem;
+  color: var(--fv2-text-muted);
   text-align: center;
 }
 
-// ─── Skeleton table ────────────────────────────────────────────────────────────
+// ─── Alerta de inicio de Q2 ─────────────────────────────────────────────────
+.cv2-inicio-alert {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--fv2-teal-light);
+  flex-wrap: wrap;
+}
 
-.skeleton-table {
-  background: #ffffff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  padding: 16px;
+.cv2-inicio-alert__main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cv2-inicio-alert__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #f59e0b;
+  flex-shrink: 0;
+}
+
+.cv2-inicio-alert__text {
+  font-size: 0.85rem;
+  color: var(--fv2-text-primary);
+  font-weight: 500;
+}
+
+.cv2-countdown {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(34, 141, 159, 0.15);
+  color: var(--fv2-brand);
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+
+  &--warn {
+    background: rgba(245, 158, 11, 0.18);
+    color: #b45309;
+  }
+}
+
+// ─── Desglose por plan (dos columnas) ───────────────────────────────────────
+.cv2-plan-grid {
+  display: grid;
+  grid-template-columns: 1fr 1px 1fr;
+  gap: 14px;
+  margin-top: 4px;
+}
+
+.cv2-plan-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.cv2-plan-col__sep {
+  background: var(--fv2-border);
+  align-self: stretch;
+}
+
+.cv2-plan-col__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cv2-plan-col__dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  flex-shrink: 0;
+}
+
+.cv2-plan-col__label {
+  font-size: 0.75rem;
+  color: var(--fv2-text-secondary);
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.cv2-plan-col__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--fv2-text-primary);
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  margin-top: 2px;
+}
+
+.cv2-plan-col__pct {
+  font-size: 0.8rem;
+  color: var(--fv2-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-plan-col__bar-track {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(229, 231, 235, 0.6);
+  overflow: hidden;
+  margin-top: 2px;
+}
+
+.cv2-plan-col__bar {
+  height: 100%;
+  border-radius: 2px;
+  min-width: 2px;
+  transition: width 0.4s ease;
+}
+
+// ─── Skeletons / errores específicos sección 02 ─────────────────────────────
+.cv2-skeleton--badge {
+  width: 80px;
+  height: 22px;
+  border-radius: 20px;
+}
+
+.cv2-skeleton--big-value {
+  width: 50%;
+  height: 36px;
+}
+
+.cv2-skeleton--plan-grid {
+  width: 100%;
+  height: 80px;
+}
+
+.cv2-quincena-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 24px;
+  align-items: flex-start;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 03 — Estado de cartera
+// ═══════════════════════════════════════════════════════════════════════════
+
+.cv2-cartera-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+  align-items: stretch;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 65% 1fr;
+    gap: 20px;
+  }
+}
+
+.cv2-cartera-left {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-width: 0;
+}
+
+.cv2-cartera-right {
+  display: flex;
+  min-width: 0;
+}
+
+// ─── Cards claras (Pendientes / Perdidos) ──────────────────────────────────
+.cv2-cartera-card {
+  background: var(--fv2-bg-card);
+  border: 1px solid var(--fv2-border);
+  border-radius: var(--fv2-radius);
+  box-shadow: var(--fv2-shadow);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &--skeleton {
+    gap: 12px;
+  }
+}
+
+.cv2-cartera-card__head {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 4px;
+}
+
+.cv2-cartera-card__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cv2-cartera-card__label {
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  font-weight: 600;
+  color: var(--fv2-text-secondary);
+}
+
+.cv2-cartera-card__breakdown {
+  margin: 4px 0 0 0;
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-cartera-card__desc {
+  margin: auto 0 0 0;
+  padding-top: 12px;
+  font-size: 0.8rem;
+  color: var(--fv2-text-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+// Pendientes: valor amber
+.cv2-pendientes__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  color: #f59e0b;
+  font-variant-numeric: tabular-nums;
+}
+
+// Perdidos: row con valor + chip
+.cv2-perdidos__row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cv2-perdidos__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 1.75rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+
+  &--danger  { color: var(--fv2-danger); }
+  &--neutral { color: var(--fv2-text-primary); }
+}
+
+// ─── Card oscura de retención ──────────────────────────────────────────────
+.cv2-retencion-card {
+  background: var(--fv2-bg-dark);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: var(--fv2-radius);
+  padding: 24px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  color: #ffffff;
+  min-height: 240px;
+
+  &--skeleton,
+  &--error {
+    gap: 14px;
+  }
+
+  &--error {
+    align-items: flex-start;
+    justify-content: center;
+  }
+}
+
+.cv2-retencion-card__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.cv2-retencion-card__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255, 255, 255, 0.6);
+  text-transform: uppercase;
+}
+
+.cv2-retencion-card__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 12px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+  font-size: 0.72rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-retencion__value {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 2.5rem;
+  font-weight: 800;
+  letter-spacing: -0.025em;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+  margin-top: 6px;
+
+  &--good { color: #6ee7b7; }
+  &--ok   { color: #fcd34d; }
+  &--mid  { color: #fb923c; }
+  &--bad  { color: #fca5a5; }
+  &--null { color: rgba(255, 255, 255, 0.5); }
+}
+
+.cv2-retencion-card__primary {
+  margin: 4px 0 0 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-retencion-card__context {
+  margin: 0;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.cv2-retencion-card__divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.12);
+  margin: 14px 0 4px 0;
+}
+
+.cv2-retencion-card__error-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+// Fila de recuperados
+.cv2-recuperados-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+}
+
+.cv2-recuperados-row__main {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.cv2-recuperados-row__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #fcd34d;
+  flex-shrink: 0;
+}
+
+.cv2-recuperados-row__text {
+  color: #ffffff;
+  font-size: 0.85rem;
+
+  strong {
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.cv2-recuperados-row__sub {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+// Skeleton oscuro (mismo truco que finanzas-v2 fv2-skeleton-dark)
+.cv2-skeleton-dark {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.06) 0%,
+    rgba(255, 255, 255, 0.14) 50%,
+    rgba(255, 255, 255, 0.06) 100%
+  );
+  background-size: 200% 100%;
+  animation: cv2-shimmer 1.4s ease-in-out infinite;
+  border-radius: 6px;
+  height: 12px;
+
+  &.cv2-skeleton--label-sm  { width: 100px; height: 10px; }
+  &.cv2-skeleton--badge     { width: 80px; height: 22px; border-radius: 20px; }
+  &.cv2-skeleton--big-value { width: 50%;   height: 36px; }
+  &.cv2-skeleton--line      { width: 100%;  height: 12px; }
+  &.cv2-skeleton--short     { width: 60%; }
+  &.cv2-skeleton--block-sm  { width: 100%;  height: 40px; border-radius: 8px; }
+}
+
+.cv2-link-btn--dark {
+  color: rgba(255, 255, 255, 0.9);
+
+  &:hover { color: #ffffff; }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 04 — Tendencia
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Header con acciones (pills a la derecha) — patrón equivalente a finanzas-v2
+.cv2-section__header--with-actions {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+
+  @media (max-width: 767px) {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+// ─── Pills de ventana ─────────────────────────────────────────────────────
+.cv2-pills {
+  display: flex;
+  gap: 4px;
+  background: rgba(34, 141, 159, 0.06);
+  padding: 4px;
+  border-radius: 999px;
+  align-self: flex-start;
+  flex-shrink: 0;
+
+  @media (max-width: 767px) {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    max-width: 100%;
+    scrollbar-width: none;
+
+    &::-webkit-scrollbar { display: none; }
+  }
+}
+
+.cv2-pill-tab {
+  border: none;
+  background: transparent;
+  color: var(--fv2-text-secondary);
+  padding: 6px 14px;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &:hover:not(.cv2-pill-tab--active) {
+    color: var(--fv2-brand);
+  }
+
+  &--active {
+    background: var(--fv2-bg-card);
+    color: var(--fv2-brand);
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+}
+
+// ─── Card de tendencia ────────────────────────────────────────────────────
+.cv2-tendencia-card {
+  padding: 24px;
+  background: var(--fv2-bg-card);
+  border-radius: var(--fv2-radius);
+  box-shadow: var(--fv2-shadow);
+  border: 1px solid var(--fv2-border);
+}
+
+.cv2-tendencia__body {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 24px;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 35% 1fr;
+    gap: 32px;
+  }
+}
+
+.cv2-tendencia__skeleton {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 16px;
+
+  @media (min-width: 1024px) {
+    grid-template-columns: 35% 1fr;
+  }
+}
+
+.cv2-skeleton--block {
+  width: 100%;
+  background: linear-gradient(90deg, #e5e7eb 0%, #f3f4f6 50%, #e5e7eb 100%);
+  background-size: 200% 100%;
+  animation: cv2-shimmer 1.4s ease-in-out infinite;
+  border-radius: 8px;
+}
+
+.cv2-skeleton--tendencia-left  { height: 200px; }
+.cv2-skeleton--tendencia-right { height: 240px; }
+
+.cv2-tendencia__error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+}
+
+// ─── Zona izquierda ───────────────────────────────────────────────────────
+.cv2-tendencia__left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cv2-tendencia__label {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--fv2-text-muted);
+  text-transform: uppercase;
+}
+
+.cv2-var {
+  font-family: 'Geist', 'Inter', system-ui, sans-serif;
+  font-size: 2rem;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--fv2-text-primary);
+
+  &.cv2-var--up   { color: var(--fv2-success); }
+  &.cv2-var--down { color: var(--fv2-danger); }
+  &.cv2-var--flat { color: var(--fv2-text-secondary); }
+  &.cv2-var--null { color: var(--fv2-text-muted); }
+}
+
+.cv2-tendencia__sub {
+  font-size: 0.8rem;
+  color: var(--fv2-text-secondary);
+  margin: 0;
+}
+
+.cv2-tendencia__divider {
+  height: 1px;
+  background: var(--fv2-border);
+  margin: 12px 0 4px 0;
+}
+
+.cv2-tendencia__footnote {
+  margin: 8px 0 0 0;
+  font-size: 0.75rem;
+  color: var(--fv2-text-muted);
+  font-style: italic;
+}
+
+// ─── Mini leyenda ────────────────────────────────────────────────────────
+.cv2-legend {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
   flex-direction: column;
   gap: 12px;
 }
 
-.skeleton-table__row {
-  display: grid;
-  grid-template-columns: 2fr 1fr 1fr;
-  gap: 12px;
+.cv2-legend__row {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cv2-legend__head {
+  display: flex;
   align-items: center;
+  gap: 6px;
+  font-size: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.cv2-legend__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.cv2-legend__label {
+  color: var(--fv2-text-primary);
+  font-weight: 600;
+  flex: 0 0 auto;
+}
+
+.cv2-legend__range {
+  color: var(--fv2-text-secondary);
+  font-variant-numeric: tabular-nums;
+  margin-left: auto;
+  font-size: 0.72rem;
+}
+
+.cv2-legend__arrow {
+  color: var(--fv2-text-muted);
+  margin: 0 4px;
+}
+
+.cv2-legend__bar-track {
+  width: 100%;
+  height: 4px;
+  background: rgba(229, 231, 235, 0.6);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.cv2-legend__bar {
+  height: 100%;
+  border-radius: 999px;
+  min-width: 2px;
+  transition: width 0.4s ease;
+}
+
+// ─── Zona derecha (canvas) ───────────────────────────────────────────────
+.cv2-tendencia__right {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.cv2-chart-canvas-wrap {
+  width: 100%;
+  height: 220px;
+  position: relative;
+
+  @media (max-width: 767px) {
+    height: 180px;
+  }
+}
+
+.cv2-chart-legend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  flex-wrap: wrap;
+  font-size: 0.75rem;
+  color: var(--fv2-text-secondary);
+}
+
+.cv2-chart-legend__item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cv2-chart-legend__sw {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 05 — Distribución por quincena
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Contenedor de los dos grupos de pills (plan + ventana)
+.cv2-section__actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+
+  @media (max-width: 767px) {
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+}
+
+.cv2-distribucion-card {
+  padding: 24px;
+  background: var(--fv2-bg-card);
+  border-radius: var(--fv2-radius);
+  box-shadow: var(--fv2-shadow);
+  border: 1px solid var(--fv2-border);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.cv2-distribucion__skeleton {
+  display: flex;
+  flex-direction: column;
+}
+
+.cv2-skeleton--distribucion { height: 240px; }
+
+.cv2-distribucion__error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 20px 0;
+}
+
+.cv2-chart-canvas-wrap--tall {
+  height: 240px;
+
+  @media (max-width: 767px) {
+    height: 180px;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 06 — Clientes en riesgo
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Badge "● X requieren atención"
+.cv2-riesgo-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 20px;
+  background: rgba(245, 158, 11, 0.15);
+  color: #b45309;
+  font-size: 0.78rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  align-self: flex-start;
+
+  &__dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #f59e0b;
+    flex-shrink: 0;
+  }
+}
+
+// Empty state (sin riesgo)
+.cv2-riesgo-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 10px;
+  padding: 36px 24px;
+  background: rgba(16, 185, 129, 0.04);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: var(--fv2-radius);
+}
+
+.cv2-riesgo-empty__icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--fv2-success);
+}
+
+.cv2-riesgo-empty__title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--fv2-text-primary);
+}
+
+.cv2-riesgo-empty__subtitle {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+}
+
+// ─── Tabla / cards de riesgo ─────────────────────────────────────────────
+.cv2-riesgo-table {
+  background: var(--fv2-bg-card);
+  border: 1px solid var(--fv2-border);
+  border-radius: var(--fv2-radius);
+  box-shadow: var(--fv2-shadow);
+  overflow: hidden;
+}
+
+.cv2-riesgo-error {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-start;
+  padding: 24px;
+}
+
+// Header de tabla (solo desktop)
+.cv2-riesgo-thead {
+  display: none;
+
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 0.9fr 1.1fr 1.1fr 1.2fr;
+    gap: 12px;
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--fv2-border);
+    background: rgba(0, 0, 0, 0.015);
+  }
+}
+
+.cv2-riesgo-th {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  color: var(--fv2-text-muted);
+  text-transform: uppercase;
+}
+
+// Fila — desktop: grid de columnas, mobile: card stack.
+.cv2-riesgo-row {
+  border-bottom: 1px solid var(--fv2-border);
+  transition: background-color 0.15s ease;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
+  // ── Desktop ──
+  @media (min-width: 768px) {
+    display: grid;
+    grid-template-columns: 2fr 1.4fr 0.9fr 1.1fr 1.1fr 1.2fr;
+    gap: 12px;
+    align-items: center;
+    padding: 16px 20px;
+
+    &:hover { background: rgba(0, 0, 0, 0.02); }
+  }
+
+  // ── Mobile: card layout ──
+  @media (max-width: 767px) {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding: 16px;
+  }
+
+  &--skeleton {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    @media (max-width: 767px) { padding: 16px; }
+  }
+}
+
+.cv2-riesgo-cell {
+  display: flex;
+  min-width: 0;
+
+  @media (max-width: 767px) {
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+// Etiqueta solo móvil dentro de cada celda
+.cv2-riesgo-th-mobile {
+  display: none;
+
+  @media (max-width: 767px) {
+    display: inline-block;
+    font-size: 0.7rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: var(--fv2-text-muted);
+    text-transform: uppercase;
+  }
+}
+
+// Cliente: avatar + nombre
+.cv2-riesgo-cell--cliente {
+  align-items: center;
+  gap: 12px;
+
+  @media (max-width: 767px) {
+    justify-content: flex-start;
+    border-bottom: 1px solid var(--fv2-border);
+    padding-bottom: 10px;
+  }
+}
+
+.cv2-riesgo-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  flex-shrink: 0;
+}
+
+.cv2-riesgo-nombre {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--fv2-text-primary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  min-width: 0;
+}
+
+.cv2-riesgo-entrenador {
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cv2-riesgo-date {
+  font-size: 0.85rem;
+  color: var(--fv2-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+// Plan badge
+.cv2-plan-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+
+  &--6d {
+    background: var(--fv2-teal-light);
+    color: var(--fv2-brand);
+  }
+  &--3d {
+    background: rgba(103, 232, 249, 0.15);
+    color: #0891b2;
+  }
+}
+
+// Vence el
+.cv2-vence {
+  font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
+
+  &--vencido {
+    color: var(--fv2-danger);
+    font-weight: 600;
+  }
+  &--proximo { color: #f59e0b; }
+  &--ok      { color: var(--fv2-text-secondary); }
+}
+
+// Estado badge
+.cv2-estado-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 20px;
+  font-size: 0.8rem;
+  font-weight: 500;
+
+  &__dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  &--pendiente {
+    background: rgba(245, 158, 11, 0.12);
+    color: #92400e;
+
+    .cv2-estado-badge__dot { background: #f59e0b; }
+  }
+
+  &--por-vencer {
+    background: rgba(220, 38, 38, 0.08);
+    color: var(--fv2-danger);
+
+    .cv2-estado-badge__dot { background: var(--fv2-danger); }
+  }
+}
+
+// Skeleton específico de la tabla
+.cv2-skeleton--avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// POLISH FINAL — gap entre secciones, padding consistente
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Aplicar gap consistente entre secciones (32px desktop, 20px móvil)
+// .cv2-section ya tenía margin-top 32px desktop / 24px móvil — bajamos
+// el móvil a 20px para alinear con el spec final.
+@media (max-width: 767px) {
+  .cv2-section { margin-top: 20px; }
 }

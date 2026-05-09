@@ -47,11 +47,7 @@ export interface PaymentSuccessData {
   paymentResponse?: RegisterPaymentResponse;
   /** Present when type = 'installment' */
   installmentResponse?: RegisterInstallmentResponse;
-  /**
-   * Present only when type = 'payment' and the resulting status = 'paid'.
-   * Starts as 'sending' immediately after the payment is registered.
-   * Undefined means no receipt applies (partial / installment).
-   */
+  /** Present whenever the resulting status = 'paid' (full payment OR closing installment). */
   receiptStatus?: ReceiptEmailStatus;
 }
 

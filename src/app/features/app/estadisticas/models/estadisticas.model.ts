@@ -27,11 +27,17 @@ export interface ClientesActivosBreakdown {
  * - tipo_a: clientes que pagaron en el período [inicio_mes, fecha_referencia].
  * - tipo_b: clientes vigentes de mes anterior sin pago en el mes actual.
  * - total_activos_hoy: suma de tipo_a + tipo_b (FASE 4).
+ * - total_clientes_sistema: universo total de clientes (deleted_at IS NULL)
+ *     en el alcance del filtro (con filtro de entrenador → solo sus asignados).
+ * - parciales_mes: cantidad de pagos con status='partial' (queda saldo > 0)
+ *     recibidos en el mes en curso, filtrados por entrenador cuando aplica.
  */
 export interface ClientesActivosCards {
   tipo_a: ClientesActivosBreakdown;
   tipo_b: ClientesActivosBreakdown;
   total_activos_hoy: ClientesActivosBreakdown;
+  total_clientes_sistema: number;
+  parciales_mes: number;
 }
 
 // ─── Stats Quincenal Cards ─────────────────────────────────────────────────────

@@ -1643,6 +1643,7 @@ export type Database = {
       fn_stats_clients_cards: {
         Args: { p_ref: string; p_te: string }
         Returns: {
+          parciales_mes: number
           ta_3d: number
           ta_6d: number
           ta_prev_total: number
@@ -1655,6 +1656,7 @@ export type Database = {
           tb_6d: number
           tb_prev_total: number
           tb_total: number
+          total_sistema: number
         }[]
       }
       fn_stats_clients_detalle: {

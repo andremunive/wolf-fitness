@@ -485,13 +485,30 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
     this.registerInstallmentClient = null;
     this.openPaymentForInstallment = null;
     this.paymentFlowClient = null;
+
+    const closesPayment = result.response.nuevo_status === 'paid';
+
+    const receiptStatus: ReceiptEmailStatus | undefined = closesPayment
+      ? {
+          state: 'sending',
+          clientEmail: result.clientEmail,
+          paymentId: result.response.payment_id
+        }
+      : undefined;
+
     this.paymentSuccessData = {
       type: 'installment',
       clientName: result.clientName,
-      installmentResponse: result.response
+      installmentResponse: result.response,
+      receiptStatus
     };
+
     this.refreshTrigger$.next();
     this.cdr.markForCheck();
+
+    if (closesPayment) {
+      this.dispatchReceiptEmail(result.response.payment_id);
+    }
   }
 
   // ─── Modal de éxito de pago ─────────────────────────────────────────────────
