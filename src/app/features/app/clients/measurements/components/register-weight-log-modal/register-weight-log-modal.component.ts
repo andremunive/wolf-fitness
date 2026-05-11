@@ -34,6 +34,26 @@ function notFutureDateValidator(): ValidatorFn {
   };
 }
 
+/**
+ * Accepts a positive decimal with up to 2 decimals, using either `.` or `,`
+ * as separator (iOS Spanish keyboards emit comma). Validates the parsed value
+ * falls within [min, max].
+ */
+function decimalRangeValidator(min: number, max: number): ValidatorFn {
+  const pattern = /^\d+([.,]\d{1,2})?$/;
+  return (control: AbstractControl) => {
+    const raw = control.value;
+    if (raw === null || raw === undefined || raw === '') return null;
+    const str = String(raw).trim();
+    if (!pattern.test(str)) return { invalidWeight: true };
+    const parsed = parseFloat(str.replace(',', '.'));
+    if (Number.isNaN(parsed) || parsed < min || parsed > max) {
+      return { invalidWeight: true };
+    }
+    return null;
+  };
+}
+
 @Component({
   selector: 'app-register-weight-log-modal',
   templateUrl: './register-weight-log-modal.component.html',
@@ -101,7 +121,7 @@ export class RegisterWeightLogModalComponent implements OnInit, OnDestroy {
   private buildForm(): FormGroup {
     return this.fb.group({
       measured_at: [this.todayIso, [Validators.required, notFutureDateValidator()]],
-      weight_kg: [null, [Validators.required, Validators.min(0.1), Validators.max(300)]]
+      weight_kg: ['', [Validators.required, decimalRangeValidator(0.1, 300)]]
     });
   }
 
@@ -147,13 +167,13 @@ export class RegisterWeightLogModalComponent implements OnInit, OnDestroy {
 
     const { measured_at, weight_kg } = this.form.getRawValue() as {
       measured_at: string;
-      weight_kg: number;
+      weight_kg: string;
     };
 
     const payload: ClientWeightLogInsert = {
       client_id: this.client.id,
       measured_at,
-      weight_kg
+      weight_kg: parseFloat(String(weight_kg).replace(',', '.'))
     };
 
     this.weightLogsService
