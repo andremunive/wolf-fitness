@@ -1,0 +1,170 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true"
+  [attr.aria-label]="isNormal ? 'Cerrar préstamo' : 'Cerrar préstamo con pérdida'"
+  (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── HEADER ────────────────────────────────────────────────────────── -->
+    <div class="modal-sheet__header">
+      <div class="close-header">
+
+        <!-- Case A: Normal (saldo = 0) -->
+        <ng-container *ngIf="isNormal">
+          <span class="close-header__icon close-header__icon--success" aria-hidden="true">
+            <!-- CheckCircle2 -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+            </svg>
+          </span>
+          <h2 class="modal-sheet__title">Cerrar préstamo</h2>
+        </ng-container>
+
+        <!-- Case B: Forced (saldo > 0) -->
+        <ng-container *ngIf="!isNormal">
+          <span class="close-header__icon close-header__icon--warning" aria-hidden="true">
+            <!-- AlertTriangle -->
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+          </span>
+          <h2 class="modal-sheet__title">Cerrar préstamo con pérdida</h2>
+        </ng-container>
+
+      </div>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── BODY ──────────────────────────────────────────────────────────── -->
+    <div class="modal-body">
+
+      <!-- ══ CASE A: Normal ══════════════════════════════════════════════ -->
+      <ng-container *ngIf="isNormal">
+
+        <!-- Success banner -->
+        <div class="status-banner status-banner--success">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+          </svg>
+          <span>El préstamo está completamente saldado.</span>
+        </div>
+
+        <!-- Summary grid -->
+        <div class="summary-grid">
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Monto original</span>
+            <span class="summary-grid__value">{{ formatAmount(loan.amount_cop) }}</span>
+          </div>
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Total abonado</span>
+            <span class="summary-grid__value">{{ formatAmount(loan.total_paid_cop) }}</span>
+          </div>
+          <div class="summary-grid__item" *ngIf="profit > 0">
+            <span class="summary-grid__label">Ganancia</span>
+            <span class="summary-grid__value summary-grid__value--success">{{ formatAmount(profit) }}</span>
+          </div>
+          <div class="summary-grid__item" *ngIf="profit === 0">
+            <span class="summary-grid__label">Ganancia</span>
+            <span class="summary-grid__value summary-grid__value--muted">$0</span>
+          </div>
+        </div>
+
+        <p class="confirm-text">
+          ¿Confirmas el cierre de este préstamo? Esta acción no se puede deshacer.
+        </p>
+
+      </ng-container>
+
+      <!-- ══ CASE B: Forced ══════════════════════════════════════════════ -->
+      <ng-container *ngIf="!isNormal">
+
+        <!-- Warning banner -->
+        <div class="status-banner status-banner--warning">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+          </svg>
+          <span>
+            Este préstamo tiene un saldo pendiente de <strong>{{ formatAmount(loan.saldo_cop) }}</strong>.
+            Al cerrar forzadamente, este monto se registrará como pérdida.
+          </span>
+        </div>
+
+        <!-- Summary grid -->
+        <div class="summary-grid">
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Monto original</span>
+            <span class="summary-grid__value">{{ formatAmount(loan.amount_cop) }}</span>
+          </div>
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Total abonado</span>
+            <span class="summary-grid__value">{{ formatAmount(loan.total_paid_cop) }}</span>
+          </div>
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Saldo sin cobrar</span>
+            <span class="summary-grid__value summary-grid__value--danger">{{ formatAmount(loan.saldo_cop) }}</span>
+          </div>
+          <div class="summary-grid__item">
+            <span class="summary-grid__label">Pérdida a registrar</span>
+            <span class="summary-grid__value summary-grid__value--danger summary-grid__value--bold">{{ formatAmount(loss) }}</span>
+          </div>
+        </div>
+
+        <!-- Confirmation input -->
+        <div class="confirm-input-wrap">
+          <label class="confirm-input-wrap__label" for="close-confirm-input">
+            Escribe <strong>CONFIRMAR</strong> para continuar
+          </label>
+          <input
+            id="close-confirm-input"
+            type="text"
+            class="confirm-input-wrap__input"
+            [class.confirm-input-wrap__input--valid]="confirmationValid"
+            [formControl]="confirmation"
+            placeholder="CONFIRMAR"
+            autocomplete="off"
+            spellcheck="false"
+          />
+        </div>
+
+      </ng-container>
+
+    </div><!-- /modal-body -->
+
+    <!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-footer__cancel-btn"
+        (click)="close()"
+        [disabled]="isLoading"
+      >Cancelar</button>
+
+      <!-- Normal close button (success / green) -->
+      <button
+        *ngIf="isNormal"
+        type="button"
+        class="modal-footer__confirm-btn modal-footer__confirm-btn--success"
+        (click)="onConfirmClose()"
+        [disabled]="!canClose"
+      >
+        <ng-container *ngIf="isLoading; else normalLabel">Cerrando...</ng-container>
+        <ng-template #normalLabel>Cerrar préstamo</ng-template>
+      </button>
+
+      <!-- Forced close button (danger / red) -->
+      <button
+        *ngIf="!isNormal"
+        type="button"
+        class="modal-footer__confirm-btn modal-footer__confirm-btn--danger"
+        (click)="onConfirmClose()"
+        [disabled]="!canClose"
+      >
+        <ng-container *ngIf="isLoading; else forcedLabel">Cerrando...</ng-container>
+        <ng-template #forcedLabel>Cerrar con pérdida</ng-template>
+      </button>
+    </div>
+
+  </div>
+</div>

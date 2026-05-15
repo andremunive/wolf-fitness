@@ -51,6 +51,12 @@ const routes: Routes = [
         canActivate: [roleGuard(['admin'])]
       },
       {
+        path: 'prestamos',
+        loadChildren: () =>
+          import('./prestamos/prestamos.module').then((m) => m.PrestamosModule),
+        canActivate: [roleGuard(['admin'])]
+      },
+      {
         path: 'descuentos',
         loadChildren: () =>
           import('./discounts/discounts.module').then((m) => m.DiscountsModule),

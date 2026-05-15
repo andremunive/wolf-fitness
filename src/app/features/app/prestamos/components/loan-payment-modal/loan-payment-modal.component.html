@@ -1,0 +1,179 @@
+<div class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Registrar abono" (click)="close()">
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="close()">
+
+    <!-- ── HEADER ────────────────────────────────────────────────────────── -->
+    <div class="modal-sheet__header">
+      <div class="payment-header">
+        <h2 class="modal-sheet__title">Registrar abono</h2>
+        <p class="payment-header__subtitle">
+          Préstamo a <strong>{{ loan.beneficiary_label }}</strong>
+        </p>
+        <span
+          class="payment-header__saldo-chip"
+          [ngClass]="loan.saldo_cop > 0 ? 'payment-header__saldo-chip--danger' : 'payment-header__saldo-chip--success'"
+        >
+          Saldo: {{ formatAmount(loan.saldo_cop) }}
+        </span>
+      </div>
+      <button type="button" class="modal-sheet__close" (click)="close()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── BODY ──────────────────────────────────────────────────────────── -->
+    <div class="modal-body">
+
+      <!-- Resumen compacto de solo lectura -->
+      <div class="compact-summary">
+        <span>Monto original: <strong>{{ formatAmount(loan.amount_cop) }}</strong></span>
+        <span class="compact-summary__sep" aria-hidden="true">|</span>
+        <span>Abonado: <strong>{{ formatAmount(loan.total_paid_cop) }}</strong></span>
+        <span class="compact-summary__sep" aria-hidden="true">|</span>
+        <span>Saldo: <strong>{{ formatAmount(loan.saldo_cop) }}</strong></span>
+      </div>
+
+      <form [formGroup]="form" (ngSubmit)="save()">
+
+        <!-- Monto del abono -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-amount">
+            Monto del abono (COP) <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="pay-amount"
+            type="text"
+            inputmode="numeric"
+            autocomplete="off"
+            class="form-field__input"
+            [class.form-field__input--error]="isFieldInvalid('amount_cop')"
+            placeholder="0"
+            [value]="amountDisplay"
+            (input)="onAmountInput($event)"
+            (blur)="form.get('amount_cop')!.markAsTouched()"
+          />
+          <span class="form-field__hint-error" *ngIf="isFieldInvalid('amount_cop')">
+            El monto debe ser mayor a cero.
+          </span>
+
+          <!-- Hint: pago exacto -->
+          <div *ngIf="amountHint === 'exact'" class="amount-hint amount-hint--success">
+            Este abono salda el préstamo completamente.
+          </div>
+
+          <!-- Hint: pago en exceso -->
+          <div *ngIf="amountHint === 'over'" class="amount-hint amount-hint--warning">
+            Este abono supera el saldo ({{ formatAmount(loan.saldo_cop) }}).
+            La diferencia ({{ formatAmount(potentialGain) }}) se registrará como ganancia al cerrar el préstamo.
+          </div>
+        </div>
+
+        <!-- Fecha del abono -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-date">
+            Fecha del abono <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="pay-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="isFieldInvalid('payment_date')"
+            formControlName="payment_date"
+            [max]="today"
+          />
+          <span class="form-field__hint-error" *ngIf="isFieldInvalid('payment_date')">
+            La fecha es requerida.
+          </span>
+        </div>
+
+        <!-- Método de pago -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-method">
+            Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="pay-method"
+            class="form-field__select"
+            [class.form-field__select--error]="isFieldInvalid('payment_method')"
+            formControlName="payment_method"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="other">Otro</option>
+          </select>
+          <span class="form-field__hint-error" *ngIf="isFieldInvalid('payment_method')">
+            Selecciona el método de pago.
+          </span>
+        </div>
+
+        <!-- Notas (opcional) -->
+        <div class="form-field">
+          <label class="form-field__label" for="pay-notes">Notas (opcional)</label>
+          <input
+            id="pay-notes"
+            type="text"
+            class="form-field__input"
+            formControlName="notes"
+            placeholder="Observaciones del abono..."
+            maxlength="300"
+          />
+        </div>
+
+      </form>
+
+      <!-- Preview del resultado -->
+      <div *ngIf="showPreview" class="result-preview">
+        <div class="result-preview__row">
+          <span class="result-preview__label">Saldo actual</span>
+          <span class="result-preview__value">{{ formatAmount(loan.saldo_cop) }}</span>
+        </div>
+        <div class="result-preview__row">
+          <span class="result-preview__label">Este abono</span>
+          <span class="result-preview__value result-preview__value--deduct">
+            − {{ formatAmount(enteredAmount) }}
+          </span>
+        </div>
+        <div class="result-preview__divider"></div>
+        <div class="result-preview__row">
+          <span class="result-preview__label result-preview__label--strong">Nuevo saldo</span>
+          <span
+            class="result-preview__value result-preview__value--strong"
+            [ngClass]="newSaldo <= 0 ? 'result-preview__value--success' : ''"
+          >
+            {{ formatAmount(newSaldo) }}
+          </span>
+        </div>
+        <div *ngIf="potentialGain > 0" class="result-preview__row">
+          <span class="result-preview__label result-preview__label--gain">Ganancia potencial</span>
+          <span class="result-preview__value result-preview__value--gain">
+            +{{ formatAmount(potentialGain) }}
+          </span>
+        </div>
+      </div>
+
+    </div><!-- /modal-body -->
+
+    <!-- ── FOOTER ─────────────────────────────────────────────────────────── -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-footer__cancel-btn"
+        (click)="close()"
+        [disabled]="isLoading"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="modal-footer__save-btn"
+        (click)="save()"
+        [disabled]="form.invalid || isLoading"
+      >
+        <ng-container *ngIf="isLoading; else saveLabel">Registrando...</ng-container>
+        <ng-template #saveLabel>Registrar abono</ng-template>
+      </button>
+    </div>
+
+  </div>
+</div>

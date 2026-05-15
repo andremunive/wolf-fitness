@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -739,6 +739,156 @@ export type Database = {
           },
           {
             foreignKeyName: "expense_records_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loan_payments: {
+        Row: {
+          amount_cop: number
+          created_at: string
+          created_by: string
+          id: string
+          loan_id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string
+        }
+        Insert: {
+          amount_cop: number
+          created_at?: string
+          created_by: string
+          id?: string
+          loan_id: string
+          notes?: string | null
+          payment_date?: string
+          payment_method: string
+        }
+        Update: {
+          amount_cop?: number
+          created_at?: string
+          created_by?: string
+          id?: string
+          loan_id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loan_payments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loan_payments_loan_id_fkey"
+            columns: ["loan_id"]
+            isOneToOne: false
+            referencedRelation: "loans"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      loans: {
+        Row: {
+          amount_cop: number
+          beneficiary_type: string
+          closed_at: string | null
+          closed_by: string | null
+          closure_type: string | null
+          created_at: string
+          created_by: string
+          id: string
+          loan_date: string
+          loss_cop: number | null
+          notes: string | null
+          profit_cop: number | null
+          provider_id: string | null
+          status: string
+          third_party_name: string | null
+          total_paid_cop: number
+          trainer_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_cop: number
+          beneficiary_type: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_type?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          loan_date?: string
+          loss_cop?: number | null
+          notes?: string | null
+          profit_cop?: number | null
+          provider_id?: string | null
+          status?: string
+          third_party_name?: string | null
+          total_paid_cop?: number
+          trainer_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          beneficiary_type?: string
+          closed_at?: string | null
+          closed_by?: string | null
+          closure_type?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          loan_date?: string
+          loss_cop?: number | null
+          notes?: string | null
+          profit_cop?: number | null
+          provider_id?: string | null
+          status?: string
+          third_party_name?: string | null
+          total_paid_cop?: number
+          trainer_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "loans_closed_by_fkey"
+            columns: ["closed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_provider_id_fkey"
+            columns: ["provider_id"]
+            isOneToOne: false
+            referencedRelation: "service_providers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "loans_updated_by_fkey"
             columns: ["updated_by"]
             isOneToOne: false
             referencedRelation: "profiles"
@@ -2170,3 +2320,12 @@ export type ExpenseRecordItemUpdate = Database["public"]["Tables"]["expense_reco
 export type AppConfig = Database["public"]["Tables"]["app_config"]["Row"]
 export type AppConfigInsert = Database["public"]["Tables"]["app_config"]["Insert"]
 export type AppConfigUpdate = Database["public"]["Tables"]["app_config"]["Update"]
+
+// loans
+export type Loan = Database["public"]["Tables"]["loans"]["Row"]
+export type LoanInsert = Database["public"]["Tables"]["loans"]["Insert"]
+export type LoanUpdate = Database["public"]["Tables"]["loans"]["Update"]
+
+// loan_payments
+export type LoanPayment = Database["public"]["Tables"]["loan_payments"]["Row"]
+export type LoanPaymentInsert = Database["public"]["Tables"]["loan_payments"]["Insert"]

@@ -1157,8 +1157,9 @@
   font-weight: 800;
   font-size: 0.8rem;
 
-  &--pos { color: var(--fv2-success); }
-  &--neg { color: var(--fv2-danger); }
+  &--pos     { color: var(--fv2-success); }
+  &--neg     { color: var(--fv2-danger);  }
+  &--neutral { color: #d97706;            }
 }
 
 .fv2-caja-stat__value {
@@ -1168,6 +1169,15 @@
   color: var(--fv2-text-primary);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
+
+  &--amber { color: #d97706; }
+}
+
+.fv2-caja-stat__sublabel {
+  font-size: 0.62rem;
+  color: var(--fv2-text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
 }
 
 // ─── Alerta de cierre de quincena ────────────────────────────────────────

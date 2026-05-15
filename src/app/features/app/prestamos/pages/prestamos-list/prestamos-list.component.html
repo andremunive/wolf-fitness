@@ -1,0 +1,561 @@
+<div class="prestamos-page">
+
+  <!-- ===== HEADER ===== -->
+  <header class="prestamos-page__header">
+    <div class="prestamos-page__header-inner">
+      <div class="prestamos-page__title-row">
+        <h1 class="prestamos-page__title">
+          Préstamos
+          <span
+            *ngIf="!isLoadingActive && activeCount > 0"
+            class="prestamos-page__active-badge"
+          >{{ activeCount }} activos</span>
+        </h1>
+        <button
+          type="button"
+          class="prestamos-page__new-btn"
+          (click)="openNewLoanModal()"
+          aria-label="Nuevo préstamo"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          <span>Nuevo préstamo</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ===== MAIN ===== -->
+  <main class="prestamos-page__main">
+
+    <!-- ── Sección: Préstamos activos ─────────────────────────────────────── -->
+    <section class="prestamos-page__section">
+      <h2 class="prestamos-page__section-title">Préstamos activos</h2>
+
+      <!-- Loading skeleton -->
+      <div *ngIf="isLoadingActive" class="prestamos-loading" aria-label="Cargando préstamos activos...">
+        <div *ngFor="let i of skeletonRows" class="skeleton-row"></div>
+      </div>
+
+      <!-- Empty state (P4: no collapse UI — just show empty state directly) -->
+      <div *ngIf="!isLoadingActive && activeLoans.length === 0" class="loans-empty">
+        <div class="loans-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 18.75a60.07 60.07 0 0115.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 013 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 00-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 01-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 003 15h-.75M15 10.5a3 3 0 11-6 0 3 3 0 016 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/>
+          </svg>
+        </div>
+        <p class="loans-empty__text">Sin préstamos activos</p>
+        <button type="button" class="loans-empty__cta" (click)="openNewLoanModal()">
+          + Nuevo préstamo
+        </button>
+      </div>
+
+      <!-- Mobile cards -->
+      <div *ngIf="!isLoadingActive && activeLoans.length > 0" class="loans-cards">
+        <div
+          *ngFor="let loan of activeLoans; trackBy: trackByLoanId"
+          class="loan-card"
+        >
+          <!-- Beneficiary row -->
+          <div class="loan-card__top">
+            <div class="loan-card__beneficiary">
+              <span
+                class="loan-card__avatar"
+                [style.background-color]="getAvatarBg(loan.beneficiary_label)"
+                aria-hidden="true"
+              >{{ getInitials(loan.beneficiary_label) }}</span>
+              <div class="loan-card__beneficiary-info">
+                <span class="loan-card__name">{{ loan.beneficiary_label }}</span>
+                <span
+                  class="loan-card__type-badge"
+                  [ngClass]="{
+                    'loan-card__type-badge--trainer': loan.beneficiary_type === 'trainer',
+                    'loan-card__type-badge--provider': loan.beneficiary_type === 'provider',
+                    'loan-card__type-badge--third': loan.beneficiary_type === 'third_party'
+                  }"
+                >
+                  <ng-container *ngIf="loan.beneficiary_type === 'trainer'">Entrenador</ng-container>
+                  <ng-container *ngIf="loan.beneficiary_type === 'provider'">Proveedor</ng-container>
+                  <ng-container *ngIf="loan.beneficiary_type === 'third_party'">Tercero</ng-container>
+                </span>
+              </div>
+            </div>
+            <!-- Actions dropdown -->
+            <div class="loan-card__menu">
+              <app-loan-actions-menu
+                [loan]="loan"
+                dropdownAlign="right"
+                (detailRequested)="openDetail($event)"
+                (paymentRequested)="openPayment($event)"
+                (editRequested)="openEdit($event)"
+                (closeRequested)="openClose($event)"
+              ></app-loan-actions-menu>
+            </div>
+          </div>
+
+          <!-- Date + amounts -->
+          <div class="loan-card__body">
+            <div class="loan-card__field">
+              <span class="loan-card__field-label">Fecha</span>
+              <span class="loan-card__field-value">{{ loan.loan_date | date:'dd/MM/yyyy' }}</span>
+              <span class="loan-card__field-sub">{{ getDaysAgoLabel(loan.loan_date) }}</span>
+            </div>
+            <div class="loan-card__field">
+              <span class="loan-card__field-label">Monto</span>
+              <span class="loan-card__field-value loan-card__field-value--bold">{{ formatAmount(loan.amount_cop) }}</span>
+            </div>
+            <div class="loan-card__field">
+              <span class="loan-card__field-label">Abonado</span>
+              <span class="loan-card__field-value">{{ formatAmount(loan.total_paid_cop) }}</span>
+              <!-- Progress bar -->
+              <div class="loan-progress">
+                <div
+                  class="loan-progress__fill"
+                  [style.width.%]="getProgressPct(loan)"
+                  [ngClass]="isPaidOff(loan) ? 'loan-progress__fill--paid' : 'loan-progress__fill--active'"
+                ></div>
+              </div>
+            </div>
+            <div class="loan-card__field">
+              <span class="loan-card__field-label">Saldo</span>
+              <ng-container *ngIf="loan.saldo_cop > 0">
+                <span class="loan-card__field-value loan-card__field-value--danger">{{ formatAmount(loan.saldo_cop) }}</span>
+              </ng-container>
+              <ng-container *ngIf="loan.saldo_cop <= 0">
+                <span class="loan-card__field-value loan-card__field-value--success">
+                  Saldo $0
+                  <span *ngIf="loan.saldo_cop < 0" class="loan-card__surplus-badge">Con ganancia</span>
+                </span>
+              </ng-container>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Desktop table -->
+      <div *ngIf="!isLoadingActive && activeLoans.length > 0" class="loans-table-wrap">
+        <table class="loans-table">
+          <thead>
+            <tr>
+              <th class="loans-table__th">Beneficiario</th>
+              <th class="loans-table__th">Fecha</th>
+              <th class="loans-table__th loans-table__th--right">Monto</th>
+              <th class="loans-table__th loans-table__th--right">Abonado</th>
+              <th class="loans-table__th loans-table__th--right">Saldo</th>
+              <th class="loans-table__th loans-table__th--center">Acciones</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let loan of activeLoans; trackBy: trackByLoanId"
+              class="loans-table__row"
+            >
+              <!-- Beneficiario -->
+              <td class="loans-table__td">
+                <div class="loans-table__beneficiary">
+                  <span
+                    class="loans-table__avatar"
+                    [style.background-color]="getAvatarBg(loan.beneficiary_label)"
+                    aria-hidden="true"
+                  >{{ getInitials(loan.beneficiary_label) }}</span>
+                  <div>
+                    <p class="loans-table__name">{{ loan.beneficiary_label }}</p>
+                    <span
+                      class="loans-table__type-badge"
+                      [ngClass]="{
+                        'loans-table__type-badge--trainer': loan.beneficiary_type === 'trainer',
+                        'loans-table__type-badge--provider': loan.beneficiary_type === 'provider',
+                        'loans-table__type-badge--third': loan.beneficiary_type === 'third_party'
+                      }"
+                    >
+                      <ng-container *ngIf="loan.beneficiary_type === 'trainer'">Entrenador</ng-container>
+                      <ng-container *ngIf="loan.beneficiary_type === 'provider'">Proveedor</ng-container>
+                      <ng-container *ngIf="loan.beneficiary_type === 'third_party'">Tercero</ng-container>
+                    </span>
+                  </div>
+                </div>
+              </td>
+
+              <!-- Fecha -->
+              <td class="loans-table__td">
+                <p class="loans-table__date-main">{{ loan.loan_date | date:'dd/MM/yyyy' }}</p>
+                <p class="loans-table__date-sub">{{ getDaysAgoLabel(loan.loan_date) }}</p>
+              </td>
+
+              <!-- Monto -->
+              <td class="loans-table__td loans-table__td--right loans-table__td--bold">
+                {{ formatAmount(loan.amount_cop) }}
+              </td>
+
+              <!-- Abonado + progress -->
+              <td class="loans-table__td loans-table__td--right">
+                <p>{{ formatAmount(loan.total_paid_cop) }}</p>
+                <div class="loan-progress">
+                  <div
+                    class="loan-progress__fill"
+                    [style.width.%]="getProgressPct(loan)"
+                    [ngClass]="isPaidOff(loan) ? 'loan-progress__fill--paid' : 'loan-progress__fill--active'"
+                  ></div>
+                </div>
+              </td>
+
+              <!-- Saldo -->
+              <td class="loans-table__td loans-table__td--right">
+                <ng-container *ngIf="loan.saldo_cop > 0">
+                  <span class="loans-table__saldo--danger">{{ formatAmount(loan.saldo_cop) }}</span>
+                </ng-container>
+                <ng-container *ngIf="loan.saldo_cop <= 0">
+                  <span class="loans-table__saldo--success">
+                    Saldo $0
+                    <span *ngIf="loan.saldo_cop < 0" class="loan-surplus-badge">Con ganancia</span>
+                  </span>
+                </ng-container>
+              </td>
+
+              <!-- Acciones -->
+              <td class="loans-table__td loans-table__td--center">
+                <div class="loans-table__actions-menu">
+                  <app-loan-actions-menu
+                    [loan]="loan"
+                    dropdownAlign="right"
+                    (detailRequested)="openDetail($event)"
+                    (paymentRequested)="openPayment($event)"
+                    (editRequested)="openEdit($event)"
+                    (closeRequested)="openClose($event)"
+                  ></app-loan-actions-menu>
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ── Sección: Historial ──────────────────────────────────────────────── -->
+    <section class="prestamos-page__section">
+      <h2 class="prestamos-page__section-title">Historial de préstamos</h2>
+
+      <!-- Loading skeleton -->
+      <div *ngIf="isLoadingClosed" class="prestamos-loading" aria-label="Cargando historial de préstamos...">
+        <div *ngFor="let i of skeletonRows" class="skeleton-row"></div>
+      </div>
+
+      <ng-container *ngIf="!isLoadingClosed">
+
+        <!-- Filtros (solo si hay préstamos cerrados) -->
+        <div *ngIf="closedLoans.length > 0" class="historial-filters">
+          <!-- Search -->
+          <div class="historial-filters__search">
+            <svg class="historial-filters__search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-4.35-4.35m0 0A7 7 0 1116.65 16.65z"/>
+            </svg>
+            <input
+              type="text"
+              class="historial-filters__input"
+              placeholder="Buscar por nombre..."
+              [value]="currentFilters.search"
+              (input)="onSearchChange($any($event.target).value)"
+              aria-label="Buscar préstamo cerrado por nombre"
+            />
+          </div>
+
+          <!-- Tipo -->
+          <select
+            class="historial-filters__select"
+            [value]="currentFilters.tipo"
+            (change)="onTipoChange($any($event.target).value)"
+            aria-label="Filtrar por tipo de beneficiario"
+          >
+            <option value="">Tipo: Todos</option>
+            <option value="trainer">Entrenador</option>
+            <option value="provider">Proveedor</option>
+            <option value="third_party">Tercero</option>
+          </select>
+
+          <!-- Resultado -->
+          <select
+            class="historial-filters__select"
+            [value]="currentFilters.resultado"
+            (change)="onResultadoChange($any($event.target).value)"
+            aria-label="Filtrar por resultado del préstamo"
+          >
+            <option value="">Resultado: Todos</option>
+            <option value="profit">Con ganancia</option>
+            <option value="neutral">Sin ganancia</option>
+            <option value="loss">Con pérdida</option>
+          </select>
+        </div>
+
+        <!-- Empty state: sin préstamos cerrados en BD -->
+        <div *ngIf="closedLoans.length === 0" class="loans-empty">
+          <div class="loans-empty__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25zM6.75 12h.008v.008H6.75V12zm0 3h.008v.008H6.75V15zm0 3h.008v.008H6.75V18z"/>
+            </svg>
+          </div>
+          <p class="loans-empty__text">Sin préstamos cerrados aún.</p>
+        </div>
+
+        <!-- Empty state: filtros vacían el resultado -->
+        <div *ngIf="closedLoans.length > 0 && filteredClosedLoans.length === 0" class="loans-empty">
+          <div class="loans-empty__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z"/>
+            </svg>
+          </div>
+          <p class="loans-empty__text">No hay préstamos que coincidan con los filtros.</p>
+          <button type="button" class="loans-empty__cta" (click)="clearFilters()">
+            Limpiar filtros
+          </button>
+        </div>
+
+        <!-- Mobile cards: historial -->
+        <div *ngIf="filteredClosedLoans.length > 0" class="loans-cards">
+          <div
+            *ngFor="let loan of filteredClosedLoans; trackBy: trackByLoanId"
+            class="loan-card loan-card--closed"
+          >
+            <!-- Beneficiary row -->
+            <div class="loan-card__top">
+              <div class="loan-card__beneficiary">
+                <span
+                  class="loan-card__avatar loan-card__avatar--closed"
+                  [style.background-color]="getAvatarBg(loan.beneficiary_label)"
+                  aria-hidden="true"
+                >{{ getInitials(loan.beneficiary_label) }}</span>
+                <div class="loan-card__beneficiary-info">
+                  <span class="loan-card__name">{{ loan.beneficiary_label }}</span>
+                  <span
+                    class="loan-card__type-badge"
+                    [ngClass]="{
+                      'loan-card__type-badge--trainer': loan.beneficiary_type === 'trainer',
+                      'loan-card__type-badge--provider': loan.beneficiary_type === 'provider',
+                      'loan-card__type-badge--third': loan.beneficiary_type === 'third_party'
+                    }"
+                  >
+                    <ng-container *ngIf="loan.beneficiary_type === 'trainer'">Entrenador</ng-container>
+                    <ng-container *ngIf="loan.beneficiary_type === 'provider'">Proveedor</ng-container>
+                    <ng-container *ngIf="loan.beneficiary_type === 'third_party'">Tercero</ng-container>
+                  </span>
+                </div>
+              </div>
+              <!-- Actions: only "Ver detalle" for closed loans -->
+              <div class="loan-card__menu">
+                <app-loan-actions-menu
+                  [loan]="loan"
+                  dropdownAlign="right"
+                  (detailRequested)="openDetail($event)"
+                ></app-loan-actions-menu>
+              </div>
+            </div>
+
+            <!-- Date + amounts + result -->
+            <div class="loan-card__body">
+              <div class="loan-card__field">
+                <span class="loan-card__field-label">Préstamo</span>
+                <span class="loan-card__field-value">{{ loan.loan_date | date:'dd/MM/yyyy' }}</span>
+              </div>
+              <div class="loan-card__field">
+                <span class="loan-card__field-label">Monto</span>
+                <span class="loan-card__field-value loan-card__field-value--bold">{{ formatAmount(loan.amount_cop) }}</span>
+              </div>
+              <div class="loan-card__field">
+                <span class="loan-card__field-label">Abonado</span>
+                <span class="loan-card__field-value">{{ formatAmount(loan.total_paid_cop) }}</span>
+              </div>
+              <div class="loan-card__field">
+                <span class="loan-card__field-label">Resultado</span>
+                <!-- Con ganancia -->
+                <ng-container *ngIf="(loan.profit_cop ?? 0) > 0">
+                  <span class="loan-result-chip loan-result-chip--profit">
+                    + {{ formatAmount(loan.profit_cop ?? 0) }} ganancia
+                  </span>
+                </ng-container>
+                <!-- Con pérdida -->
+                <ng-container *ngIf="(loan.loss_cop ?? 0) > 0">
+                  <span class="loan-result-chip loan-result-chip--loss">
+                    − {{ formatAmount(loan.loss_cop ?? 0) }} pérdida
+                  </span>
+                </ng-container>
+                <!-- Sin ganancia ni pérdida -->
+                <ng-container *ngIf="(loan.profit_cop ?? 0) === 0 && (loan.loss_cop ?? 0) === 0">
+                  <span class="loan-result-chip loan-result-chip--neutral">Sin ganancia</span>
+                </ng-container>
+              </div>
+            </div>
+
+            <!-- Cierre info -->
+            <div *ngIf="loan.closed_at" class="loan-card__footer">
+              <span class="loan-card__closed-label">
+                Cierre {{ loan.closed_at | date:'dd/MM/yyyy' }}
+              </span>
+              <span
+                class="loan-closure-badge"
+                [ngClass]="{
+                  'loan-closure-badge--normal': loan.closure_type === 'normal',
+                  'loan-closure-badge--forced': loan.closure_type === 'forced'
+                }"
+              >
+                <ng-container *ngIf="loan.closure_type === 'normal'">Normal</ng-container>
+                <ng-container *ngIf="loan.closure_type === 'forced'">Forzado</ng-container>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Desktop table: historial -->
+        <div *ngIf="filteredClosedLoans.length > 0" class="loans-table-wrap">
+          <table class="loans-table">
+            <thead>
+              <tr>
+                <th class="loans-table__th">Beneficiario</th>
+                <th class="loans-table__th">Fecha préstamo</th>
+                <th class="loans-table__th loans-table__th--right">Monto</th>
+                <th class="loans-table__th loans-table__th--right">Abonado</th>
+                <th class="loans-table__th">Cierre</th>
+                <th class="loans-table__th">Resultado</th>
+                <th class="loans-table__th loans-table__th--center">Acciones</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let loan of filteredClosedLoans; trackBy: trackByLoanId"
+                class="loans-table__row"
+              >
+                <!-- Beneficiario -->
+                <td class="loans-table__td">
+                  <div class="loans-table__beneficiary">
+                    <span
+                      class="loans-table__avatar loans-table__avatar--closed"
+                      [style.background-color]="getAvatarBg(loan.beneficiary_label)"
+                      aria-hidden="true"
+                    >{{ getInitials(loan.beneficiary_label) }}</span>
+                    <div>
+                      <p class="loans-table__name">{{ loan.beneficiary_label }}</p>
+                      <span
+                        class="loans-table__type-badge"
+                        [ngClass]="{
+                          'loans-table__type-badge--trainer': loan.beneficiary_type === 'trainer',
+                          'loans-table__type-badge--provider': loan.beneficiary_type === 'provider',
+                          'loans-table__type-badge--third': loan.beneficiary_type === 'third_party'
+                        }"
+                      >
+                        <ng-container *ngIf="loan.beneficiary_type === 'trainer'">Entrenador</ng-container>
+                        <ng-container *ngIf="loan.beneficiary_type === 'provider'">Proveedor</ng-container>
+                        <ng-container *ngIf="loan.beneficiary_type === 'third_party'">Tercero</ng-container>
+                      </span>
+                    </div>
+                  </div>
+                </td>
+
+                <!-- Fecha préstamo -->
+                <td class="loans-table__td">
+                  <p class="loans-table__date-main">{{ loan.loan_date | date:'dd/MM/yyyy' }}</p>
+                </td>
+
+                <!-- Monto -->
+                <td class="loans-table__td loans-table__td--right loans-table__td--bold">
+                  {{ formatAmount(loan.amount_cop) }}
+                </td>
+
+                <!-- Abonado -->
+                <td class="loans-table__td loans-table__td--right">
+                  {{ formatAmount(loan.total_paid_cop) }}
+                </td>
+
+                <!-- Cierre: fecha + badge tipo -->
+                <td class="loans-table__td">
+                  <p *ngIf="loan.closed_at" class="loans-table__date-main">
+                    {{ loan.closed_at | date:'dd/MM/yyyy' }}
+                  </p>
+                  <span
+                    *ngIf="loan.closure_type"
+                    class="loan-closure-badge"
+                    [ngClass]="{
+                      'loan-closure-badge--normal': loan.closure_type === 'normal',
+                      'loan-closure-badge--forced': loan.closure_type === 'forced'
+                    }"
+                  >
+                    <ng-container *ngIf="loan.closure_type === 'normal'">Normal</ng-container>
+                    <ng-container *ngIf="loan.closure_type === 'forced'">Forzado</ng-container>
+                  </span>
+                </td>
+
+                <!-- Resultado -->
+                <td class="loans-table__td">
+                  <ng-container *ngIf="(loan.profit_cop ?? 0) > 0">
+                    <span class="loan-result-chip loan-result-chip--profit">
+                      + {{ formatAmount(loan.profit_cop ?? 0) }} ganancia
+                    </span>
+                  </ng-container>
+                  <ng-container *ngIf="(loan.loss_cop ?? 0) > 0">
+                    <span class="loan-result-chip loan-result-chip--loss">
+                      − {{ formatAmount(loan.loss_cop ?? 0) }} pérdida
+                    </span>
+                  </ng-container>
+                  <ng-container *ngIf="(loan.profit_cop ?? 0) === 0 && (loan.loss_cop ?? 0) === 0">
+                    <span class="loan-result-chip loan-result-chip--neutral">Sin ganancia</span>
+                  </ng-container>
+                </td>
+
+                <!-- Acciones -->
+                <td class="loans-table__td loans-table__td--center">
+                  <div class="loans-table__actions-menu">
+                    <app-loan-actions-menu
+                      [loan]="loan"
+                      dropdownAlign="right"
+                      (detailRequested)="openDetail($event)"
+                    ></app-loan-actions-menu>
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+      </ng-container>
+    </section>
+
+  </main>
+
+</div>
+
+<!-- Modal: Nuevo préstamo -->
+<app-new-loan-modal
+  *ngIf="isNewLoanModalOpen"
+  (closed)="closeNewLoanModal()"
+  (loanCreated)="onLoanCreated()"
+></app-new-loan-modal>
+
+<!-- Modal: Detalle del préstamo -->
+<app-loan-detail-modal
+  *ngIf="detailModalLoan"
+  [loan]="detailModalLoan"
+  (closed)="closeDetail()"
+  (paymentRequested)="onPaymentRequestedFromDetail($event)"
+></app-loan-detail-modal>
+
+<!-- Modal: Registrar abono (z-60, superpone al detail si ambos están abiertos) -->
+<app-loan-payment-modal
+  *ngIf="paymentModalLoan"
+  [loan]="paymentModalLoan"
+  (closed)="closePayment()"
+  (paymentCreated)="onPaymentCreated($event)"
+></app-loan-payment-modal>
+
+<!-- Modal: Editar préstamo -->
+<app-loan-edit-modal
+  *ngIf="editModalLoan"
+  [loan]="editModalLoan"
+  (closed)="closeEdit()"
+  (loanUpdated)="onLoanUpdated($event)"
+></app-loan-edit-modal>
+
+<!-- Modal: Cerrar préstamo -->
+<app-loan-close-modal
+  *ngIf="closeModalLoan"
+  [loan]="closeModalLoan"
+  (closed)="closeClose()"
+  (loanClosed)="onLoanClosed($event)"
+></app-loan-close-modal>

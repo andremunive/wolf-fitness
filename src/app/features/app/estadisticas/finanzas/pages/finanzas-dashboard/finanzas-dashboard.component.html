@@ -686,6 +686,22 @@
                   {{ formatVisible(state.cs.data!.caja_consolidada.nomina_pagada_cop, state.v) }}
                 </div>
               </div>
+              <div class="fv2-caja-stat">
+                <span class="fv2-caja-stat__label">
+                  <span class="fv2-caja-stat__sign fv2-caja-stat__sign--neutral">~</span>
+                  PRÉSTAMOS
+                </span>
+                <div
+                  class="fv2-caja-stat__value"
+                  [class.fv2-caja-stat__value--amber]="(state.cs.data!.caja_consolidada.saldo_prestamos_cop ?? 0) < 0"
+                >
+                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_prestamos_cop ?? 0, state.v) }}
+                </div>
+                <div class="fv2-caja-stat__sublabel">
+                  Otorgados: {{ formatVisible(state.cs.data!.caja_consolidada.prestamos_otorgados_cop ?? 0, state.v) }}
+                  · Recup.: {{ formatVisible(state.cs.data!.caja_consolidada.abonos_recibidos_cop ?? 0, state.v) }}
+                </div>
+              </div>
             </div>
 
             <!-- Sparkline grande decorativa al fondo -->

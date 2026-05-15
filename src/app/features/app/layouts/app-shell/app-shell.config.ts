@@ -1,6 +1,6 @@
 import { UserRole } from 'src/app/core/types/supabase';
 
-export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase' | 'receipt';
+export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase' | 'receipt' | 'banknote';
 
 export interface NavMenuItem {
   label: string;
@@ -72,6 +72,13 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         description: 'Registro cronológico de egresos del gimnasio por categoría.',
         iconKey: 'receipt',
         routerLink: '/app/registro',
+        allowedRoles: ['admin']
+      },
+      {
+        label: 'Préstamos',
+        description: 'Préstamos activos e historial de pagos.',
+        iconKey: 'banknote',
+        routerLink: '/app/prestamos',
         allowedRoles: ['admin']
       }
     ]

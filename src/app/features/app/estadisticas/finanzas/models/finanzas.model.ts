@@ -21,6 +21,12 @@ export interface CajaConsolidada {
   egresos_operativos_cop: number;
   nomina_pagada_cop: number;
   saldo_cop: number;                  // puede ser negativo
+  /** Monto total otorgado en préstamos activos+cerrados. Opcional mientras el backend despliega v2. */
+  prestamos_otorgados_cop?: number;
+  /** Monto total recuperado (abonos recibidos). Opcional mientras el backend despliega v2. */
+  abonos_recibidos_cop?: number;
+  /** Saldo neto de préstamos (otorgados − recuperado). Negativo = dinero afuera. Opcional mientras el backend despliega v2. */
+  saldo_prestamos_cop?: number;
 }
 
 export interface CajaMenor {
