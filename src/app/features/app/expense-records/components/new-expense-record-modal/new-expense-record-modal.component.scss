@@ -155,6 +155,14 @@ form { display: flex; flex-direction: column; gap: 12px; }
     font-size: 12px;
     color: #dc2626;
   }
+
+  &__hint-warn {
+    font-size: 12px;
+    color: #b45309;
+    margin-top: 4px;
+    display: block;
+    line-height: 1.35;
+  }
 }
 
 // ─── File input ───────────────────────────────────────────────────────────────

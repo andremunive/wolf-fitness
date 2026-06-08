@@ -59,10 +59,7 @@ export class ExpenseCategoryAutocompleteComponent implements OnInit, OnChanges, 
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['selectedCategory'] && this.selectedCategory) {
-      const display = this.selectedCategory.emoji
-        ? `${this.selectedCategory.emoji} ${this.selectedCategory.name}`
-        : this.selectedCategory.name;
-      this.searchControl.setValue(display, { emitEvent: false });
+      this.searchControl.setValue(this.selectedCategory.name, { emitEvent: false });
     }
     if (changes['categories']) {
       this.updateFilteredOptions(this.searchControl.value ?? '');
@@ -81,10 +78,7 @@ export class ExpenseCategoryAutocompleteComponent implements OnInit, OnChanges, 
       this.isOpen = false;
       // If nothing valid is selected, revert the input to the selected value.
       if (this.selectedCategory) {
-        const display = this.selectedCategory.emoji
-          ? `${this.selectedCategory.emoji} ${this.selectedCategory.name}`
-          : this.selectedCategory.name;
-        this.searchControl.setValue(display, { emitEvent: false });
+        this.searchControl.setValue(this.selectedCategory.name, { emitEvent: false });
       } else {
         this.searchControl.setValue('', { emitEvent: false });
       }
@@ -101,10 +95,7 @@ export class ExpenseCategoryAutocompleteComponent implements OnInit, OnChanges, 
     }
     if (option.category) {
       this.categorySelected.emit(option.category);
-      const display = option.category.emoji
-        ? `${option.category.emoji} ${option.category.name}`
-        : option.category.name;
-      this.searchControl.setValue(display, { emitEvent: false });
+      this.searchControl.setValue(option.category.name, { emitEvent: false });
       this.isOpen = false;
       this.cdr.markForCheck();
     }
@@ -129,7 +120,7 @@ export class ExpenseCategoryAutocompleteComponent implements OnInit, OnChanges, 
     const options: AutocompleteOption[] = matched.map((c) => ({
       category: c,
       isCreateNew: false,
-      label: c.emoji ? `${c.emoji} ${c.name}` : c.name
+      label: c.name
     }));
 
     // Show "create new" option when query doesn't exactly match any existing name.

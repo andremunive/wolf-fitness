@@ -12,7 +12,7 @@
       >
         <option value="">Todas</option>
         <option *ngFor="let cat of categories" [value]="cat.id">
-          {{ cat.emoji ? cat.emoji + ' ' : '' }}{{ cat.name }}
+          {{ cat.name }}
         </option>
       </select>
     </div>
@@ -48,9 +48,9 @@
     >
       <div class="record-card__top">
         <div class="record-card__category-wrap">
-          <span class="record-card__category">
-            <span *ngIf="record.categoryEmoji" class="record-card__emoji">{{ record.categoryEmoji }}</span>
-            {{ record.categoryName }}
+          <span class="record-card__category">{{ record.categoryName }}</span>
+          <span class="expense-type-badge expense-type-badge--{{ record.categoryExpenseType }}">
+            {{ record.categoryExpenseType | expenseTypeLabel }}
           </span>
           <span class="record-card__provider" *ngIf="record.providerName">{{ record.providerName }}</span>
         </div>
@@ -91,9 +91,9 @@
         <tr *ngFor="let record of records; trackBy: trackByRecordId" class="records-table__row">
           <td class="records-table__td">{{ formatDate(record.expenseDate) }}</td>
           <td class="records-table__td">
-            <span class="records-table__category">
-              <span *ngIf="record.categoryEmoji" class="records-table__emoji">{{ record.categoryEmoji }}</span>
-              {{ record.categoryName }}
+            <span class="records-table__category">{{ record.categoryName }}</span>
+            <span class="expense-type-badge expense-type-badge--{{ record.categoryExpenseType }}">
+              {{ record.categoryExpenseType | expenseTypeLabel }}
             </span>
             <span class="records-table__provider">{{ record.providerName }}</span>
           </td>

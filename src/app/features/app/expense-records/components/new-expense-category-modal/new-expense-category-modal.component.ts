@@ -13,7 +13,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { ExpenseCategoriesService } from '../../services/expense-categories.service';
-import { ExpenseCategoryViewModel } from '../../models/expense-record.model';
+import { ExpenseCategoryViewModel, ExpenseTypeValue } from '../../models/expense-record.model';
 
 @Component({
   selector: 'app-new-expense-category-modal',
@@ -25,6 +25,9 @@ export class NewExpenseCategoryModalComponent implements OnInit, OnDestroy {
   /** Pre-fills the name field when the admin chose "Create new: <query>" from the autocomplete. */
   @Input() prefillName = '';
 
+  /** Pre-fills the expense type when the parent form already has a value selected. */
+  @Input() prefillExpenseType: ExpenseTypeValue | null = null;
+
   @Output() closed = new EventEmitter<void>();
   @Output() created = new EventEmitter<ExpenseCategoryViewModel>();
 
@@ -32,7 +35,7 @@ export class NewExpenseCategoryModalComponent implements OnInit, OnDestroy {
 
   readonly form = new FormGroup({
     name: new FormControl('', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]),
-    emoji: new FormControl('', [Validators.maxLength(8)]),
+    expense_type: new FormControl<ExpenseTypeValue | ''>('', [Validators.required]),
     description: new FormControl('')
   });
 
@@ -45,15 +48,16 @@ export class NewExpenseCategoryModalComponent implements OnInit, OnDestroy {
   ) {}
 
   ngOnInit(): void {
-    if (this.prefillName) {
-      this.form.patchValue({ name: this.prefillName });
-    }
+    const patch: { name?: string; expense_type?: ExpenseTypeValue } = {};
+    if (this.prefillName) patch.name = this.prefillName;
+    if (this.prefillExpenseType) patch.expense_type = this.prefillExpenseType;
+    if (Object.keys(patch).length) this.form.patchValue(patch);
   }
 
   save(): void {
     if (this.form.invalid || this.isSaving) return;
 
-    const { name, emoji, description } = this.form.value;
+    const { name, expense_type, description } = this.form.value;
 
     this.isSaving = true;
     this.errorMessage = null;
@@ -62,7 +66,7 @@ export class NewExpenseCategoryModalComponent implements OnInit, OnDestroy {
     this.categoriesService
       .create({
         name: name!,
-        emoji: emoji || null,
+        expense_type: expense_type as ExpenseTypeValue,
         description: description || null
       })
       .pipe(takeUntil(this.destroy$))

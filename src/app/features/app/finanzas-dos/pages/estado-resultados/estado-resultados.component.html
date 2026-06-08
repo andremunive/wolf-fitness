@@ -1,0 +1,437 @@
+<ng-container *ngIf="state$ | async as state">
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER STICKY                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <header class="er-header">
+    <div class="er-header__inner">
+      <!-- Fila 1: título + acción de export -->
+      <div class="er-header__top">
+        <div class="er-header__titles">
+          <h1 class="er-header__title">Estado de Resultados</h1>
+          <p class="er-header__subtitle">
+            Wolf Fitness · <span class="er-header__period">{{ periodoSnap.label }}</span>
+            <span *ngIf="periodoSnap.es_actual" class="er-header__partial-chip">
+              <span class="er-header__partial-dot"></span>
+              En curso
+            </span>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="er-btn er-btn--primary er-btn--export"
+          (click)="onExportarPdf()"
+          [disabled]="exportando || state.status !== 'loaded'"
+          [attr.aria-label]="exportando ? 'Generando PDF' : 'Exportar a PDF'"
+          [attr.aria-busy]="exportando"
+        >
+          <svg
+            *ngIf="!exportando"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-6m-3 3l3 3 3-3" />
+          </svg>
+          <span
+            *ngIf="exportando"
+            class="er-btn__spinner"
+            aria-hidden="true"
+          ></span>
+          <span>{{ exportando ? 'Generando…' : 'Exportar PDF' }}</span>
+        </button>
+      </div>
+
+      <!-- Fila 2: selector de modo + navegación temporal -->
+      <div class="er-header__controls">
+        <div class="er-modo" role="tablist" aria-label="Modo de período">
+          <button
+            *ngFor="let m of modos; trackBy: trackByModo"
+            type="button"
+            role="tab"
+            class="er-modo__chip"
+            [class.er-modo__chip--active]="periodoSnap.modo === m.modo"
+            [attr.aria-selected]="periodoSnap.modo === m.modo"
+            (click)="onCambiarModo(m.modo)"
+          >
+            {{ m.label }}
+          </button>
+        </div>
+
+        <div class="er-nav" role="group" aria-label="Navegación de período">
+          <button
+            type="button"
+            class="er-nav__btn"
+            (click)="onPeriodoAnterior()"
+            aria-label="Período anterior"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 010 1.06L9.06 10l3.73 3.71a.75.75 0 11-1.06 1.06l-4.25-4.25a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <div
+            class="er-nav__label"
+            [attr.data-modo]="periodoSnap.modo"
+            aria-live="polite"
+          >
+            {{ periodoSnap.label }}
+          </div>
+          <button
+            type="button"
+            class="er-nav__btn"
+            (click)="onPeriodoSiguiente()"
+            [disabled]="periodoSnap.es_actual"
+            [attr.aria-label]="periodoSnap.es_actual ? 'Ya estás en el período actual' : 'Período siguiente'"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L10.94 10 7.21 6.29a.75.75 0 111.06-1.06l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- DOCUMENTO P&G — hoja blanca centrada                                -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <main class="er-page">
+    <!-- Toast de error de exportación -->
+    <div
+      *ngIf="exportError"
+      class="er-export-toast"
+      role="alert"
+    >
+      <span>{{ exportError }}</span>
+      <button
+        type="button"
+        class="er-export-toast__close"
+        (click)="dismissExportError()"
+        aria-label="Cerrar"
+      >×</button>
+    </div>
+
+    <!-- Documento (loading + loaded + error) -->
+    <article class="er-paper" role="document">
+      <!-- ───────── ERROR — dentro del paper para mantener jerarquía ───────── -->
+      <div *ngIf="state.status === 'error'" class="er-paper-error">
+        <div class="er-paper-error__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="er-paper-error__title">No se pudo cargar el estado de resultados</p>
+        <p class="er-paper-error__desc">Revisa tu conexión y vuelve a intentarlo.</p>
+        <button type="button" class="er-btn er-btn--secondary" (click)="onRetry()">
+          Intentar de nuevo
+        </button>
+      </div>
+
+      <!-- ───────── LOADING — skeleton completo del documento ───────── -->
+      <ng-container *ngIf="state.status === 'loading'">
+        <!-- Encabezado del documento (skeleton) -->
+        <div class="er-paper__head">
+          <div class="er-sk er-sk--eyebrow"></div>
+          <div class="er-sk er-sk--title"></div>
+          <div class="er-sk er-sk--periodo"></div>
+        </div>
+        <hr class="er-paper__divider" />
+
+        <!-- INGRESOS skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-section__rows">
+            <div class="er-row er-row--sk"><div class="er-sk er-sk--label"></div><div class="er-sk er-sk--amount"></div></div>
+          </div>
+          <div class="er-row er-row--total er-row--sk">
+            <div class="er-sk er-sk--label er-sk--label-strong"></div>
+            <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+          </div>
+        </section>
+
+        <!-- COSTOS skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-section__rows">
+            <div class="er-row er-row--sk" *ngFor="let i of [0,1,2]; trackBy: trackByIndex">
+              <div class="er-sk er-sk--label"></div>
+              <div class="er-sk er-sk--amount"></div>
+            </div>
+          </div>
+          <div class="er-row er-row--total er-row--sk">
+            <div class="er-sk er-sk--label er-sk--label-strong"></div>
+            <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+          </div>
+        </section>
+
+        <!-- UTILIDAD BRUTA skeleton -->
+        <div class="er-utilidad er-utilidad--sk">
+          <div class="er-sk er-sk--label er-sk--label-strong"></div>
+          <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+        </div>
+
+        <!-- GASTOS skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-section__rows">
+            <div class="er-row er-row--sk" *ngFor="let i of [0,1,2,3,4,5,6,7,8]; trackBy: trackByIndex">
+              <div class="er-sk er-sk--label"></div>
+              <div class="er-sk er-sk--amount"></div>
+            </div>
+          </div>
+          <div class="er-row er-row--total er-row--sk">
+            <div class="er-sk er-sk--label er-sk--label-strong"></div>
+            <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+          </div>
+        </section>
+
+        <!-- UTILIDAD OPERATIVA skeleton -->
+        <div class="er-utilidad er-utilidad--sk">
+          <div class="er-sk er-sk--label er-sk--label-strong"></div>
+          <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+        </div>
+      </ng-container>
+
+      <!-- ───────── LOADED — datos reales ───────── -->
+      <ng-container *ngIf="state.status === 'loaded'">
+        <!-- Encabezado del documento -->
+        <div class="er-paper__head">
+          <p class="er-paper__brand">WOLF FITNESS</p>
+          <h2 class="er-paper__title">Estado de Resultados</h2>
+          <p class="er-paper__periodo">{{ periodoSnap.label }}</p>
+          <span *ngIf="state.data.periodo.es_parcial" class="er-paper__partial-chip">
+            <span class="er-paper__partial-dot"></span>
+            En curso · datos hasta {{ formatDateDmy(state.data.periodo.fecha_corte) }}
+          </span>
+        </div>
+        <hr class="er-paper__divider" />
+
+        <!-- Aviso global cuando el período no registró movimientos -->
+        <div *ngIf="isSinMovimientos(state.data)" class="er-no-data" role="status">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M9 17v-2a4 4 0 014-4h7M3 7h13a4 4 0 014 4v2M3 7l4-4m-4 4l4 4" />
+          </svg>
+          <p class="er-no-data__title">Sin movimientos registrados.</p>
+          <p class="er-no-data__desc">Este período no tiene ingresos, costos ni gastos en el sistema.</p>
+        </div>
+
+        <!-- ─────────── SECCIÓN 1 — INGRESOS ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Ingresos</h3>
+          <div class="er-section__rows">
+            <div class="er-row">
+              <span class="er-row__label">Ingresos por mensualidades</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOP(state.data.ingresos.mensualidades_cop) }}</span>
+            </div>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL INGRESOS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.ingresos.total_cop) }}</span>
+          </div>
+        </section>
+
+        <!-- ─────────── SECCIÓN 2 — COSTOS DIRECTOS ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Costos directos</h3>
+          <div class="er-section__rows">
+            <ng-container *ngIf="state.data.costos_directos.lineas.length > 0; else sinCostos">
+              <div
+                class="er-row"
+                *ngFor="let linea of state.data.costos_directos.lineas; trackBy: trackByLineaCategoria"
+              >
+                <span class="er-row__label">{{ linea.categoria }}</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
+              </div>
+            </ng-container>
+            <ng-template #sinCostos>
+              <p class="er-empty">Sin costos directos en este período.</p>
+            </ng-template>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL COSTOS DIRECTOS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.costos_directos.total_cop) }}</span>
+          </div>
+        </section>
+
+        <!-- ─────────── BLOQUE — UTILIDAD BRUTA ─────────── -->
+        <div
+          class="er-utilidad"
+          [attr.aria-label]="
+            'Utilidad bruta: ' + formatCOP(state.data.utilidad_bruta_cop)
+          "
+        >
+          <div class="er-utilidad__row">
+            <span class="er-utilidad__label">UTILIDAD BRUTA</span>
+            <span
+              class="er-utilidad__amount"
+              [ngClass]="utilidadAmountClass(state.data.utilidad_bruta_cop)"
+            >
+              {{ formatCOP(state.data.utilidad_bruta_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula">(Ingresos − Costos directos)</p>
+        </div>
+
+        <!-- ─────────── SECCIÓN 3 — GASTOS ADMINISTRATIVOS ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Gastos administrativos</h3>
+          <div class="er-section__rows">
+            <ng-container *ngIf="state.data.gastos_administrativos.lineas.length > 0; else sinAdmin">
+              <div
+                class="er-row"
+                *ngFor="let linea of state.data.gastos_administrativos.lineas; trackBy: trackByLineaCategoria"
+              >
+                <span class="er-row__label">{{ linea.categoria }}</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
+              </div>
+            </ng-container>
+            <ng-template #sinAdmin>
+              <p class="er-empty">Sin gastos administrativos en este período.</p>
+            </ng-template>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL GASTOS ADMINISTRATIVOS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.gastos_administrativos.total_cop) }}</span>
+          </div>
+        </section>
+
+        <!-- ─────────── SECCIÓN 4 — GASTOS OPERATIVOS ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Gastos operativos</h3>
+          <div class="er-section__rows">
+            <ng-container
+              *ngFor="let linea of state.data.gastos_operativos.lineas; trackBy: trackByLineaCategoria"
+            >
+              <!-- Nómina entrenadores: SIEMPRE visible (aunque $0), con dot indigo distintivo. -->
+              <div *ngIf="linea.es_nomina_entrenadores" class="er-row er-row--nomina">
+                <span class="er-row__label">
+                  <span class="er-row__nomina-dot" aria-hidden="true">●</span>
+                  {{ linea.categoria }}
+                </span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span
+                  class="er-row__amount er-row__amount--nomina"
+                  [class.er-row__amount--zero]="linea.total_cop === 0"
+                >
+                  {{ formatCOP(linea.total_cop) }}
+                </span>
+              </div>
+
+              <!-- Líneas normales de expense_records: solo si > 0. -->
+              <div *ngIf="!linea.es_nomina_entrenadores && linea.total_cop > 0" class="er-row">
+                <span class="er-row__label">{{ linea.categoria }}</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
+              </div>
+            </ng-container>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL GASTOS OPERATIVOS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.gastos_operativos.total_cop) }}</span>
+          </div>
+        </section>
+
+        <!-- ─────────── BLOQUE — UTILIDAD OPERATIVA (intermedio) ─────────── -->
+        <div
+          class="er-utilidad"
+          [attr.aria-label]="
+            (state.data.utilidad_operativa_cop < 0
+              ? 'Pérdida operativa de '
+              : state.data.utilidad_operativa_cop > 0
+                ? 'Utilidad operativa de '
+                : 'Resultado operativo de ') +
+            formatCOPSigned(state.data.utilidad_operativa_cop)
+          "
+        >
+          <div class="er-utilidad__row">
+            <span
+              class="er-utilidad__label"
+              [ngClass]="utilidadAmountClass(state.data.utilidad_operativa_cop)"
+            >
+              {{ utilidadOperativaLabel(state.data.utilidad_operativa_cop) }}
+            </span>
+            <span
+              class="er-utilidad__amount"
+              [ngClass]="utilidadAmountClass(state.data.utilidad_operativa_cop)"
+            >
+              {{ formatCOPSigned(state.data.utilidad_operativa_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula">(Utilidad bruta − Gastos adm. − Gastos op.)</p>
+        </div>
+
+        <!-- ─────────── SECCIÓN 5 — GASTOS FINANCIEROS ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Gastos financieros</h3>
+          <div class="er-section__rows">
+            <ng-container *ngIf="state.data.gastos_financieros.lineas.length > 0; else sinFinancieros">
+              <div
+                class="er-row"
+                *ngFor="let linea of state.data.gastos_financieros.lineas; trackBy: trackByLineaCategoria"
+              >
+                <span class="er-row__label">{{ linea.categoria }}</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
+              </div>
+            </ng-container>
+            <ng-template #sinFinancieros>
+              <p class="er-empty">Sin gastos financieros en este período.</p>
+            </ng-template>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL GASTOS FINANCIEROS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.gastos_financieros.total_cop) }}</span>
+          </div>
+        </section>
+
+        <!-- ─────────── BLOQUE FINAL — RESULTADO DEL PERÍODO ─────────── -->
+        <div
+          class="er-utilidad er-utilidad--final"
+          [attr.aria-label]="
+            (state.data.resultado_periodo_cop < 0
+              ? 'Pérdida del período de '
+              : 'Resultado del período de ') +
+            formatCOPSigned(state.data.resultado_periodo_cop)
+          "
+        >
+          <div class="er-utilidad__row">
+            <span
+              class="er-utilidad__label"
+              [ngClass]="utilidadAmountClass(state.data.resultado_periodo_cop)"
+            >
+              {{ resultadoPeriodoLabel(state.data.resultado_periodo_cop) }}
+            </span>
+            <span
+              class="er-utilidad__amount"
+              [ngClass]="utilidadAmountClass(state.data.resultado_periodo_cop)"
+            >
+              {{ formatCOPSigned(state.data.resultado_periodo_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula">(Utilidad operativa − Gastos financieros)</p>
+        </div>
+
+        <!-- ─────────── NOTA AL PIE ─────────── -->
+        <footer class="er-paper__footer">
+          <hr class="er-paper__divider er-paper__divider--footer" />
+          <p class="er-paper__footnote">
+            Documento de uso gerencial interno. No reemplaza estados financieros certificados.
+          </p>
+          <p *ngIf="state.data.periodo.es_parcial" class="er-paper__footnote er-paper__footnote--partial">
+            * Los datos del período en curso están sujetos a cambios hasta el cierre del período.
+          </p>
+        </footer>
+      </ng-container>
+    </article>
+  </main>
+</ng-container>

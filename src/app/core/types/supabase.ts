@@ -583,7 +583,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           description: string | null
-          emoji: string | null
+          expense_type: string
           id: string
           is_active: boolean
           name: string
@@ -593,7 +593,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          emoji?: string | null
+          expense_type?: string
           id?: string
           is_active?: boolean
           name: string
@@ -603,7 +603,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           description?: string | null
-          emoji?: string | null
+          expense_type?: string
           id?: string
           is_active?: boolean
           name?: string

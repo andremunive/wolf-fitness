@@ -33,8 +33,10 @@
           <ng-container *ngIf="editingCategoryId !== category.id">
             <div class="type-item__info">
               <div class="type-item__name-row">
-                <span class="type-item__emoji" *ngIf="category.emoji">{{ category.emoji }}</span>
                 <span class="type-item__name">{{ category.name }}</span>
+                <span class="expense-type-badge expense-type-badge--{{ category.expenseType }}">
+                  {{ category.expenseType | expenseTypeLabel }}
+                </span>
                 <span class="type-item__inactive-badge" *ngIf="!category.isActive">Inactivo</span>
               </div>
               <p class="type-item__description" *ngIf="category.description">{{ category.description }}</p>
@@ -73,30 +75,35 @@
           </ng-container>
 
           <div *ngIf="editingCategoryId === category.id" class="inline-edit">
-            <div class="inline-edit__row">
-              <div class="form-field form-field--grow">
-                <label class="form-field__label" [for]="'edit-cat-name-' + category.id">
-                  Nombre <span class="form-field__required" aria-hidden="true">*</span>
-                </label>
-                <input
-                  [id]="'edit-cat-name-' + category.id"
-                  type="text"
-                  class="form-field__input"
-                  [formControl]="editNameControl"
-                  placeholder="Nombre"
-                />
-              </div>
-              <div class="form-field form-field--emoji">
-                <label class="form-field__label" [for]="'edit-cat-emoji-' + category.id">Emoji</label>
-                <input
-                  [id]="'edit-cat-emoji-' + category.id"
-                  type="text"
-                  class="form-field__input form-field__input--emoji"
-                  [formControl]="editEmojiControl"
-                  placeholder="☕"
-                  maxlength="8"
-                />
-              </div>
+            <div class="form-field">
+              <label class="form-field__label" [for]="'edit-cat-name-' + category.id">
+                Nombre <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                [id]="'edit-cat-name-' + category.id"
+                type="text"
+                class="form-field__input"
+                [formControl]="editNameControl"
+                placeholder="Nombre"
+              />
+            </div>
+            <div class="form-field">
+              <label class="form-field__label" [for]="'edit-cat-type-' + category.id">
+                Tipo de gasto <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <select
+                [id]="'edit-cat-type-' + category.id"
+                class="form-field__input"
+                [formControl]="editExpenseTypeControl"
+              >
+                <option value="" disabled>Seleccionar...</option>
+                <option value="costo_directo">Costo directo</option>
+                <option value="gasto_operativo">Gasto operativo</option>
+                <option value="inversion">Inversión</option>
+                <option value="gasto_administrativo">Gasto administrativo</option>
+                <option value="gasto_financiero">Gasto financiero</option>
+                <option value="deuda">Deuda</option>
+              </select>
             </div>
             <div class="form-field">
               <label class="form-field__label" [for]="'edit-cat-desc-' + category.id">Descripción</label>
@@ -110,7 +117,7 @@
             </div>
             <div class="inline-edit__actions">
               <button type="button" class="inline-edit__cancel" (click)="cancelEdit()" [disabled]="isSaving">Cancelar</button>
-              <button type="button" class="inline-edit__save" (click)="saveEdit(category)" [disabled]="editNameControl.invalid || isSaving">Guardar</button>
+              <button type="button" class="inline-edit__save" (click)="saveEdit(category)" [disabled]="editNameControl.invalid || editExpenseTypeControl.invalid || isSaving">Guardar</button>
             </div>
           </div>
 
@@ -119,30 +126,35 @@
 
       <div class="add-type" *ngIf="isAdding">
         <h3 class="add-type__title">Nueva categoría</h3>
-        <div class="add-type__row">
-          <div class="form-field form-field--grow">
-            <label class="form-field__label" for="new-cat-name">
-              Nombre <span class="form-field__required" aria-hidden="true">*</span>
-            </label>
-            <input
-              id="new-cat-name"
-              type="text"
-              class="form-field__input"
-              [formControl]="newNameControl"
-              placeholder="Ej. Mantenimiento"
-            />
-          </div>
-          <div class="form-field form-field--emoji">
-            <label class="form-field__label" for="new-cat-emoji">Emoji</label>
-            <input
-              id="new-cat-emoji"
-              type="text"
-              class="form-field__input form-field__input--emoji"
-              [formControl]="newEmojiControl"
-              placeholder="🔧"
-              maxlength="8"
-            />
-          </div>
+        <div class="form-field">
+          <label class="form-field__label" for="new-cat-name">
+            Nombre <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="new-cat-name"
+            type="text"
+            class="form-field__input"
+            [formControl]="newNameControl"
+            placeholder="Ej. Mantenimiento"
+          />
+        </div>
+        <div class="form-field">
+          <label class="form-field__label" for="new-cat-type">
+            Tipo de gasto <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="new-cat-type"
+            class="form-field__input"
+            [formControl]="newExpenseTypeControl"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            <option value="costo_directo">Costo directo</option>
+            <option value="gasto_operativo">Gasto operativo</option>
+            <option value="inversion">Inversión</option>
+            <option value="gasto_administrativo">Gasto administrativo</option>
+            <option value="gasto_financiero">Gasto financiero</option>
+            <option value="deuda">Deuda</option>
+          </select>
         </div>
         <div class="form-field">
           <label class="form-field__label" for="new-cat-desc">Descripción</label>
@@ -156,7 +168,7 @@
         </div>
         <div class="add-type__actions">
           <button type="button" class="add-type__cancel" (click)="cancelAdd()" [disabled]="isSaving">Cancelar</button>
-          <button type="button" class="add-type__save" (click)="saveAdd()" [disabled]="newNameControl.invalid || isSaving">Agregar</button>
+          <button type="button" class="add-type__save" (click)="saveAdd()" [disabled]="newNameControl.invalid || newExpenseTypeControl.invalid || isSaving">Agregar</button>
         </div>
       </div>
 

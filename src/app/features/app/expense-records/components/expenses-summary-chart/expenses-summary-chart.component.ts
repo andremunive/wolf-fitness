@@ -20,7 +20,6 @@ import {
 export interface ChartBar {
   categoryId: string;
   categoryName: string;
-  categoryEmoji: string | null;
   totalCop: number;
   formattedAmount: string;
   bgColor: string;
@@ -73,7 +72,6 @@ export class ExpensesSummaryChartComponent implements OnChanges {
       return {
         categoryId: d.category_id,
         categoryName: d.category_name,
-        categoryEmoji: d.category_emoji,
         totalCop: d.total_cop,
         formattedAmount: formatAmountShort(d.total_cop),
         bgColor: colors.bg,

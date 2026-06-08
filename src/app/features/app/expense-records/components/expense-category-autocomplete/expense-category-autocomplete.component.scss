@@ -39,7 +39,9 @@
   }
 
   &__option {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: 8px;
     width: 100%;
     padding: 10px 14px;
     text-align: left;
@@ -50,8 +52,6 @@
     cursor: pointer;
     transition: background 0.1s ease;
     min-height: 44px;
-    display: flex;
-    align-items: center;
 
     &:hover {
       background: #f3f4f6;
@@ -78,5 +78,13 @@
     &:only-child {
       border-radius: 10px;
     }
+  }
+
+  &__option-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 }

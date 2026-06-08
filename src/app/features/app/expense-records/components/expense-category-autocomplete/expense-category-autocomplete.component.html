@@ -22,7 +22,13 @@
       role="option"
       (mousedown)="selectOption(option)"
     >
-      {{ option.label }}
+      <ng-container *ngIf="!option.isCreateNew && option.category; else plainLabel">
+        <span class="autocomplete__option-name">{{ option.label }}</span>
+        <span class="expense-type-badge expense-type-badge--{{ option.category.expenseType }} expense-type-badge--sm">
+          {{ option.category.expenseType | expenseTypeLabel }}
+        </span>
+      </ng-container>
+      <ng-template #plainLabel>{{ option.label }}</ng-template>
     </button>
   </div>
 </div>

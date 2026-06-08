@@ -1,6 +1,15 @@
 import { UserRole } from 'src/app/core/types/supabase';
 
-export type NavIconKey = 'users' | 'dumbbell' | 'chart' | 'dollar' | 'box' | 'briefcase' | 'receipt' | 'banknote';
+export type NavIconKey =
+  | 'users'
+  | 'dumbbell'
+  | 'chart'
+  | 'dollar'
+  | 'box'
+  | 'briefcase'
+  | 'receipt'
+  | 'banknote'
+  | 'file-text';
 
 export interface NavMenuItem {
   label: string;
@@ -102,6 +111,27 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         iconKey: 'chart',
         routerLink: '/app/estadisticas/finanzas',
         allowedRoles: ['admin']
+      }
+    ]
+  },
+  {
+    id: 'finanzas-2',
+    label: 'Finanzas 2.0',
+    description: 'Informes financieros consolidados del gimnasio.',
+    triggerIcon: 'file-text',
+    allowedRoles: ['admin'],
+    items: [
+      {
+        label: 'Estado de Resultados',
+        description: 'P&G mensual, trimestral y semestral.',
+        iconKey: 'file-text',
+        routerLink: '/app/finanzas-2/estado-de-resultados'
+      },
+      {
+        label: 'Flujo de Caja',
+        description: 'Movimientos reales de caja por período.',
+        iconKey: 'file-text',
+        routerLink: '/app/finanzas-2/flujo-de-caja'
       }
     ]
   }

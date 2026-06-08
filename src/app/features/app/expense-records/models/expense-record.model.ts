@@ -45,12 +45,30 @@ export function buildPeriodRange(monthCount: PeriodFilterKey): { start: string; 
 
 // ─── Category view model ───────────────────────────────────────────────────────
 
+export type ExpenseTypeValue =
+  | 'costo_directo'
+  | 'gasto_operativo'
+  | 'inversion'
+  | 'gasto_administrativo'
+  | 'gasto_financiero'
+  | 'deuda';
+
+/** Etiqueta humana para cada tipo de gasto — fuente única de verdad. */
+export const EXPENSE_TYPE_LABELS: Record<ExpenseTypeValue, string> = {
+  costo_directo: 'Costo directo',
+  gasto_operativo: 'Gasto operativo',
+  inversion: 'Inversión',
+  gasto_administrativo: 'Gasto administrativo',
+  gasto_financiero: 'Gasto financiero',
+  deuda: 'Deuda'
+};
+
 export interface ExpenseCategoryViewModel {
   id: string;
   name: string;
-  emoji: string | null;
   description: string | null;
   isActive: boolean;
+  expenseType: ExpenseTypeValue;
   createdAt: string;
 }
 
@@ -58,9 +76,9 @@ export function mapCategoryRow(row: ExpenseCategory): ExpenseCategoryViewModel {
   return {
     id: row.id,
     name: row.name,
-    emoji: row.emoji,
     description: row.description,
     isActive: row.is_active,
+    expenseType: (row.expense_type as ExpenseTypeValue) ?? 'gasto_operativo',
     createdAt: row.created_at
   };
 }
@@ -92,7 +110,7 @@ export function mapExpenseItemRow(row: ExpenseRecordItem): ExpenseItemViewModel 
 // ─── Expense record view model ─────────────────────────────────────────────────
 
 export interface ExpenseRecordRow extends ExpenseRecord {
-  expense_categories?: { name: string; emoji: string | null } | null;
+  expense_categories?: { name: string; expense_type: string } | null;
   service_providers?: {
     id: string;
     name: string;
@@ -108,7 +126,7 @@ export interface ExpenseRecordViewModel {
   paymentMethod: string;
   categoryId: string;
   categoryName: string;
-  categoryEmoji: string | null;
+  categoryExpenseType: ExpenseTypeValue;
   providerId: string | null;
   providerName: string | null;
   serviceTypeName: string | null;
@@ -130,7 +148,7 @@ export function mapExpenseRecordRow(row: ExpenseRecordRow): ExpenseRecordViewMod
     paymentMethod: row.payment_method,
     categoryId: row.category_id,
     categoryName: row.expense_categories?.name ?? '',
-    categoryEmoji: row.expense_categories?.emoji ?? null,
+    categoryExpenseType: (row.expense_categories?.expense_type as ExpenseTypeValue) ?? 'gasto_operativo',
     providerId: row.provider_id,
     providerName: row.service_providers?.name ?? null,
     serviceTypeName: row.service_providers?.service_types?.name ?? null,
@@ -150,7 +168,6 @@ export function mapExpenseRecordRow(row: ExpenseRecordRow): ExpenseRecordViewMod
 export interface ExpenseSummaryByCategory {
   category_id: string;
   category_name: string;
-  category_emoji: string | null;
   total_cop: number;
   record_count: number;
 }
@@ -159,13 +176,13 @@ export interface ExpenseSummaryByCategory {
 
 export interface CreateExpenseCategoryPayload {
   name: string;
-  emoji?: string | null;
+  expense_type: ExpenseTypeValue;
   description?: string | null;
 }
 
 export interface UpdateExpenseCategoryPayload {
   name?: string;
-  emoji?: string | null;
+  expense_type?: ExpenseTypeValue;
   description?: string | null;
   is_active?: boolean;
 }

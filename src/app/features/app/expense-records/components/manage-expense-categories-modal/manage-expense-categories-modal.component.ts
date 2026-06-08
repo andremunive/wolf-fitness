@@ -12,7 +12,7 @@ import { Subject } from 'rxjs';
 import { takeUntil } from 'rxjs/operators';
 
 import { ExpenseCategoriesService } from '../../services/expense-categories.service';
-import { ExpenseCategoryViewModel } from '../../models/expense-record.model';
+import { ExpenseCategoryViewModel, ExpenseTypeValue } from '../../models/expense-record.model';
 
 @Component({
   selector: 'app-manage-expense-categories-modal',
@@ -32,12 +32,12 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
   actionError: string | null = null;
 
   readonly newNameControl = new FormControl('', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]);
-  readonly newEmojiControl = new FormControl('', [Validators.maxLength(8)]);
+  readonly newExpenseTypeControl = new FormControl<ExpenseTypeValue | ''>('', [Validators.required]);
   readonly newDescriptionControl = new FormControl('');
 
   editingCategoryId: string | null = null;
   editNameControl = new FormControl('', [Validators.required, Validators.minLength(2), Validators.maxLength(60)]);
-  editEmojiControl = new FormControl('', [Validators.maxLength(8)]);
+  editExpenseTypeControl = new FormControl<ExpenseTypeValue | ''>('', [Validators.required]);
   editDescriptionControl = new FormControl('');
 
   constructor(
@@ -74,7 +74,7 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
     this.isAdding = true;
     this.editingCategoryId = null;
     this.newNameControl.reset('');
-    this.newEmojiControl.reset('');
+    this.newExpenseTypeControl.reset('');
     this.newDescriptionControl.reset('');
     this.actionError = null;
     this.cdr.markForCheck();
@@ -92,10 +92,17 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
     this.actionError = null;
     this.cdr.markForCheck();
 
+    if (this.newExpenseTypeControl.invalid) {
+      this.isSaving = false;
+      this.actionError = 'Selecciona el tipo de gasto.';
+      this.cdr.markForCheck();
+      return;
+    }
+
     this.categoriesService
       .create({
         name: this.newNameControl.value!,
-        emoji: this.newEmojiControl.value || null,
+        expense_type: this.newExpenseTypeControl.value as ExpenseTypeValue,
         description: this.newDescriptionControl.value?.trim() || null
       })
       .pipe(takeUntil(this.destroy$))
@@ -120,7 +127,7 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
     this.editingCategoryId = category.id;
     this.isAdding = false;
     this.editNameControl.setValue(category.name);
-    this.editEmojiControl.setValue(category.emoji ?? '');
+    this.editExpenseTypeControl.setValue(category.expenseType);
     this.editDescriptionControl.setValue(category.description ?? '');
     this.actionError = null;
     this.cdr.markForCheck();
@@ -132,7 +139,7 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
   }
 
   saveEdit(category: ExpenseCategoryViewModel): void {
-    if (this.editNameControl.invalid || this.isSaving) return;
+    if (this.editNameControl.invalid || this.editExpenseTypeControl.invalid || this.isSaving) return;
 
     this.isSaving = true;
     this.actionError = null;
@@ -141,7 +148,7 @@ export class ManageExpenseCategoriesModalComponent implements OnInit, OnDestroy 
     this.categoriesService
       .update(category.id, {
         name: this.editNameControl.value!,
-        emoji: this.editEmojiControl.value || null,
+        expense_type: this.editExpenseTypeControl.value as ExpenseTypeValue,
         description: this.editDescriptionControl.value?.trim() || null
       })
       .pipe(takeUntil(this.destroy$))

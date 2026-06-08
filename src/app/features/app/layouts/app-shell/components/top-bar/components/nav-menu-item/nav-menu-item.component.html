@@ -45,6 +45,14 @@
             d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2zM16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" />
         </svg>
       </ng-container>
+      <ng-container *ngIf="section.triggerIcon === 'file-text'">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6" />
+          <path stroke-linecap="round" stroke-linejoin="round" d="M8 13h8M8 17h8M8 9h3" />
+        </svg>
+      </ng-container>
     </span>
 
     <span class="nav-trigger__label">{{ section.label }}</span>
@@ -141,6 +149,14 @@
                 <path stroke-linecap="round" stroke-linejoin="round"
                   d="M12 15a3 3 0 100-6 3 3 0 000 6z"/>
                 <path stroke-linecap="round" stroke-linejoin="round" d="M6 10h.01M18 14h.01"/>
+              </svg>
+            </ng-container>
+            <ng-container *ngIf="item.iconKey === 'file-text'">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M8 13h8M8 17h8M8 9h3" />
               </svg>
             </ng-container>
           </span>

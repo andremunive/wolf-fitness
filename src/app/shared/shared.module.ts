@@ -6,9 +6,15 @@ import { RouterModule } from '@angular/router';
 import { GlobalLoaderComponent } from './components/global-loader/global-loader.component';
 import { ToastHostComponent } from './components/toast-host/toast-host.component';
 import { FocusTrapDirective } from './directives/focus-trap.directive';
+import { ExpenseTypeLabelPipe } from './pipes/expense-type-label.pipe';
 
 @NgModule({
-  declarations: [GlobalLoaderComponent, ToastHostComponent, FocusTrapDirective],
+  declarations: [
+    GlobalLoaderComponent,
+    ToastHostComponent,
+    FocusTrapDirective,
+    ExpenseTypeLabelPipe
+  ],
   imports: [CommonModule, FormsModule, ReactiveFormsModule, RouterModule],
   exports: [
     CommonModule,
@@ -17,7 +23,8 @@ import { FocusTrapDirective } from './directives/focus-trap.directive';
     RouterModule,
     GlobalLoaderComponent,
     ToastHostComponent,
-    FocusTrapDirective
+    FocusTrapDirective,
+    ExpenseTypeLabelPipe
   ]
 })
 export class SharedModule {}

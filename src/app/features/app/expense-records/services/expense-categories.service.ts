@@ -20,7 +20,7 @@ export class ExpenseCategoriesService {
     return from(
       this.supabase.client
         .from('expense_categories')
-        .select('id, name, emoji, description, is_active, created_at, created_by')
+        .select('id, name, expense_type, description, is_active, created_at, created_by')
         .eq('is_active', true)
         .order('name', { ascending: true })
     ).pipe(
@@ -40,7 +40,7 @@ export class ExpenseCategoriesService {
     return from(
       this.supabase.client
         .from('expense_categories')
-        .select('id, name, emoji, description, is_active, created_at, created_by')
+        .select('id, name, expense_type, description, is_active, created_at, created_by')
         .order('name', { ascending: true })
     ).pipe(
       map(({ data, error }) => {
@@ -60,10 +60,10 @@ export class ExpenseCategoriesService {
         .from('expense_categories')
         .insert({
           name: payload.name.trim(),
-          emoji: payload.emoji?.trim() || null,
+          expense_type: payload.expense_type,
           description: payload.description?.trim() ?? null
         })
-        .select('id, name, emoji, description, is_active, created_at, created_by')
+        .select('id, name, expense_type, description, is_active, created_at, created_by')
         .single()
     ).pipe(
       map(({ data, error }) => {
@@ -85,7 +85,7 @@ export class ExpenseCategoriesService {
   update(id: string, payload: UpdateExpenseCategoryPayload): Observable<ExpenseCategoryViewModel> {
     const patch: ExpenseCategoryUpdate = {};
     if (payload.name !== undefined) patch.name = payload.name.trim();
-    if (payload.emoji !== undefined) patch.emoji = payload.emoji?.trim() || null;
+    if (payload.expense_type !== undefined) patch.expense_type = payload.expense_type;
     if (payload.description !== undefined) patch.description = payload.description?.trim() ?? null;
     if (payload.is_active !== undefined) patch.is_active = payload.is_active;
 
@@ -94,7 +94,7 @@ export class ExpenseCategoriesService {
         .from('expense_categories')
         .update(patch)
         .eq('id', id)
-        .select('id, name, emoji, description, is_active, created_at, created_by')
+        .select('id, name, expense_type, description, is_active, created_at, created_by')
         .single()
     ).pipe(
       map(({ data, error }) => {

@@ -166,7 +166,7 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
           this.selectedCategory = {
             id: this.record.categoryId,
             name: this.record.categoryName,
-            emoji: this.record.categoryEmoji,
+            expenseType: this.record.categoryExpenseType,
             description: null,
             isActive: false,
             createdAt: ''

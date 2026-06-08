@@ -18,10 +18,10 @@ import {
 const PAGE_SIZE = 10;
 
 const RECORD_SELECT_LIST =
-  'id, expense_date, amount_cop, payment_method, category_id, provider_id, notes, is_active, created_at, updated_at, created_by, updated_by, invoice_storage_path, invoice_mime_type, invoice_size_bytes, expense_categories(name, emoji), service_providers(id, name, service_types(name))';
+  'id, expense_date, amount_cop, payment_method, category_id, provider_id, notes, is_active, created_at, updated_at, created_by, updated_by, invoice_storage_path, invoice_mime_type, invoice_size_bytes, expense_categories(name, expense_type), service_providers(id, name, service_types(name))';
 
 const RECORD_SELECT_DETAIL =
-  'id, expense_date, amount_cop, payment_method, category_id, provider_id, notes, is_active, created_at, updated_at, created_by, updated_by, invoice_storage_path, invoice_mime_type, invoice_size_bytes, expense_categories(name, emoji), service_providers(id, name, service_types(name)), expense_record_items(id, name, description, quantity, unit_price_cop, subtotal_cop, updated_at)';
+  'id, expense_date, amount_cop, payment_method, category_id, provider_id, notes, is_active, created_at, updated_at, created_by, updated_by, invoice_storage_path, invoice_mime_type, invoice_size_bytes, expense_categories(name, expense_type), service_providers(id, name, service_types(name)), expense_record_items(id, name, description, quantity, unit_price_cop, subtotal_cop, updated_at)';
 
 const ALLOWED_INVOICE_MIME_TYPES = [
   'application/pdf',

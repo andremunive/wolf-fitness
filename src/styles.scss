@@ -43,3 +43,58 @@ body {
     font-size: 16px !important;
   }
 }
+
+/* ─── Expense type badge — shared across the expense-records module ─────── */
+/* Used in: records table, detail modal, manage-categories modal,
+   new-category modal, autocomplete dropdown.
+   Two variants: costo_directo (green) and gasto_operativo (indigo).
+   Two sizes: default and --sm for compact contexts like dropdowns. */
+
+.expense-type-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1;
+  padding: 3px 7px;
+  white-space: nowrap;
+  flex-shrink: 0;
+
+  &--costo_directo {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+  }
+
+  &--gasto_operativo {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4f46e5;
+  }
+
+  &--inversion {
+    background: rgba(245, 158, 11, 0.1);
+    color: #b45309;
+  }
+
+  &--gasto_administrativo {
+    background: rgba(99, 102, 241, 0.1);
+    color: #4338ca;
+  }
+
+  &--gasto_financiero {
+    background: rgba(239, 68, 68, 0.1);
+    color: #b91c1c;
+  }
+
+  &--deuda {
+    background: rgba(100, 116, 139, 0.1);
+    color: #334155;
+  }
+
+  /* Slightly more compact for autocomplete dropdown options */
+  &--sm {
+    font-size: 10px;
+    padding: 2px 5px;
+    border-radius: 4px;
+  }
+}

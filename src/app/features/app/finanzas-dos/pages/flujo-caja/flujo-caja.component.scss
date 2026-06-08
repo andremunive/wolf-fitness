@@ -1,0 +1,159 @@
+// El componente reutiliza la mayoría de tokens y clases del documento
+// del Estado de Resultados. Reusa el SCSS del P&G y agrega clases fc-*
+// específicas de Flujo de Caja.
+
+@import '../estado-resultados/estado-resultados.component.scss';
+
+// ─── Aviso sutil cuando no hay movimientos ─────────────────────────────────
+.fc-no-data-hint {
+  margin: 12px 0 18px;
+  text-align: center;
+  font-size: 0.8125rem;
+  font-style: italic;
+  color: var(--fv2-text-muted);
+}
+
+// ─── Saldo inicial — fila destacada antes de las secciones ─────────────────
+.fc-saldo-row {
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+  padding: 8px 4px;
+
+  &__label {
+    flex: 0 1 auto;
+    font-size: 1rem;
+    font-weight: 700;
+    color: var(--fv2-text-primary);
+    letter-spacing: 0.04em;
+  }
+
+  &__amount {
+    margin-left: auto;
+    flex: 0 0 auto;
+    min-width: var(--er-amount-min);
+    font-size: 1rem;
+    font-weight: 700;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    color: var(--fv2-text-primary);
+    white-space: nowrap;
+  }
+
+  @media (max-width: 480px) {
+    &__label, &__amount { font-size: 0.95rem; }
+  }
+}
+
+// Separador doble grueso (2px) que se usa después de saldo inicial
+// y antes del bloque final.
+.fc-divider-strong {
+  border: 0;
+  border-top: 2px solid var(--fv2-text-primary);
+  margin: 6px 0 24px;
+
+  &--spaced {
+    margin-top: 24px;
+  }
+}
+
+// ─── Subtítulos "Entradas" / "Salidas" indentados ──────────────────────────
+.fc-subheader {
+  margin: 0 0 8px 16px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fv2-text-muted);
+
+  &--spaced {
+    margin-top: 22px;
+  }
+}
+
+// Subtotales (Total entradas / Total salidas) — un poco menos prominentes
+// que los totales generales del P&G.
+.fc-row-subtotal {
+  .er-row__label,
+  .er-row__amount {
+    font-weight: 600;
+    letter-spacing: 0.03em;
+  }
+}
+
+// ─── Bloque final: variación + saldo final ────────────────────────────────
+.fc-cierre {
+  // Hereda el estilo destacado de .er-utilidad--final (borde 2px t/b).
+  // Permitimos varias filas + separador interno.
+
+  &__row {
+    padding: 0 4px;
+  }
+
+  &__row--final {
+    margin-top: 6px;
+  }
+
+  &__formula {
+    margin: 4px 4px 0;
+  }
+
+  // Línea separadora interna entre variación y saldo final.
+  &__sep {
+    border: 0;
+    border-top: 1px dashed var(--fv2-border);
+    margin: 14px 0 12px;
+  }
+
+  // Fila del saldo final — la más prominente del documento.
+  &__label-final {
+    font-size: 1.2rem;
+    font-weight: 800;
+    letter-spacing: 0.05em;
+    color: var(--fv2-text-primary);
+
+    // Hereda los modificadores de color de er-utilidad__amount.
+    &.er-utilidad__amount--positive { color: var(--fv2-success); }
+    &.er-utilidad__amount--negative { color: var(--fv2-danger); }
+    &.er-utilidad__amount--zero     { color: var(--fv2-text-muted); }
+  }
+
+  &__amount-final {
+    margin-left: auto;
+    flex: 0 0 auto;
+    min-width: var(--er-amount-min);
+    font-size: 1.2rem;
+    font-weight: 800;
+    text-align: right;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    &.er-utilidad__amount--positive { color: var(--fv2-success); }
+    &.er-utilidad__amount--negative { color: var(--fv2-danger); }
+    &.er-utilidad__amount--zero     { color: var(--fv2-text-muted); }
+
+    @media (max-width: 480px) {
+      font-size: 1.1rem;
+      min-width: 140px;
+    }
+  }
+}
+
+// ─── Alerta de saldo negativo ─────────────────────────────────────────────
+.fc-alert {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 14px 4px 0;
+  padding: 6px 12px;
+  background: rgba(220, 38, 38, 0.08);
+  color: var(--fv2-danger);
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+
+  &__icon {
+    font-size: 0.95rem;
+    line-height: 1;
+  }
+}

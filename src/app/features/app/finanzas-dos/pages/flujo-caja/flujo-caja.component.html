@@ -1,0 +1,464 @@
+<ng-container *ngIf="state$ | async as state">
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- HEADER STICKY                                                       -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <header class="er-header">
+    <div class="er-header__inner">
+      <!-- Fila 1: título + acción de export -->
+      <div class="er-header__top">
+        <div class="er-header__titles">
+          <h1 class="er-header__title">Estado de Flujo de Caja</h1>
+          <p class="er-header__subtitle">
+            Wolf Fitness · <span class="er-header__period">{{ periodoSnap.label }}</span>
+            <span *ngIf="periodoSnap.es_actual" class="er-header__partial-chip">
+              <span class="er-header__partial-dot"></span>
+              En curso
+            </span>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="er-btn er-btn--primary er-btn--export"
+          (click)="onExportarPdf()"
+          [disabled]="exportando || state.status !== 'loaded'"
+          [attr.aria-label]="exportando ? 'Generando PDF' : 'Exportar a PDF'"
+          [attr.aria-busy]="exportando"
+        >
+          <svg
+            *ngIf="!exportando"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="1.75"
+            aria-hidden="true"
+          >
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8l-6-6z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M14 2v6h6" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 18v-6m-3 3l3 3 3-3" />
+          </svg>
+          <span
+            *ngIf="exportando"
+            class="er-btn__spinner"
+            aria-hidden="true"
+          ></span>
+          <span>{{ exportando ? 'Generando…' : 'Exportar PDF' }}</span>
+        </button>
+      </div>
+
+      <!-- Fila 2: selector de modo + navegación temporal -->
+      <div class="er-header__controls">
+        <div class="er-modo" role="tablist" aria-label="Modo de período">
+          <button
+            *ngFor="let m of modos; trackBy: trackByModo"
+            type="button"
+            role="tab"
+            class="er-modo__chip"
+            [class.er-modo__chip--active]="periodoSnap.modo === m.modo"
+            [attr.aria-selected]="periodoSnap.modo === m.modo"
+            (click)="onCambiarModo(m.modo)"
+          >
+            {{ m.label }}
+          </button>
+        </div>
+
+        <div class="er-nav" role="group" aria-label="Navegación de período">
+          <button
+            type="button"
+            class="er-nav__btn"
+            (click)="onPeriodoAnterior()"
+            aria-label="Período anterior"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M12.79 5.23a.75.75 0 010 1.06L9.06 10l3.73 3.71a.75.75 0 11-1.06 1.06l-4.25-4.25a.75.75 0 010-1.06l4.25-4.25a.75.75 0 011.06 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+          <div
+            class="er-nav__label"
+            [attr.data-modo]="periodoSnap.modo"
+            aria-live="polite"
+          >
+            {{ periodoSnap.label }}
+          </div>
+          <button
+            type="button"
+            class="er-nav__btn"
+            (click)="onPeriodoSiguiente()"
+            [disabled]="periodoSnap.es_actual"
+            [attr.aria-label]="periodoSnap.es_actual ? 'Ya estás en el período actual' : 'Período siguiente'"
+          >
+            <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+              <path fill-rule="evenodd" d="M7.21 14.77a.75.75 0 010-1.06L10.94 10 7.21 6.29a.75.75 0 111.06-1.06l4.25 4.25a.75.75 0 010 1.06l-4.25 4.25a.75.75 0 01-1.06 0z" clip-rule="evenodd" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <!-- DOCUMENTO — hoja blanca centrada                                    -->
+  <!-- ═══════════════════════════════════════════════════════════════════ -->
+  <main class="er-page">
+    <!-- Toast de error de exportación -->
+    <div
+      *ngIf="exportError"
+      class="er-export-toast"
+      role="alert"
+    >
+      <span>{{ exportError }}</span>
+      <button
+        type="button"
+        class="er-export-toast__close"
+        (click)="dismissExportError()"
+        aria-label="Cerrar"
+      >×</button>
+    </div>
+
+    <article class="er-paper" role="document">
+      <!-- ───────── ERROR ───────── -->
+      <div *ngIf="state.status === 'error'" class="er-paper-error">
+        <div class="er-paper-error__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        </div>
+        <p class="er-paper-error__title">No se pudo cargar el flujo de caja</p>
+        <p class="er-paper-error__desc">Revisa tu conexión y vuelve a intentarlo.</p>
+        <button type="button" class="er-btn er-btn--secondary" (click)="onRetry()">
+          Intentar de nuevo
+        </button>
+      </div>
+
+      <!-- ───────── LOADING — skeleton ───────── -->
+      <ng-container *ngIf="state.status === 'loading'">
+        <div class="er-paper__head">
+          <div class="er-sk er-sk--eyebrow"></div>
+          <div class="er-sk er-sk--title"></div>
+          <div class="er-sk er-sk--periodo"></div>
+        </div>
+        <hr class="er-paper__divider" />
+
+        <!-- Saldo inicial -->
+        <div class="er-utilidad er-utilidad--sk">
+          <div class="er-sk er-sk--label er-sk--label-strong"></div>
+          <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+        </div>
+
+        <!-- Flujo operativo skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-section__rows">
+            <div class="er-row er-row--sk" *ngFor="let i of [0,1,2,3,4,5,6]; trackBy: trackByIndex">
+              <div class="er-sk er-sk--label"></div>
+              <div class="er-sk er-sk--amount"></div>
+            </div>
+          </div>
+          <div class="er-row er-row--total er-row--sk">
+            <div class="er-sk er-sk--label er-sk--label-strong"></div>
+            <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+          </div>
+        </section>
+
+        <!-- Flujo inversión skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-row er-row--sk">
+            <div class="er-sk er-sk--label"></div>
+            <div class="er-sk er-sk--amount"></div>
+          </div>
+        </section>
+
+        <!-- Flujo financiamiento skeleton -->
+        <section class="er-section">
+          <div class="er-sk er-sk--section-title"></div>
+          <div class="er-row er-row--sk" *ngFor="let i of [0,1,2]; trackBy: trackByIndex">
+            <div class="er-sk er-sk--label"></div>
+            <div class="er-sk er-sk--amount"></div>
+          </div>
+        </section>
+
+        <!-- Variación + Saldo final skeleton -->
+        <div class="er-utilidad er-utilidad--sk">
+          <div class="er-sk er-sk--label er-sk--label-strong"></div>
+          <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+        </div>
+        <div class="er-utilidad er-utilidad--sk">
+          <div class="er-sk er-sk--label er-sk--label-strong"></div>
+          <div class="er-sk er-sk--amount er-sk--amount-strong"></div>
+        </div>
+      </ng-container>
+
+      <!-- ───────── LOADED ───────── -->
+      <ng-container *ngIf="state.status === 'loaded'">
+        <!-- Encabezado del documento -->
+        <div class="er-paper__head">
+          <p class="er-paper__brand">WOLF FITNESS</p>
+          <h2 class="er-paper__title">Estado de Flujo de Caja</h2>
+          <p class="er-paper__periodo">{{ periodoSnap.label }}</p>
+          <span *ngIf="state.data.periodo.es_parcial" class="er-paper__partial-chip">
+            <span class="er-paper__partial-dot"></span>
+            Período en curso · datos hasta {{ formatDateDmy(state.data.periodo.fecha_corte) }}
+          </span>
+        </div>
+        <hr class="er-paper__divider" />
+
+        <!-- Aviso sutil cuando no hay movimientos (mantiene la estructura completa con ceros). -->
+        <p *ngIf="isSinMovimientos(state.data)" class="fc-no-data-hint" role="status">
+          Sin movimientos registrados en este período.
+        </p>
+
+        <!-- ─────────── SALDO INICIAL DE CAJA ─────────── -->
+        <div
+          class="fc-saldo-row"
+          [attr.aria-label]="'Saldo inicial de caja: ' + formatCOP(state.data.saldo_inicial_cop)"
+        >
+          <span class="fc-saldo-row__label">SALDO INICIAL DE CAJA</span>
+          <span class="fc-saldo-row__amount">{{ formatCOP(state.data.saldo_inicial_cop) }}</span>
+        </div>
+        <hr class="fc-divider-strong" />
+
+        <!-- ═══════════════ SECCIÓN 1 — FLUJO OPERATIVO ═══════════════ -->
+        <section class="er-section">
+          <h3 class="er-section__title">Flujo operativo</h3>
+
+          <!-- ENTRADAS -->
+          <p class="fc-subheader">Entradas</p>
+          <div class="er-section__rows">
+            <div class="er-row">
+              <span class="er-row__label">Cobros por mensualidades</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.mensualidades_cop) }}</span>
+            </div>
+          </div>
+          <div class="er-row er-row--total fc-row-subtotal">
+            <span class="er-row__label">TOTAL ENTRADAS</span>
+            <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.total_cop) }}</span>
+          </div>
+
+          <!-- SALIDAS -->
+          <p class="fc-subheader fc-subheader--spaced">Salidas</p>
+          <div class="er-section__rows">
+            <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.costos_directos_cop > 0">
+              <span class="er-row__label">Costos directos</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.costos_directos_cop) }}</span>
+            </div>
+            <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_administrativos_cop > 0">
+              <span class="er-row__label">Gastos administrativos</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_administrativos_cop) }}</span>
+            </div>
+            <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_operativos_cop > 0">
+              <span class="er-row__label">Gastos operativos</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_operativos_cop) }}</span>
+            </div>
+            <!-- Nómina entrenadores: SIEMPRE visible (aunque $0), con dot indigo. -->
+            <div class="er-row er-row--nomina">
+              <span class="er-row__label">
+                <span class="er-row__nomina-dot" aria-hidden="true">●</span>
+                Nómina entrenadores
+              </span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span
+                class="er-row__amount er-row__amount--nomina"
+                [class.er-row__amount--zero]="state.data.flujo_operativo.salidas.nomina_entrenadores_cop === 0"
+              >
+                {{
+                  state.data.flujo_operativo.salidas.nomina_entrenadores_cop === 0
+                    ? formatCOP(0)
+                    : formatCOPSigned(-state.data.flujo_operativo.salidas.nomina_entrenadores_cop)
+                }}
+              </span>
+            </div>
+            <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_financieros_cop > 0">
+              <span class="er-row__label">Gastos financieros</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_financieros_cop) }}</span>
+            </div>
+          </div>
+          <div class="er-row er-row--total fc-row-subtotal">
+            <span class="er-row__label">TOTAL SALIDAS</span>
+            <span class="er-row__amount">
+              {{
+                state.data.flujo_operativo.salidas.total_cop === 0
+                  ? formatCOP(0)
+                  : formatCOPSigned(-state.data.flujo_operativo.salidas.total_cop)
+              }}
+            </span>
+          </div>
+        </section>
+
+        <!-- ─────────── BLOQUE: FLUJO NETO OPERATIVO ─────────── -->
+        <div
+          class="er-utilidad"
+          [attr.aria-label]="'Flujo neto operativo: ' + formatCOPSigned(state.data.flujo_operativo.flujo_neto_cop)"
+        >
+          <div class="er-utilidad__row">
+            <span
+              class="er-utilidad__label"
+              [ngClass]="flujoNetoClass(state.data.flujo_operativo.flujo_neto_cop)"
+            >
+              FLUJO NETO OPERATIVO
+            </span>
+            <span
+              class="er-utilidad__amount"
+              [ngClass]="flujoNetoClass(state.data.flujo_operativo.flujo_neto_cop)"
+            >
+              {{ formatCOPSigned(state.data.flujo_operativo.flujo_neto_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula">(Entradas − Salidas)</p>
+        </div>
+
+        <!-- ═══════ SECCIÓN 2 — FLUJO DE INVERSIÓN (oculto si !tiene_datos) ═══════ -->
+        <ng-container *ngIf="state.data.flujo_inversion.tiene_datos">
+          <section class="er-section">
+            <h3 class="er-section__title">Flujo de inversión</h3>
+            <div class="er-section__rows">
+              <div class="er-row">
+                <span class="er-row__label">Inversiones y equipos</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_inversion.inversiones_cop) }}</span>
+              </div>
+            </div>
+          </section>
+
+          <div
+            class="er-utilidad"
+            [attr.aria-label]="'Flujo neto de inversión: ' + formatCOPSigned(state.data.flujo_inversion.flujo_neto_cop)"
+          >
+            <div class="er-utilidad__row">
+              <span
+                class="er-utilidad__label"
+                [ngClass]="flujoNetoClass(state.data.flujo_inversion.flujo_neto_cop)"
+              >
+                FLUJO NETO DE INVERSIÓN
+              </span>
+              <span
+                class="er-utilidad__amount"
+                [ngClass]="flujoNetoClass(state.data.flujo_inversion.flujo_neto_cop)"
+              >
+                {{ formatCOPSigned(state.data.flujo_inversion.flujo_neto_cop) }}
+              </span>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ════════ SECCIÓN 3 — FLUJO DE FINANCIAMIENTO (oculto si !tiene_datos) ════════ -->
+        <ng-container *ngIf="state.data.flujo_financiamiento.tiene_datos">
+          <section class="er-section">
+            <h3 class="er-section__title">Flujo de financiamiento</h3>
+            <div class="er-section__rows">
+              <div class="er-row" *ngIf="state.data.flujo_financiamiento.obligaciones_cop > 0">
+                <span class="er-row__label">Obligaciones financieras</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_financiamiento.obligaciones_cop) }}</span>
+              </div>
+              <div class="er-row" *ngIf="state.data.flujo_financiamiento.prestamos_otorgados_cop > 0">
+                <span class="er-row__label">Préstamos otorgados</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_financiamiento.prestamos_otorgados_cop) }}</span>
+              </div>
+              <div class="er-row" *ngIf="state.data.flujo_financiamiento.abonos_recibidos_cop > 0">
+                <span class="er-row__label">Abonos recibidos</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(state.data.flujo_financiamiento.abonos_recibidos_cop) }}</span>
+              </div>
+            </div>
+          </section>
+
+          <div
+            class="er-utilidad"
+            [attr.aria-label]="'Flujo neto de financiamiento: ' + formatCOPSigned(state.data.flujo_financiamiento.flujo_neto_cop)"
+          >
+            <div class="er-utilidad__row">
+              <span
+                class="er-utilidad__label"
+                [ngClass]="flujoNetoClass(state.data.flujo_financiamiento.flujo_neto_cop)"
+              >
+                FLUJO NETO DE FINANCIAMIENTO
+              </span>
+              <span
+                class="er-utilidad__amount"
+                [ngClass]="flujoNetoClass(state.data.flujo_financiamiento.flujo_neto_cop)"
+              >
+                {{ formatCOPSigned(state.data.flujo_financiamiento.flujo_neto_cop) }}
+              </span>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ═══════════════ BLOQUE FINAL — VARIACIÓN + SALDO FINAL ═══════════════ -->
+        <hr class="fc-divider-strong fc-divider-strong--spaced" />
+
+        <div class="er-utilidad er-utilidad--final fc-cierre">
+          <!-- Variación neta -->
+          <div class="er-utilidad__row fc-cierre__row">
+            <span
+              class="er-utilidad__label"
+              [ngClass]="flujoNetoClass(state.data.variacion_neta_cop)"
+            >
+              VARIACIÓN NETA DE CAJA
+            </span>
+            <span
+              class="er-utilidad__amount"
+              [ngClass]="flujoNetoClass(state.data.variacion_neta_cop)"
+            >
+              {{ formatCOPSigned(state.data.variacion_neta_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula fc-cierre__formula">
+            (Flujo operativo + Flujo inversión + Flujo financiamiento)
+          </p>
+
+          <hr class="fc-cierre__sep" />
+
+          <!-- Saldo final — fila más destacada del documento -->
+          <div
+            class="er-utilidad__row fc-cierre__row fc-cierre__row--final"
+            [attr.aria-label]="'Saldo final de caja: ' + formatCOPSigned(state.data.saldo_final_cop)"
+          >
+            <span
+              class="fc-cierre__label-final"
+              [ngClass]="saldoFinalClass(state.data.saldo_final_cop)"
+            >
+              SALDO FINAL DE CAJA
+            </span>
+            <span
+              class="fc-cierre__amount-final"
+              [ngClass]="saldoFinalClass(state.data.saldo_final_cop)"
+            >
+              {{ formatCOPSigned(state.data.saldo_final_cop) }}
+            </span>
+          </div>
+          <p class="er-utilidad__formula fc-cierre__formula">(Saldo inicial + Variación neta)</p>
+
+          <!-- Alerta si saldo final negativo -->
+          <div
+            *ngIf="state.data.saldo_final_cop < 0"
+            class="fc-alert"
+            role="alert"
+          >
+            <span class="fc-alert__icon" aria-hidden="true">⚠</span>
+            Saldo negativo — revisar liquidez
+          </div>
+        </div>
+
+        <!-- ─────────── FOOTER ─────────── -->
+        <footer class="er-paper__footer">
+          <hr class="er-paper__divider er-paper__divider--footer" />
+          <p class="er-paper__footnote">
+            Documento de uso gerencial interno. No reemplaza estados financieros certificados.
+          </p>
+          <p *ngIf="state.data.periodo.es_parcial" class="er-paper__footnote er-paper__footnote--partial">
+            * Los datos del período en curso están sujetos a cambios hasta el cierre del período.
+          </p>
+        </footer>
+      </ng-container>
+    </article>
+  </main>
+</ng-container>

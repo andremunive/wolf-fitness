@@ -42,18 +42,29 @@
         </div>
 
         <div class="form-field">
-          <label class="form-field__label" for="cat-emoji">Emoji</label>
-          <div class="form-field__emoji-wrap">
-            <input
-              id="cat-emoji"
-              type="text"
-              class="form-field__input form-field__input--emoji"
-              formControlName="emoji"
-              placeholder="☕"
-              maxlength="8"
-            />
-            <span class="form-field__emoji-hint">Escribe o pega un emoji (opcional)</span>
-          </div>
+          <label class="form-field__label" for="cat-type">
+            Tipo de gasto <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="cat-type"
+            class="form-field__input"
+            formControlName="expense_type"
+            [class.form-field__input--error]="form.controls.expense_type.invalid && form.controls.expense_type.touched"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            <option value="costo_directo">Costo directo</option>
+            <option value="gasto_operativo">Gasto operativo</option>
+            <option value="inversion">Inversión</option>
+            <option value="gasto_administrativo">Gasto administrativo</option>
+            <option value="gasto_financiero">Gasto financiero</option>
+            <option value="deuda">Deuda</option>
+          </select>
+          <span
+            class="form-field__hint-error"
+            *ngIf="form.controls.expense_type.invalid && form.controls.expense_type.touched"
+          >
+            Selecciona el tipo de gasto.
+          </span>
         </div>
 
         <div class="form-field">

@@ -98,9 +98,6 @@ export type VentanaTendenciaFin = 1 | 2 | 6;
 
 /**
  * Fila base compartida por categoría y proveedor.
- * Los discriminadores específicos (`categoria_id`, `proveedor_id`, `emoji`)
- * se declaran en los tipos concretos para evitar `any` y mantener el tipo
- * estrecho en los puntos de uso.
  */
 interface ComposicionRowBase {
   nombre: string;
@@ -110,14 +107,13 @@ interface ComposicionRowBase {
   cantidad: number;
 }
 
-/** Fila de la vista "Por categoría". `emoji` es opcional: el backend lo omite si la categoría no lo tiene. */
+/** Fila de la vista "Por categoría". */
 export interface ComposicionCategoriaRow extends ComposicionRowBase {
   /** El id discriminador de categoría — puede ser un UUID o el literal `'nomina'`. */
   categoria_id: string;
-  emoji: string;
 }
 
-/** Fila de la vista "Por proveedor". No tiene emoji. */
+/** Fila de la vista "Por proveedor". */
 export interface ComposicionProveedorRow extends ComposicionRowBase {
   proveedor_id: string;
 }

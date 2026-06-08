@@ -173,7 +173,6 @@ export interface MetodoPagoRow {
 export interface ComposicionRow {
   id: string;
   nombre: string;
-  emoji?: string;
   total_cop: number;
   porcentaje: number;
   cantidad: number;
@@ -1421,7 +1420,6 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
       ? comp.por_categoria.map((r, i) => ({
           id: r.categoria_id,
           nombre: r.nombre,
-          emoji: r.emoji,
           total_cop: r.total_cop,
           porcentaje: r.porcentaje,
           cantidad: r.cantidad,
@@ -1433,7 +1431,6 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
       : comp.por_proveedor.map((r, i) => ({
           id: r.proveedor_id,
           nombre: r.nombre,
-          emoji: undefined as string | undefined,
           total_cop: r.total_cop,
           porcentaje: r.porcentaje,
           cantidad: r.cantidad,
