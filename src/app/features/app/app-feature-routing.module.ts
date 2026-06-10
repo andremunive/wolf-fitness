@@ -69,9 +69,9 @@ const routes: Routes = [
         canActivate: [roleGuard(['admin', 'trainer'])]
       },
       {
-        path: 'finanzas-2',
+        path: 'contabilidad',
         loadChildren: () =>
-          import('./finanzas-dos/finanzas-dos.module').then((m) => m.FinanzasDosModule),
+          import('./contabilidad/contabilidad.module').then((m) => m.ContabilidadModule),
         canActivate: [roleGuard(['admin'])]
       }
     ]

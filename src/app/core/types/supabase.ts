@@ -1681,6 +1681,7 @@ export type Database = {
           last_payment_balance_cop: number | null
           last_payment_period_end: string | null
           last_payment_status: string | null
+          membership_status: string | null
           origin: Database["public"]["Enums"]["client_origin"] | null
           phone: string | null
           plan_amount_cop: number | null

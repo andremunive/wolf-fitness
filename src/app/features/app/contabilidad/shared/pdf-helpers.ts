@@ -1,7 +1,7 @@
 import { jsPDF } from 'jspdf';
 
 /**
- * Helpers de generación de PDF compartidos por los informes de Finanzas 2.0.
+ * Helpers de generación de PDF compartidos por los informes de Contabilidad.
  * Cubren formato, tipografía y trozos genéricos (footer, fecha/hora,
  * sanitización de unicode) — todo lo específico de la estructura del
  * documento vive en el `buildPDF` de cada componente.

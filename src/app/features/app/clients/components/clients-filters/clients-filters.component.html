@@ -28,17 +28,17 @@
     role="region"
     aria-label="Panel de filtros"
   >
-    <!-- Estado de pago -->
+    <!-- Estado de membresía -->
     <div class="filter-group">
-      <span class="filter-group__label">Por estado de pago</span>
-      <div class="filter-chips" role="group" aria-label="Filtrar por estado de pago">
+      <span class="filter-group__label">Por estado de membresía</span>
+      <div class="filter-chips" role="group" aria-label="Filtrar por estado de membresía">
         <button
-          *ngFor="let opt of paymentStatusOptions; trackBy: trackByValue"
+          *ngFor="let opt of membershipStatusOptions; trackBy: trackByValue"
           type="button"
           class="filter-chip"
-          [class.filter-chip--active]="isPaymentStatusSelected(opt.value)"
-          (click)="togglePaymentStatus(opt.value)"
-          [attr.aria-pressed]="isPaymentStatusSelected(opt.value)"
+          [class.filter-chip--active]="isMembershipStatusSelected(opt.value)"
+          (click)="toggleMembershipStatus(opt.value)"
+          [attr.aria-pressed]="isMembershipStatusSelected(opt.value)"
         >{{ opt.label }}</button>
       </div>
     </div>

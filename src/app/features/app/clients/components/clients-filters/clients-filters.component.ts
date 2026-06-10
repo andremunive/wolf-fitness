@@ -8,8 +8,11 @@ import {
 } from '@angular/animations';
 import {
   ChangeDetectionStrategy,
+  ChangeDetectorRef,
   Component,
+  ElementRef,
   EventEmitter,
+  HostListener,
   Input,
   OnChanges,
   Output,
@@ -19,14 +22,14 @@ import { Observable, shareReplay } from 'rxjs';
 
 import {
   ClientOrigin,
-  ClientPaymentStatusDisplay,
+  MembershipStatus,
   TrainerOption
 } from '../../models/client.model';
 import { ClientsService } from '../../services/clients.service';
 
 export interface ClientFiltersValue {
-  /** Lista vacía = sin filtro (todos los estados de pago). */
-  paymentStatuses: ClientPaymentStatusDisplay[];
+  /** Lista vacía = sin filtro (todos los estados de membresía). */
+  membershipStatuses: MembershipStatus[];
   /** Lista vacía = sin filtro (todos los orígenes). */
   origins: ClientOrigin[];
   /** null = todos los entrenadores. */
@@ -62,7 +65,7 @@ export interface ClientFiltersValue {
 })
 export class ClientsFiltersComponent implements OnChanges {
   @Input() currentFilters: ClientFiltersValue = {
-    paymentStatuses: [],
+    membershipStatuses: [],
     origins: [],
     trainerId: null
   };
@@ -71,12 +74,12 @@ export class ClientsFiltersComponent implements OnChanges {
 
   isOpen = false;
 
-  readonly paymentStatusOptions: Array<{ value: ClientPaymentStatusDisplay; label: string }> = [
-    { value: 'paid',        label: 'Al día' },
-    { value: 'partial',     label: 'Pago parcial' },
-    { value: 'pending',     label: 'Pendiente' },
-    { value: 'voided',      label: 'Anulado' },
-    { value: 'no_payments', label: 'Sin pagos' }
+  readonly membershipStatusOptions: Array<{ value: MembershipStatus; label: string }> = [
+    { value: 'active',     label: 'Al día' },
+    { value: 'partial',    label: 'Parcial' },
+    { value: 'pending',    label: 'Pendiente' },
+    { value: 'expired',    label: 'Vencido' },
+    { value: 'no_payment', label: 'Sin pago' }
   ];
 
   readonly originOptions: Array<{ value: ClientOrigin; label: string }> = [
@@ -88,20 +91,43 @@ export class ClientsFiltersComponent implements OnChanges {
   readonly trainers$: Observable<TrainerOption[]>;
 
   localFilters: ClientFiltersValue = {
-    paymentStatuses: [],
+    membershipStatuses: [],
     origins: [],
     trainerId: null
   };
 
-  constructor(private readonly clientsService: ClientsService) {
+  constructor(
+    private readonly clientsService: ClientsService,
+    private readonly elementRef: ElementRef,
+    private readonly cdr: ChangeDetectorRef
+  ) {
     this.trainers$ = this.clientsService.getActiveTrainers().pipe(shareReplay(1));
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.isOpen) return;
+    // Click inside the host (button + panel) — leave the panel open.
+    if (this.elementRef.nativeElement.contains(event.target as Node)) return;
+    this.isOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    if (!this.isOpen) return;
+    this.isOpen = false;
+    this.cdr.markForCheck();
+    // Return focus to the toggle button so keyboard users don't lose context.
+    const toggle = this.elementRef.nativeElement.querySelector('.filters-toggle') as HTMLElement | null;
+    toggle?.focus();
   }
 
   ngOnChanges(changes: SimpleChanges): void {
     if (changes['currentFilters']) {
       this.localFilters = {
         ...this.currentFilters,
-        paymentStatuses: [...this.currentFilters.paymentStatuses],
+        membershipStatuses: [...this.currentFilters.membershipStatuses],
         origins: [...this.currentFilters.origins]
       };
     }
@@ -109,7 +135,7 @@ export class ClientsFiltersComponent implements OnChanges {
 
   get activeFilterCount(): number {
     let count = 0;
-    if (this.currentFilters.paymentStatuses.length > 0) count++;
+    if (this.currentFilters.membershipStatuses.length > 0) count++;
     if (this.currentFilters.origins.length > 0) count++;
     if (this.currentFilters.trainerId) count++;
     return count;
@@ -123,17 +149,17 @@ export class ClientsFiltersComponent implements OnChanges {
     this.isOpen = !this.isOpen;
   }
 
-  togglePaymentStatus(value: ClientPaymentStatusDisplay): void {
-    const current = this.localFilters.paymentStatuses;
+  toggleMembershipStatus(value: MembershipStatus): void {
+    const current = this.localFilters.membershipStatuses;
     const next = current.includes(value)
       ? current.filter((v) => v !== value)
       : [...current, value];
-    this.localFilters = { ...this.localFilters, paymentStatuses: next };
+    this.localFilters = { ...this.localFilters, membershipStatuses: next };
     this.emitChange();
   }
 
-  isPaymentStatusSelected(value: ClientPaymentStatusDisplay): boolean {
-    return this.localFilters.paymentStatuses.includes(value);
+  isMembershipStatusSelected(value: MembershipStatus): boolean {
+    return this.localFilters.membershipStatuses.includes(value);
   }
 
   toggleOrigin(value: ClientOrigin): void {
@@ -158,7 +184,7 @@ export class ClientsFiltersComponent implements OnChanges {
   private emitChange(): void {
     this.filtersChange.emit({
       ...this.localFilters,
-      paymentStatuses: [...this.localFilters.paymentStatuses],
+      membershipStatuses: [...this.localFilters.membershipStatuses],
       origins: [...this.localFilters.origins]
     });
   }

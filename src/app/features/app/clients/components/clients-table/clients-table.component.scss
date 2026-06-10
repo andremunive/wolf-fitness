@@ -244,6 +244,93 @@
   }
 }
 
+// ─── Membership status badge ───────────────────────────────────────────────────
+// Dot (8×8 px) + label pill. Colores literales definidos por el orquestador.
+
+.membership-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 10px;
+  border-radius: 9999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+
+  &__dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
+  // 'active' — Al día
+  &--active {
+    background: rgba(16, 185, 129, 0.1);
+    color: #059669;
+
+    .membership-badge__dot {
+      background: #10b981;
+    }
+  }
+
+  // 'partial' — Parcial
+  &--partial {
+    background: rgba(234, 179, 8, 0.1);
+    color: #854d0e;
+
+    .membership-badge__dot {
+      background: #eab308;
+    }
+  }
+
+  // 'pending' — Pendiente
+  &--pending {
+    background: rgba(245, 158, 11, 0.1);
+    color: #92400e;
+
+    .membership-badge__dot {
+      background: #f59e0b;
+    }
+  }
+
+  // 'expired' — Vencido
+  &--expired {
+    background: rgba(220, 38, 38, 0.1);
+    color: #991b1b;
+
+    .membership-badge__dot {
+      background: #dc2626;
+    }
+  }
+
+  // 'no_payment' — Sin pago
+  &--no-payment {
+    background: rgba(107, 114, 128, 0.1);
+    color: #374151;
+
+    .membership-badge__dot {
+      background: #6b7280;
+    }
+  }
+}
+
+// ─── Fecha de vencimiento — colores por urgencia ────────────────────────────────
+
+.due-date {
+  // Vencida: periodo ya pasó
+  &--expired {
+    color: #dc2626;
+    font-weight: 600;
+  }
+
+  // Próxima a vencer: dentro de los próximos 7 días (inclusive hoy)
+  &--soon {
+    color: #b45309;
+    font-weight: 600;
+  }
+}
+
 // ─── Fila inactiva ─────────────────────────────────────────────────────────────
 
 .clients-table__row--inactive {

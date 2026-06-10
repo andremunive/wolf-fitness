@@ -5,9 +5,9 @@
         <th scope="col" class="clients-table__actions-th"><span class="visually-hidden">Acciones</span></th>
         <th scope="col">Cliente</th>
         <th scope="col">Plan</th>
-        <th scope="col" class="clients-table__th--center">Estado pago</th>
+        <th scope="col" class="clients-table__th--center">Membresía</th>
         <th scope="col">Último pago</th>
-        <th scope="col">Vencimiento</th>
+        <th scope="col">Vence el</th>
         <th scope="col">Entrenador</th>
         <th scope="col">Origen</th>
       </tr>
@@ -50,13 +50,14 @@
           </p>
         </td>
 
-        <!-- Estado de pago: badge + saldo si > 0 -->
+        <!-- Membresía: badge calculado server-side (membership_status) + saldo si > 0 -->
         <td class="clients-table__cell clients-table__cell--payment-status">
           <span
-            class="payment-badge"
-            [ngClass]="getPaymentStatusClass(client.lastPaymentStatus)"
+            class="membership-badge"
+            [ngClass]="getMembershipStatusClass(client.membershipStatus)"
           >
-            {{ getPaymentStatusLabel(client.lastPaymentStatus) }}
+            <span class="membership-badge__dot" aria-hidden="true"></span>
+            {{ getMembershipStatusLabel(client.membershipStatus) }}
           </span>
           <p
             class="clients-table__cell-sub clients-table__cell-sub--balance"
@@ -74,9 +75,11 @@
           </p>
         </td>
 
-        <!-- Fecha de vencimiento -->
+        <!-- Fecha de vencimiento del período de membresía -->
         <td class="clients-table__cell">
-          {{ formatDate(client.lastPaymentPeriodEnd) }}
+          <span [ngClass]="getDueDateClass(client.lastPaymentPeriodEnd)">
+            {{ formatDate(client.lastPaymentPeriodEnd) }}
+          </span>
         </td>
 
         <!-- Entrenador -->

@@ -5,7 +5,7 @@ import {
 
 /**
  * Helpers puros de cálculo de período (mensual/trimestral/semestral).
- * Compartidos entre los servicios de Finanzas 2.0 (P&G, Flujo de Caja, etc.)
+ * Compartidos entre los servicios de Contabilidad (P&G, Flujo de Caja, etc.)
  * para garantizar que todos los informes usen exactamente la misma semántica
  * de períodos y la misma forma del label.
  */

@@ -9,6 +9,12 @@ export type { Gender };
 export type ClientOrigin = 'referido' | 'publicidad' | 'llego_solo';
 
 /**
+ * Estado de membresía calculado server-side por la vista v_clients_with_payment_status.
+ * Refleja si la membresía del cliente está vigente, próxima a vencer, etc.
+ */
+export type MembershipStatus = 'active' | 'partial' | 'pending' | 'expired' | 'no_payment';
+
+/**
  * Estado del último pago del cliente.
  * Tipo text (no enum) porque incluye el centinela 'no_payments' para clientes sin pagos.
  */
@@ -82,6 +88,12 @@ export interface Client {
    * NULL si no se ha recibido dinero todavía.
    */
   lastEventAmountCop: number | null;
+
+  /**
+   * Estado de membresía calculado server-side.
+   * Replica la lógica de vigencia de período con base en last_payment_period_end.
+   */
+  membershipStatus: MembershipStatus;
 }
 
 /**
@@ -102,8 +114,8 @@ export interface ClientDetailFull extends Client {
 
 export interface ClientsQueryParams {
   search?: string;
-  /** Filtro multi-selección por estado de pago. Lista vacía = sin filtro. */
-  paymentStatuses?: ClientPaymentStatusDisplay[];
+  /** Filtro multi-selección por estado de membresía. Lista vacía = sin filtro. */
+  membershipStatuses?: MembershipStatus[];
   /** Filtro multi-selección por origen del cliente. Lista vacía = sin filtro. */
   origins?: ClientOrigin[];
   /** UUID de un trainer para mostrar solo sus clientes (asignación activa). */

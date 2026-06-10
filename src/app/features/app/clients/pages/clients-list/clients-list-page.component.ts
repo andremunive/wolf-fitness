@@ -76,7 +76,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   readonly searchControl = new FormControl<string>('');
 
   private readonly filtersSubject = new BehaviorSubject<ClientFiltersValue>({
-    paymentStatuses: [],
+    membershipStatuses: [],
     origins: [],
     trainerId: null
   });
@@ -167,7 +167,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
       const result$: Observable<ViewState> = this.clientsService
         .getClients({
           search,
-          paymentStatuses: filters.paymentStatuses,
+          membershipStatuses: filters.membershipStatuses,
           origins: filters.origins,
           trainerId: filters.trainerId,
           page: pageState.page,
@@ -251,7 +251,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   }
 
   onFiltersClear(): void {
-    this.filtersSubject.next({ paymentStatuses: [], origins: [], trainerId: null });
+    this.filtersSubject.next({ membershipStatuses: [], origins: [], trainerId: null });
   }
 
   get currentFilters(): ClientFiltersValue {

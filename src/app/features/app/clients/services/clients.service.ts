@@ -7,8 +7,8 @@ import { Database, Gender } from 'src/app/core/types/supabase';
 import {
   Client,
   ClientDetailFull,
+  MembershipStatus,
   ClientOrigin as ClientOriginModel,
-  ClientPaymentStatusDisplay,
   ClientsPage,
   ClientsQueryParams,
   CreateClientPayload,
@@ -50,6 +50,8 @@ interface ClientListRow {
   last_payment_period_end: string | null;
   last_event_date: string | null;
   last_event_amount_cop: number | null;
+  // Estado de membresía calculado server-side (migración add_membership_status_to_clients_view)
+  membership_status: string | null;
 }
 
 /**
@@ -114,7 +116,9 @@ const CLIENT_LIST_SELECT = [
   'last_payment_balance_cop',
   'last_payment_period_end',
   'last_event_date',
-  'last_event_amount_cop'
+  'last_event_amount_cop',
+  // Estado de membresía calculado server-side
+  'membership_status'
 ].join(', ');
 
 const CLIENT_DETAIL_SELECT = [
@@ -153,7 +157,8 @@ function mapListRowToClient(row: ClientListRow): Client {
     lastPaymentBalanceCop: row.last_payment_balance_cop ?? null,
     lastPaymentPeriodEnd: row.last_payment_period_end ?? null,
     lastEventDate: row.last_event_date ?? null,
-    lastEventAmountCop: row.last_event_amount_cop ?? null
+    lastEventAmountCop: row.last_event_amount_cop ?? null,
+    membershipStatus: (row.membership_status ?? 'no_payment') as MembershipStatus
   };
 }
 
@@ -186,7 +191,8 @@ function mapDetailRowToClientDetailFull(row: ClientDetailRow): ClientDetailFull 
     lastPaymentBalanceCop: null,
     lastPaymentPeriodEnd: null,
     lastEventDate: null,
-    lastEventAmountCop: null
+    lastEventAmountCop: null,
+    membershipStatus: 'no_payment'
   };
 
   return {
@@ -205,14 +211,14 @@ export class ClientsService {
   constructor(private readonly supabase: SupabaseService) {}
 
   getClients(params: ClientsQueryParams): Observable<ClientsPage> {
-    const { search, paymentStatuses, origins, trainerId, page, pageSize } = params;
+    const { search, membershipStatuses, origins, trainerId, page, pageSize } = params;
     const rangeFrom = (page - 1) * pageSize;
     const rangeTo = rangeFrom + pageSize - 1;
 
     return from(
       this.buildClientsQuery(
         search ?? '',
-        paymentStatuses ?? [],
+        membershipStatuses ?? [],
         origins ?? [],
         trainerId ?? null,
         rangeFrom,
@@ -236,7 +242,7 @@ export class ClientsService {
 
   private async buildClientsQuery(
     search: string,
-    paymentStatuses: ClientPaymentStatusDisplay[],
+    membershipStatuses: MembershipStatus[],
     origins: ClientOriginModel[],
     trainerId: string | null,
     rangeFrom: number,
@@ -249,11 +255,11 @@ export class ClientsService {
       .order('created_at', { ascending: false })
       .range(rangeFrom, rangeTo);
 
-    // Filtro por estado de pago (multi-selección).
-    // La vista v_clients_with_payment_status expone los valores como strings literales
-    // (incluido 'no_payments'), no NULL — un .in() directo cubre todos los casos.
-    if (paymentStatuses.length > 0) {
-      query = query.in('last_payment_status', paymentStatuses);
+    // Filtro por estado de membresía (multi-selección).
+    // La vista v_clients_with_payment_status expone membership_status como string no-NULL
+    // (valor por defecto 'no_payment' cuando no hay pagos) — un .in() directo cubre todos los casos.
+    if (membershipStatuses.length > 0) {
+      query = query.in('membership_status', membershipStatuses);
     }
 
     // Filtro por origen (multi-selección).

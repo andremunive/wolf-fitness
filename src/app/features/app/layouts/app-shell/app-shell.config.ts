@@ -115,8 +115,8 @@ export const NAV_SECTIONS: NavMenuSection[] = [
     ]
   },
   {
-    id: 'finanzas-2',
-    label: 'Finanzas 2.0',
+    id: 'contabilidad',
+    label: 'Contabilidad',
     description: 'Informes financieros consolidados del gimnasio.',
     triggerIcon: 'file-text',
     allowedRoles: ['admin'],
@@ -125,13 +125,13 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         label: 'Estado de Resultados',
         description: 'P&G mensual, trimestral y semestral.',
         iconKey: 'file-text',
-        routerLink: '/app/finanzas-2/estado-de-resultados'
+        routerLink: '/app/contabilidad/estado-de-resultados'
       },
       {
         label: 'Flujo de Caja',
         description: 'Movimientos reales de caja por período.',
         iconKey: 'file-text',
-        routerLink: '/app/finanzas-2/flujo-de-caja'
+        routerLink: '/app/contabilidad/flujo-de-caja'
       }
     ]
   }

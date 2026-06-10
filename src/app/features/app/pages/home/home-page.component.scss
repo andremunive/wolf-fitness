@@ -3,18 +3,36 @@
 }
 
 .home-shell {
-  min-height: 100vh;
-  min-height: 100dvh;
+  // Mobile: occupy exactly the viewport minus the sticky topbar (57px) so
+  // the page never overflows and no document-level scroll is produced.
+  // vh fallback first, then dvh overrides it in browsers that support it.
+  // dvh tracks the dynamic viewport (shrinks when the iOS Safari URL bar
+  // is visible) so the card never gets hidden behind the browser chrome.
+  height: calc(100vh - 57px);
+  height: calc(100dvh - 57px);
   background: linear-gradient(180deg, #f7f8fa 0%, #eaf6f9 100%);
   display: flex;
   flex-direction: column;
+  // Safety valve for ultra-small devices where the card height exceeds
+  // the available space: prefer scroll over clipping content.
+  overflow-y: auto;
+
+  // Desktop / tablet: the shell's flex chain already constrains the height;
+  // override the explicit mobile height and let it fill the available area.
+  @media (min-width: 768px) {
+    height: 100%;
+    overflow-y: visible;
+  }
 }
 
 // .home-header was removed — styles referenced a non-existent element.
 
 .home-main {
   flex: 1;
-  padding: 1.5rem 1.25rem 2.5rem;
+  // Reduce vertical padding on mobile so 3 shortcut cards plus the card
+  // header (role chip + heading + description) fit within calc(100dvh - 57px)
+  // at 375 px without overflow.
+  padding: 1rem 1.25rem 1.5rem;
   display: flex;
   justify-content: center;
 }
@@ -25,7 +43,7 @@
   background: #ffffff;
   border: 1px solid rgba(229, 231, 235, 0.9);
   border-radius: 1.5rem;
-  padding: 1.5rem 1.25rem;
+  padding: 1.25rem 1.25rem;
   box-shadow: 0 10px 30px rgba(10, 42, 51, 0.08);
 }
 
@@ -54,18 +72,20 @@
 // ─── Quick action cards ────────────────────────────────────────────────────────
 
 .home-quick-actions {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  // Slightly tighter gap so 3 cards fit without scroll at 375 px.
+  gap: 0.625rem;
 }
 
 .home-action-card {
   display: flex;
   align-items: center;
   gap: 1rem;
-  min-height: 64px;
-  padding: 0.875rem 1rem;
+  // Reduced from 64px: keeps tap-target accessible while fitting 3 cards.
+  min-height: 56px;
+  padding: 0.75rem 1rem;
   background: #f7f8fa;
   border: 1.5px solid #e5e7eb;
   border-radius: 1rem;
@@ -127,11 +147,14 @@
     padding: 2rem;
   }
 
+  // Cards stay in a column: the "Estadísticas — Clientes / Finanzas" labels
+  // are too long to fit legibly side-by-side in a row layout.
   .home-quick-actions {
-    flex-direction: row;
+    flex-direction: column;
+    gap: 0.75rem;
   }
 
   .home-action-card {
-    flex: 1;
+    min-height: 60px;
   }
 }
