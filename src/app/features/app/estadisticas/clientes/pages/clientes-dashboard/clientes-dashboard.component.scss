@@ -640,39 +640,28 @@
   display: grid;
   grid-template-columns: 1fr;
   gap: 16px;
+  align-items: stretch;
 
-  @media (min-width: 768px) {
+  @media (min-width: 640px) {
     grid-template-columns: repeat(2, 1fr);
   }
 
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
-
-  // Modificador para filas con 3 cards (ej: nuevos por origen).
-  &--3 {
-    @media (min-width: 1024px) {
-      grid-template-columns: repeat(3, 1fr);
-    }
-  }
-
-  // Separación entre filas dentro de la misma sección.
-  &--row-2 {
-    margin-top: 16px;
-  }
 }
 
 // ─── Card metric ──────────────────────────────────────────────────────────
 .cv2-card--metric {
-  background: var(--fv2-bg-card);
-  border-radius: var(--fv2-radius);
-  border: 1px solid var(--fv2-border);
-  box-shadow: var(--fv2-shadow);
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   padding: 20px;
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  min-height: 140px;
+  height: 100%;
   position: relative;
   transition: box-shadow 0.18s ease, transform 0.18s ease;
 
@@ -682,18 +671,23 @@
   }
 }
 
-.cv2-card-metric__top {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  margin-bottom: 12px;
+// Cuando la card de nuevos está abierta: eleva z-index y libera overflow
+// para que el panel flotante no quede clipeado por el contenedor.
+.cv2-card--metric-open {
+  z-index: 31;
+  overflow: visible;
 }
 
-.cv2-card-metric__label-row {
+.cv2-card--metric-clickable {
+  cursor: pointer;
+}
+
+// ─── Header (dot + label) ────────────────────────────────────────────────
+.cv2-card-metric__header {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  margin-bottom: 12px;
   min-width: 0;
 }
 
@@ -715,14 +709,7 @@
   text-overflow: ellipsis;
 }
 
-.cv2-card-metric__spark {
-  width: 80px;
-  height: 40px;
-  flex-shrink: 0;
-  display: block;
-  overflow: visible;
-}
-
+// ─── Número grande ───────────────────────────────────────────────────────
 .cv2-card-metric__value {
   font-family: 'Geist', 'Inter', system-ui, sans-serif;
   font-size: 1.5rem;
@@ -733,18 +720,197 @@
   font-variant-numeric: tabular-nums;
 }
 
-.cv2-card-metric__meta {
+// ─── Delta chip ──────────────────────────────────────────────────────────
+.cv2-card-metric__delta-row {
   margin-top: 8px;
-  min-height: 24px;
+  min-height: 28px;
   display: flex;
   align-items: center;
 }
 
-.cv2-card-metric__secondary {
-  margin: 10px 0 0 0;
-  font-size: 0.78rem;
-  color: var(--fv2-text-secondary);
+// ─── Divider + plan breakdown anclados al fondo ──────────────────────────
+.cv2-card-metric__divider {
+  margin-top: auto;
+  border-top: 1px solid #e5e7eb;
+  padding-top: 12px;
+}
+
+.cv2-card-metric__plan {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  gap: 12px;
+  align-items: center;
+}
+
+.cv2-card-metric__plan-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.cv2-card-metric__plan-label {
+  font-size: 0.68rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #6b7280;
+  font-weight: 600;
+}
+
+.cv2-card-metric__plan-value {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
   font-variant-numeric: tabular-nums;
+}
+
+.cv2-card-metric__plan-divider {
+  width: 1px;
+  height: 32px;
+  background: #e5e7eb;
+}
+
+// ─── Trigger "Ver desglose" ───────────────────────────────────────────────
+.cv2-card-metric__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 4px;
+  margin-top: 8px;
+  align-self: flex-end;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #6b7280;
+  transition: color 0.15s;
+
+  &:hover { color: #374151; }
+
+  &:focus-visible {
+    outline: 2px solid #228d9f;
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+.cv2-card-metric__chevron {
+  display: inline-block;
+  transition: transform 150ms ease;
+
+  &--open { transform: rotate(180deg); }
+}
+
+// ─── Panel flotante de desglose por origen ───────────────────────────────
+.cv2-nuevos-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  animation: cv2-panel-appear 150ms ease forwards;
+
+  @media (max-width: 640px) {
+    padding: 12px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@keyframes cv2-panel-appear {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.cv2-nuevos-panel__close {
+  display: none;
+
+  @media (max-width: 767px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    border-radius: 6px;
+
+    &:hover {
+      background: #f3f4f6;
+      color: #374151;
+    }
+  }
+}
+
+.cv2-nuevos-panel__title {
+  margin: 0 0 12px 0;
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #6b7280;
+}
+
+.cv2-nuevos-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cv2-nuevos-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.cv2-nuevos-panel__row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cv2-nuevos-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+}
+
+.cv2-nuevos-panel__amount {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #111827;
+  font-variant-numeric: tabular-nums;
+}
+
+.cv2-nuevos-panel__bar-track {
+  height: 3px;
+  background: #f3f4f6;
+  border-radius: 1.5px;
+  overflow: hidden;
+}
+
+.cv2-nuevos-panel__bar {
+  height: 100%;
+  border-radius: 1.5px;
+  transition: width 200ms ease;
 }
 
 // ─── Skeleton + error de card ────────────────────────────────────────────

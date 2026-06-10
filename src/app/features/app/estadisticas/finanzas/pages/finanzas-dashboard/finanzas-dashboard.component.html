@@ -419,24 +419,26 @@
               </ng-template>
             </div>
 
-            <!-- Texto secundario -->
-            <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
+            <!-- Texto secundario + trigger en una sola fila -->
+            <div class="fv2-card-metric__bottom">
+              <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
 
-            <!-- Trigger "Ver desglose" — solo en la card de egresos -->
-            <ng-container *ngIf="card.key === 'egresos' && card.status === 'loaded'">
-              <button
-                type="button"
-                class="fv2-card-metric__trigger"
-                [attr.aria-expanded]="openCardKey === 'egresos'"
-                (click)="$event.stopPropagation(); onToggleEgresosPanel('egresos', $event)"
-                aria-label="Ver desglose de egresos por tipo">
-                Ver desglose
-                <span
-                  class="fv2-card-metric__chevron"
-                  [class.fv2-card-metric__chevron--open]="openCardKey === 'egresos'"
-                  aria-hidden="true">▾</span>
-              </button>
-            </ng-container>
+              <!-- Trigger "Ver desglose" — solo en la card de egresos -->
+              <ng-container *ngIf="card.key === 'egresos' && card.status === 'loaded'">
+                <button
+                  type="button"
+                  class="fv2-card-metric__trigger"
+                  [attr.aria-expanded]="openCardKey === 'egresos'"
+                  (click)="$event.stopPropagation(); onToggleEgresosPanel('egresos', $event)"
+                  aria-label="Ver desglose de egresos por tipo">
+                  Ver desglose
+                  <span
+                    class="fv2-card-metric__chevron"
+                    [class.fv2-card-metric__chevron--open]="openCardKey === 'egresos'"
+                    aria-hidden="true">▾</span>
+                </button>
+              </ng-container>
+            </div>
 
           </ng-container>
 
@@ -671,7 +673,7 @@
         <h2 class="fv2-section__title">Estado de caja</h2>
       </div>
       <p class="fv2-section__subtitle">
-        Posición consolidada y caja menor del período
+        Posición consolidada y caja de recaudo del período
       </p>
     </header>
 
@@ -720,29 +722,6 @@
                 </p>
               </div>
 
-              <!-- Sparkline pequeña 120×50 -->
-              <ng-container *ngIf="buildSparkline(computeSaldoSeries(state.ts, state.cs), 120, 50) as sl">
-                <svg
-                  class="fv2-caja-card__spark-sm"
-                  [attr.viewBox]="'0 0 ' + sl.width + ' ' + sl.height"
-                  preserveAspectRatio="none"
-                  aria-hidden="true">
-                  <defs>
-                    <linearGradient id="fv2-caja-spark-sm" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stop-color="#228d9f" stop-opacity="0.22" />
-                      <stop offset="100%" stop-color="#228d9f" stop-opacity="0" />
-                    </linearGradient>
-                  </defs>
-                  <path [attr.d]="sl.areaPath" fill="url(#fv2-caja-spark-sm)" stroke="none" />
-                  <path
-                    [attr.d]="sl.linePath"
-                    fill="none"
-                    stroke="#228d9f"
-                    stroke-width="1.5"
-                    stroke-linecap="round"
-                    stroke-linejoin="round" />
-                </svg>
-              </ng-container>
             </div>
 
             <div class="fv2-caja-card__divider"></div>
@@ -794,34 +773,10 @@
               </div>
             </div>
 
-            <!-- Sparkline grande decorativa al fondo -->
-            <ng-container *ngIf="buildSparkline(computeSaldoSeries(state.ts, state.cs), 600, 60) as bigSl">
-              <svg
-                class="fv2-caja-card__spark-bg"
-                [attr.viewBox]="'0 0 ' + bigSl.width + ' ' + bigSl.height"
-                preserveAspectRatio="none"
-                aria-hidden="true">
-                <defs>
-                  <linearGradient id="fv2-caja-spark-bg" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stop-color="#228d9f" stop-opacity="0.18" />
-                    <stop offset="100%" stop-color="#228d9f" stop-opacity="0" />
-                  </linearGradient>
-                </defs>
-                <path [attr.d]="bigSl.areaPath" fill="url(#fv2-caja-spark-bg)" stroke="none" />
-                <path
-                  [attr.d]="bigSl.linePath"
-                  fill="none"
-                  stroke="#228d9f"
-                  stroke-width="1.5"
-                  stroke-linecap="round"
-                  stroke-linejoin="round" />
-              </svg>
-            </ng-container>
-
           </ng-container>
         </article>
 
-        <!-- ─── Card derecha: Caja Menor (oscura) ──────────────────── -->
+        <!-- ─── Card derecha: Caja de Recaudo (oscura) ─────────────── -->
         <article class="fv2-card fv2-caja-card fv2-caja-card--dark">
 
           <!-- Loading -->
@@ -833,7 +788,7 @@
 
           <!-- Error -->
           <div *ngIf="state.cs && state.cs.status === 'error'" class="fv2-caja-error fv2-caja-error--dark">
-            <p>Error al cargar la caja menor.</p>
+            <p>Error al cargar la caja de recaudo.</p>
             <button type="button" class="fv2-link-btn fv2-link-btn--dark" (click)="retryCaja()">
               Reintentar
             </button>
@@ -843,7 +798,7 @@
           <ng-container *ngIf="state.cs && state.cs.status === 'loaded'">
 
             <div class="fv2-caja-card__top">
-              <span class="fv2-caja-card__label fv2-caja-card__label--light">CAJA MENOR</span>
+              <span class="fv2-caja-card__label fv2-caja-card__label--light">CAJA DE RECAUDO</span>
               <span class="fv2-caja-card__badge">
                 {{ state.cs.data!.caja_menor.quincena_label }}
               </span>
