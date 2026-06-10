@@ -2,6 +2,7 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
+  HostListener,
   OnDestroy,
   OnInit
 } from '@angular/core';
@@ -36,6 +37,7 @@ import {
   ComposicionCategoriaRow,
   ComposicionProveedorRow,
   DetalleMetodoPago,
+  EgresosPorTipo,
   FinanzasCajaResponse,
   FinanzasComposicionResponse,
   FinanzasDetalleResponse,
@@ -224,6 +226,27 @@ export interface CardVM {
   gradId: string;
 }
 
+// ─── Desglose de egresos (panel flotante) ─────────────────────────────────
+
+export type ExpenseType =
+  | 'costo_directo'
+  | 'gasto_operativo'
+  | 'gasto_administrativo'
+  | 'gasto_financiero'
+  | 'inversion'
+  | 'deuda';
+
+export interface EgresosDesgloseRow {
+  tipo: ExpenseType;
+  label: string;
+  total_cop: number;
+  /** 0-100, proporción sobre el tipo con mayor valor (max = 100). */
+  barWidthPct: number;
+  badgeBg: string;
+  badgeText: string;
+  barFill: string;
+}
+
 // ─── Sparkline path geometry ──────────────────────────────────────────────────
 
 interface SparklineGeometry {
@@ -291,6 +314,24 @@ const VENTANA_PUNTOS: Record<VentanaTendenciaFin, number> = {
 const COLOR_INGRESOS  = '#10b981';
 const COLOR_EGRESOS   = '#dc2626';
 const COLOR_UTILIDAD  = '#228d9f';
+
+// ─── Metadatos de los expense_type para el panel de desglose ──────────────
+
+interface ExpenseTypeMeta {
+  label: string;
+  badgeBg: string;
+  badgeText: string;
+  barFill: string;
+}
+
+const EXPENSE_TYPE_META: Record<ExpenseType, ExpenseTypeMeta> = {
+  costo_directo:        { label: 'Costo directo',        badgeBg: '#d1fae5', badgeText: '#065f46', barFill: '#065f46' },
+  gasto_operativo:      { label: 'Gasto operativo',      badgeBg: '#e0e7ff', badgeText: '#3730a3', barFill: '#3730a3' },
+  gasto_administrativo: { label: 'Gasto administrativo', badgeBg: '#c7d2fe', badgeText: '#1e1b4b', barFill: '#1e1b4b' },
+  gasto_financiero:     { label: 'Gasto financiero',     badgeBg: '#fee2e2', badgeText: '#7f1d1d', barFill: '#7f1d1d' },
+  inversion:            { label: 'Inversión',            badgeBg: '#fef3c7', badgeText: '#92400e', barFill: '#92400e' },
+  deuda:                { label: 'Deuda',                badgeBg: '#fecaca', badgeText: '#991b1b', barFill: '#991b1b' }
+};
 
 /** Colores deterministas por método de pago (sección 04). */
 const METODO_COLORS: Record<MetodoPago, string> = {
@@ -762,16 +803,16 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     ts: TendenciaState | null
   ): CardVM {
     const status = this.deriveResumenCardStatus(rs);
-    const value = rs?.status === 'loaded' ? rs.data!.egresos_operativos.total_cop : 0;
-    const delta = rs?.status === 'loaded' ? rs.data!.egresos_operativos.delta_cop : null;
-    const cantidad = rs?.status === 'loaded' ? rs.data!.egresos_operativos.cantidad_registros ?? 0 : 0;
+    const value = rs?.status === 'loaded' ? rs.data!.egresos_por_tipo.total_cop : 0;
+    const delta = rs?.status === 'loaded' ? rs.data!.egresos_por_tipo.delta_cop : null;
+    const cantidad = rs?.status === 'loaded' ? rs.data!.egresos_por_tipo.cantidad_registros : 0;
     const sparkVals = ts?.status === 'loaded'
-      ? ts.data!.map((p) => p.egresos_operativos_cop)
+      ? ts.data!.map((p) => p.egresos_totales_cop)
       : [];
 
     return {
       key: 'egresos',
-      label: 'Egresos operativos',
+      label: 'Egresos',
       color: '#dc2626',
       status,
       value,
@@ -862,6 +903,77 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
 
   trackByCardKey(_i: number, c: CardVM): CardKey {
     return c.key;
+  }
+
+  // ─── Panel flotante de desglose de egresos ────────────────────────────────
+
+  /** Clave de la card cuyo panel está abierto. null = ninguno abierto. */
+  openCardKey: CardKey | null = null;
+
+  @HostListener('document:keydown.escape')
+  onEscKey(): void {
+    if (this.openCardKey !== null) {
+      this.openCardKey = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /**
+   * Alterna la apertura del panel de la card `key`.
+   * Recibe el MouseEvent para llamar stopPropagation y evitar que el
+   * HostListener de document:click cierre el panel inmediatamente.
+   */
+  onToggleEgresosPanel(key: CardKey, event: MouseEvent): void {
+    event.stopPropagation();
+    this.openCardKey = this.openCardKey === key ? null : key;
+    this.cdr.markForCheck();
+  }
+
+  /** Cierra cualquier panel abierto al hacer click fuera. */
+  @HostListener('document:click')
+  onDocumentClick(): void {
+    if (this.openCardKey !== null) {
+      this.openCardKey = null;
+      this.cdr.markForCheck();
+    }
+  }
+
+  /**
+   * Construye las filas del desglose de egresos para el panel flotante.
+   * Solo incluye tipos cuyo total_cop > 0, ordenados de mayor a menor.
+   */
+  buildEgresosDesglose(ept: EgresosPorTipo): EgresosDesgloseRow[] {
+    const entries: Array<{ tipo: ExpenseType; total_cop: number }> = [
+      { tipo: 'costo_directo',        total_cop: ept.costo_directo_cop },
+      { tipo: 'gasto_operativo',      total_cop: ept.gasto_operativo_cop },
+      { tipo: 'gasto_administrativo', total_cop: ept.gasto_administrativo_cop },
+      { tipo: 'gasto_financiero',     total_cop: ept.gasto_financiero_cop },
+      { tipo: 'inversion',            total_cop: ept.inversion_cop },
+      { tipo: 'deuda',                total_cop: ept.deuda_cop }
+    ];
+
+    const withValue = entries.filter((e) => e.total_cop > 0);
+    if (withValue.length === 0) return [];
+
+    withValue.sort((a, b) => b.total_cop - a.total_cop);
+    const maxVal = withValue[0].total_cop;
+
+    return withValue.map((e) => {
+      const meta = EXPENSE_TYPE_META[e.tipo];
+      return {
+        tipo: e.tipo,
+        label: meta.label,
+        total_cop: e.total_cop,
+        barWidthPct: maxVal > 0 ? (e.total_cop / maxVal) * 100 : 0,
+        badgeBg: meta.badgeBg,
+        badgeText: meta.badgeText,
+        barFill: meta.barFill
+      };
+    });
+  }
+
+  trackByExpenseType(_i: number, r: EgresosDesgloseRow): ExpenseType {
+    return r.tipo;
   }
 
   // ─── Saldo acumulado (compartido por card 4 y por la sección 03) ─────────

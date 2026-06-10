@@ -323,7 +323,10 @@
         <article
           *ngFor="let card of buildCards(state.rs, state.ts, state.cs); trackBy: trackByCardKey"
           class="fv2-card fv2-card--metric"
-          [attr.data-key]="card.key">
+          [class.fv2-card--metric-open]="openCardKey === card.key"
+          [class.fv2-card--metric-clickable]="card.key === 'egresos' && card.status === 'loaded'"
+          [attr.data-key]="card.key"
+          (click)="card.key === 'egresos' && card.status === 'loaded' ? onToggleEgresosPanel(card.key, $event) : null">
 
           <!-- ── Loading skeleton ─────────────────────────────────── -->
           <ng-container *ngIf="card.status === 'loading'">
@@ -419,6 +422,93 @@
             <!-- Texto secundario -->
             <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
 
+            <!-- Trigger "Ver desglose" — solo en la card de egresos -->
+            <ng-container *ngIf="card.key === 'egresos' && card.status === 'loaded'">
+              <button
+                type="button"
+                class="fv2-card-metric__trigger"
+                [attr.aria-expanded]="openCardKey === 'egresos'"
+                (click)="$event.stopPropagation(); onToggleEgresosPanel('egresos', $event)"
+                aria-label="Ver desglose de egresos por tipo">
+                Ver desglose
+                <span
+                  class="fv2-card-metric__chevron"
+                  [class.fv2-card-metric__chevron--open]="openCardKey === 'egresos'"
+                  aria-hidden="true">▾</span>
+              </button>
+            </ng-container>
+
+          </ng-container>
+
+          <!-- ── Panel flotante de desglose — solo card egresos ──── -->
+          <ng-container *ngIf="card.key === 'egresos' && openCardKey === 'egresos' && state.rs && state.rs.status === 'loaded'">
+            <div
+              class="fv2-egresos-panel"
+              role="dialog"
+              aria-modal="false"
+              aria-label="Desglose de egresos por tipo"
+              (click)="$event.stopPropagation()">
+
+              <!-- Botón X de cierre — visible solo en mobile -->
+              <button
+                type="button"
+                class="fv2-egresos-panel__close"
+                (click)="onToggleEgresosPanel('egresos', $event)"
+                aria-label="Cerrar desglose">
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor"
+                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <p class="fv2-egresos-panel__title">Desglose por tipo</p>
+
+              <ul class="fv2-egresos-panel__list">
+                <li
+                  *ngFor="let row of buildEgresosDesglose(state.rs.data!.egresos_por_tipo); trackBy: trackByExpenseType"
+                  class="fv2-egresos-panel__item">
+                  <div class="fv2-egresos-panel__item-head">
+                    <span
+                      class="fv2-egresos-panel__badge"
+                      [style.background]="row.badgeBg"
+                      [style.color]="row.badgeText">
+                      {{ row.label }}
+                    </span>
+                    <span class="fv2-egresos-panel__amount">
+                      {{ formatVisible(row.total_cop, state.v) }}
+                    </span>
+                  </div>
+                  <div class="fv2-egresos-panel__bar-track">
+                    <div
+                      class="fv2-egresos-panel__bar"
+                      [style.width.%]="row.barWidthPct"
+                      [style.background]="row.barFill">
+                    </div>
+                  </div>
+                </li>
+              </ul>
+
+              <!-- Empty state si todos son 0 -->
+              <p
+                *ngIf="buildEgresosDesglose(state.rs.data!.egresos_por_tipo).length === 0"
+                class="fv2-egresos-panel__empty">
+                Sin egresos registrados en este período.
+              </p>
+
+              <div class="fv2-egresos-panel__sep"></div>
+
+              <div class="fv2-egresos-panel__total-row">
+                <span class="fv2-egresos-panel__total-label">Total</span>
+                <span class="fv2-egresos-panel__total-amount">
+                  {{ formatVisible(state.rs.data!.egresos_por_tipo.total_cop, state.v) }}
+                </span>
+              </div>
+
+            </div>
           </ng-container>
 
         </article>

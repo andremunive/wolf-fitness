@@ -68,9 +68,29 @@ export interface UtilidadMetric extends ResumenMetricBase {
   es_positiva: boolean;
 }
 
+/**
+ * Desglose de egresos por tipo contable.
+ * `total_cop` es la suma de todos los tipos (incluye inversion y deuda),
+ * a diferencia de `egresos_operativos` que es solo el subset P&G.
+ */
+export interface EgresosPorTipo {
+  costo_directo_cop: number;
+  gasto_operativo_cop: number;
+  gasto_administrativo_cop: number;
+  gasto_financiero_cop: number;
+  inversion_cop: number;
+  deuda_cop: number;
+  total_cop: number;
+  cantidad_registros: number;
+  delta_cop: number;
+  delta_pct: number | null;
+}
+
 export interface FinanzasResumenResponse {
   ingresos: ResumenMetric;
   egresos_operativos: ResumenMetric;
+  /** Desglose completo por tipo contable (incluye inversión y deuda). */
+  egresos_por_tipo: EgresosPorTipo;
   nomina: ResumenMetric;
   utilidad: UtilidadMetric;
   mes_completo: boolean;

@@ -721,6 +721,11 @@
   color: var(--fv2-text-secondary);
 }
 
+// ─── Card metric — clickable variant (egresos cargado) ──────────────────
+.fv2-card--metric-clickable {
+  cursor: pointer;
+}
+
 // ─── Card metric skeleton ────────────────────────────────────────────────
 .fv2-card-metric__skeleton {
   display: flex;
@@ -1719,4 +1724,229 @@
     .fv2-caja-card__pagos { color: rgba(255, 255, 255, 0.78); }
     .fv2-caja-card__sub   { color: rgba(255, 255, 255, 0.6); }
   }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// SECCIÓN 01 — Panel de desglose de egresos
+// ═══════════════════════════════════════════════════════════════════════════
+
+// La card--metric ya tiene position: relative desde arriba.
+// Cuando el panel está abierto se eleva con z-index para pasar por encima
+// del resto del grid y se libera el overflow para que el panel flotante
+// (position: absolute en top: calc(100% + 6px)) no quede clippeado.
+.fv2-card--metric-open {
+  z-index: 31;
+  overflow: visible;
+}
+
+// ─── Trigger "Ver desglose ▾" ─────────────────────────────────────────────
+.fv2-card-metric__trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: auto;
+  padding: 4px 0 0 0;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: var(--fv2-text-muted);
+  letter-spacing: 0.01em;
+  align-self: flex-end;
+  // Área táctil mínima 44×44 px en mobile via padding virtual
+  min-height: 44px;
+  padding-top: 12px;
+  padding-bottom: 8px;
+  transition: color 0.15s ease;
+
+  &:hover {
+    color: var(--fv2-text-secondary);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--fv2-brand);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+}
+
+// ─── Chevron con rotación al abrir ────────────────────────────────────────
+.fv2-card-metric__chevron {
+  display: inline-block;
+  transition: transform 150ms ease;
+
+  &--open {
+    transform: rotate(180deg);
+  }
+}
+
+// ─── Panel flotante ───────────────────────────────────────────────────────
+.fv2-egresos-panel {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  z-index: 30;
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  padding: 16px;
+  animation: fv2-panel-appear 150ms ease forwards;
+
+  @media (max-width: 640px) {
+    padding: 12px;
+    // Evitar desbordamiento del viewport en mobile
+    max-width: calc(100vw - 32px);
+  }
+}
+
+@keyframes fv2-panel-appear {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+// ─── Botón de cierre (mobile-only) ───────────────────────────────────────
+.fv2-egresos-panel__close {
+  display: none; // Oculto en desktop — click-outside es suficiente
+
+  @media (max-width: 767px) {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 40px;
+    height: 40px;
+    background: transparent;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    color: #6b7280; // gray-500
+    padding: 8px;
+    transition: background-color 0.15s ease, color 0.15s ease;
+
+    &:hover {
+      background: #f3f4f6;
+      color: #374151; // gray-700
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--fv2-brand);
+      outline-offset: 2px;
+    }
+  }
+}
+
+// ─── Título del panel ─────────────────────────────────────────────────────
+.fv2-egresos-panel__title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--fv2-text-muted);
+  margin: 0 0 12px 0;
+}
+
+// ─── Lista de tipos ───────────────────────────────────────────────────────
+.fv2-egresos-panel__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.fv2-egresos-panel__item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.fv2-egresos-panel__item-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+// ─── Badge de tipo ────────────────────────────────────────────────────────
+.fv2-egresos-panel__badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+// ─── Monto por tipo ───────────────────────────────────────────────────────
+.fv2-egresos-panel__amount {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--fv2-text-primary);
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+// ─── Barra de progreso 3px ────────────────────────────────────────────────
+.fv2-egresos-panel__bar-track {
+  width: 100%;
+  height: 3px;
+  border-radius: 1.5px;
+  background: #f3f4f6;
+  overflow: hidden;
+}
+
+.fv2-egresos-panel__bar {
+  height: 100%;
+  border-radius: 1.5px;
+  min-width: 2px;
+  transition: width 0.3s ease;
+}
+
+// ─── Separador y fila de total ────────────────────────────────────────────
+.fv2-egresos-panel__sep {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 12px 0 10px 0;
+}
+
+.fv2-egresos-panel__total-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.fv2-egresos-panel__total-label {
+  font-size: 0.82rem;
+  font-weight: 400;
+  color: #374151; // gray-700
+}
+
+.fv2-egresos-panel__total-amount {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--fv2-brand);
+  font-variant-numeric: tabular-nums;
+}
+
+// ─── Empty state del panel ────────────────────────────────────────────────
+.fv2-egresos-panel__empty {
+  font-size: 0.78rem;
+  color: var(--fv2-text-muted);
+  margin: 0 0 8px 0;
+  text-align: center;
 }
