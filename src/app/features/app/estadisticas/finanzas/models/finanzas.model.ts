@@ -20,13 +20,12 @@ export interface CajaConsolidada {
   ingresos_consolidados_cop: number;
   egresos_operativos_cop: number;
   nomina_pagada_cop: number;
+  prestamos_otorgados_cop: number;
+  abonos_recibidos_cop: number;
+  saldo_prestamos_cop: number;
+  /** Neto cafetería desde semilla (entradas − salidas). Incluido en saldo_cop. */
+  cafeteria_neto_cop: number;
   saldo_cop: number;                  // puede ser negativo
-  /** Monto total otorgado en préstamos activos+cerrados. Opcional mientras el backend despliega v2. */
-  prestamos_otorgados_cop?: number;
-  /** Monto total recuperado (abonos recibidos). Opcional mientras el backend despliega v2. */
-  abonos_recibidos_cop?: number;
-  /** Saldo neto de préstamos (otorgados − recuperado). Negativo = dinero afuera. Opcional mientras el backend despliega v2. */
-  saldo_prestamos_cop?: number;
 }
 
 export interface CajaMenor {
@@ -59,7 +58,11 @@ interface ResumenMetricBase {
  * Consolidar en una sola interfaz simplifica los helpers del componente.
  */
 export interface ResumenMetric extends ResumenMetricBase {
-  cantidad_pagos?: number;      // ingresos
+  /** Solo en ingresos: desglose de mensualidades (fase 10+). */
+  mensualidades_cop?: number;
+  /** Solo en ingresos: desglose de cafetería (fase 10+). */
+  cafeteria_cop?: number;
+  cantidad_pagos?: number;      // ingresos (solo mensualidades)
   cantidad_registros?: number;  // egresos operativos
   cantidad_cierres?: number;    // nómina
 }
@@ -101,7 +104,9 @@ export interface FinanzasResumenResponse {
 export interface FinanzasTendenciaPunto {
   mes: string;                      // "2026-04"
   label: string;                    // "Abr 26"
-  ingresos_cop: number;
+  ingresos_cop: number;             // mensualidades + cafetería (fase 10+)
+  mensualidades_cop: number;        // desglose mensualidades (fase 10+)
+  cafeteria_cop: number;            // desglose cafetería (fase 10+)
   egresos_operativos_cop: number;
   nomina_cop: number;
   egresos_totales_cop: number;      // operativos + nomina (precalculado por el backend)
@@ -138,11 +143,23 @@ export interface ComposicionProveedorRow extends ComposicionRowBase {
   proveedor_id: string;
 }
 
+export interface ComposicionIngresos {
+  mensualidades_cop: number;
+  /** 0–100 con 1 decimal. */
+  mensualidades_pct: number;
+  cafeteria_cop: number;
+  /** 0–100 con 1 decimal. */
+  cafeteria_pct: number;
+  total_cop: number;
+}
+
 export interface FinanzasComposicionResponse {
   por_categoria: ComposicionCategoriaRow[];
   por_proveedor: ComposicionProveedorRow[];
   total_egresos_cop: number;
   tiene_datos: boolean;
+  /** Desglose de ingresos por fuente (fase 10+). */
+  composicion_ingresos: ComposicionIngresos;
 }
 
 // ─── Detalle response (Edge Function: stats-finanzas-detalle) ─────────────────

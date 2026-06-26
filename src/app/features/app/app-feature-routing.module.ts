@@ -73,6 +73,12 @@ const routes: Routes = [
         loadChildren: () =>
           import('./contabilidad/contabilidad.module').then((m) => m.ContabilidadModule),
         canActivate: [roleGuard(['admin'])]
+      },
+      {
+        path: 'cafeteria',
+        loadChildren: () =>
+          import('./cafeteria/cafeteria.module').then((m) => m.CafeteriaModule),
+        canActivate: [roleGuard(['admin'])]
       }
     ]
   }

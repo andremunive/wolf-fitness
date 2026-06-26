@@ -762,13 +762,32 @@
                 </span>
                 <div
                   class="fv2-caja-stat__value"
-                  [class.fv2-caja-stat__value--amber]="(state.cs.data!.caja_consolidada.saldo_prestamos_cop ?? 0) < 0"
+                  [class.fv2-caja-stat__value--amber]="state.cs.data!.caja_consolidada.saldo_prestamos_cop < 0"
                 >
-                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_prestamos_cop ?? 0, state.v) }}
+                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_prestamos_cop, state.v) }}
                 </div>
                 <div class="fv2-caja-stat__sublabel">
-                  Otorgados: {{ formatVisible(state.cs.data!.caja_consolidada.prestamos_otorgados_cop ?? 0, state.v) }}
-                  · Recup.: {{ formatVisible(state.cs.data!.caja_consolidada.abonos_recibidos_cop ?? 0, state.v) }}
+                  Otorgados: {{ formatVisible(state.cs.data!.caja_consolidada.prestamos_otorgados_cop, state.v) }}
+                  · Recup.: {{ formatVisible(state.cs.data!.caja_consolidada.abonos_recibidos_cop, state.v) }}
+                </div>
+              </div>
+
+              <!-- Cafetería — bloque adicional (fase 10) -->
+              <div class="fv2-caja-stat">
+                <span class="fv2-caja-stat__label">
+                  <span class="fv2-caja-stat__sign fv2-caja-stat__sign--neutral">~</span>
+                  CAFETERÍA
+                </span>
+                <div
+                  class="fv2-caja-stat__value"
+                  [class.fv2-caja-stat__value--cafeteria-pos]="state.cs.data!.caja_consolidada.cafeteria_neto_cop > 0"
+                  [class.fv2-caja-stat__value--cafeteria-neg]="state.cs.data!.caja_consolidada.cafeteria_neto_cop < 0"
+                  [class.fv2-caja-stat__value--amber]="state.cs.data!.caja_consolidada.cafeteria_neto_cop === 0"
+                >
+                  {{ formatVisible(state.cs.data!.caja_consolidada.cafeteria_neto_cop, state.v) }}
+                </div>
+                <div class="fv2-caja-stat__sublabel">
+                  Neto desde inicio de caja
                 </div>
               </div>
             </div>
@@ -1054,18 +1073,20 @@
         </p>
       </div>
 
-      <div class="fv2-pills" role="tablist" aria-label="Vista de composición">
-        <button
-          *ngFor="let v of vistasComposicion; trackBy: trackByVistaComposicion"
-          type="button"
-          role="tab"
-          class="fv2-pill-tab"
-          [class.fv2-pill-tab--active]="vistaComposicion === v"
-          [attr.aria-selected]="vistaComposicion === v"
-          (click)="onVistaComposicionChange(v)">
-          {{ vistaComposicionLabels[v] }}
-        </button>
-      </div>
+      <ng-container *ngIf="composicionState$ | async as cs">
+        <div class="fv2-pills" role="tablist" aria-label="Vista de composición">
+          <button
+            *ngFor="let v of vistasComposicionDisponibles(cs.status === 'loaded' ? cs.data : null); trackBy: trackByVistaComposicion"
+            type="button"
+            role="tab"
+            class="fv2-pill-tab"
+            [class.fv2-pill-tab--active]="vistaComposicion === v"
+            [attr.aria-selected]="vistaComposicion === v"
+            (click)="onVistaComposicionChange(v)">
+            {{ vistaComposicionLabels[v] }}
+          </button>
+        </div>
+      </ng-container>
     </header>
 
     <ng-container *ngIf="{
@@ -1128,60 +1149,122 @@
 
         <!-- Loaded — con datos -->
         <ng-container *ngIf="state.cs && state.cs.status === 'loaded' && state.cs.data!.tiene_datos">
-          <div class="fv2-composicion-body">
 
-            <!-- Dona grande -->
-            <div class="fv2-donut-wrap fv2-donut-wrap--lg">
-              <div class="fv2-donut-canvas fv2-donut-canvas--lg">
-                <canvas
-                  baseChart
-                  [type]="'doughnut'"
-                  [data]="buildComposicionChartData(state.cs.data!)"
-                  [options]="composicionChartOptions"
-                  aria-label="Composición de egresos"
-                  role="img"></canvas>
+          <!-- ── Vista Origen ingresos ───────────────────────────── -->
+          <ng-container *ngIf="vistaComposicion === 'origen_ingresos'">
+            <div class="fv2-composicion-body">
+              <!-- Dona -->
+              <div class="fv2-donut-wrap fv2-donut-wrap--lg">
+                <div class="fv2-donut-canvas fv2-donut-canvas--lg">
+                  <canvas
+                    baseChart
+                    [type]="'doughnut'"
+                    [data]="buildIngresosChartData(state.cs.data!.composicion_ingresos)"
+                    [options]="composicionChartOptions"
+                    aria-label="Composición de ingresos por origen"
+                    role="img"></canvas>
+                </div>
+                <div class="fv2-donut-center fv2-donut-center--lg">
+                  <span class="fv2-donut-center__label">TOTAL</span>
+                  <span class="fv2-donut-center__value fv2-donut-center__value--lg">
+                    {{ state.v ? formatShort(state.cs.data!.composicion_ingresos.total_cop) : '$••••' }}
+                  </span>
+                </div>
               </div>
-              <div class="fv2-donut-center fv2-donut-center--lg">
-                <span class="fv2-donut-center__label">TOTAL</span>
-                <span class="fv2-donut-center__value fv2-donut-center__value--lg">
-                  {{ state.v ? formatShort(state.cs.data!.total_egresos_cop) : '$••••' }}
-                </span>
-              </div>
+
+              <!-- Lista -->
+              <ul class="fv2-row-list fv2-row-list--lg">
+                <li
+                  *ngFor="let r of buildIngresosRows(state.cs.data!.composicion_ingresos); trackBy: trackByComposicionId"
+                  class="fv2-row">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name">
+                      <span class="fv2-row__dot" [style.background]="r.color"></span>
+                      {{ r.nombre }}
+                    </span>
+                    <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
+                    <span class="fv2-row__amount">
+                      {{ formatVisible(r.total_cop, state.v) }}
+                    </span>
+                  </div>
+                  <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
+                    <div
+                      class="fv2-row__bar"
+                      [style.width.%]="r.widthPct"
+                      [style.background]="r.color"></div>
+                  </div>
+                </li>
+
+                <li class="fv2-row fv2-row--total">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name fv2-row__name--total">Total ingresos</span>
+                    <span class="fv2-row__amount fv2-row__amount--total">
+                      {{ formatVisible(state.cs.data!.composicion_ingresos.total_cop, state.v) }}
+                    </span>
+                  </div>
+                </li>
+              </ul>
             </div>
+          </ng-container>
 
-            <!-- Lista -->
-            <ul class="fv2-row-list fv2-row-list--lg">
-              <li
-                *ngFor="let r of buildComposicionRows(state.cs.data!); trackBy: trackByComposicionId"
-                class="fv2-row">
-                <div class="fv2-row__top">
-                  <span class="fv2-row__name">
-                    <span class="fv2-row__dot" [style.background]="r.color"></span>
-                    {{ r.nombre }}
-                  </span>
-                  <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
-                  <span class="fv2-row__amount">
-                    {{ formatVisible(r.total_cop, state.v) }}
-                  </span>
-                </div>
-                <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
-                  <div
-                    class="fv2-row__bar"
-                    [style.width.%]="r.widthPct"
-                    [style.background]="r.color"></div>
-                </div>
-              </li>
+          <!-- ── Vista Egresos (Por categoría / Por proveedor) ──── -->
+          <ng-container *ngIf="vistaComposicion !== 'origen_ingresos'">
+            <div class="fv2-composicion-body">
 
-              <li class="fv2-row fv2-row--total">
-                <div class="fv2-row__top">
-                  <span class="fv2-row__name fv2-row__name--total">Total egresos</span>
-                  <span class="fv2-row__amount fv2-row__amount--total">
-                    {{ formatVisible(state.cs.data!.total_egresos_cop, state.v) }}
+              <!-- Dona grande -->
+              <div class="fv2-donut-wrap fv2-donut-wrap--lg">
+                <div class="fv2-donut-canvas fv2-donut-canvas--lg">
+                  <canvas
+                    baseChart
+                    [type]="'doughnut'"
+                    [data]="buildComposicionChartData(state.cs.data!)"
+                    [options]="composicionChartOptions"
+                    aria-label="Composición de egresos"
+                    role="img"></canvas>
+                </div>
+                <div class="fv2-donut-center fv2-donut-center--lg">
+                  <span class="fv2-donut-center__label">TOTAL</span>
+                  <span class="fv2-donut-center__value fv2-donut-center__value--lg">
+                    {{ state.v ? formatShort(state.cs.data!.total_egresos_cop) : '$••••' }}
                   </span>
                 </div>
-              </li>
-            </ul>
-          </div>
+              </div>
+
+              <!-- Lista -->
+              <ul class="fv2-row-list fv2-row-list--lg">
+                <li
+                  *ngFor="let r of buildComposicionRows(state.cs.data!); trackBy: trackByComposicionId"
+                  class="fv2-row">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name">
+                      <span class="fv2-row__dot" [style.background]="r.color"></span>
+                      {{ r.nombre }}
+                    </span>
+                    <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
+                    <span class="fv2-row__amount">
+                      {{ formatVisible(r.total_cop, state.v) }}
+                    </span>
+                  </div>
+                  <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
+                    <div
+                      class="fv2-row__bar"
+                      [style.width.%]="r.widthPct"
+                      [style.background]="r.color"></div>
+                  </div>
+                </li>
+
+                <li class="fv2-row fv2-row--total">
+                  <div class="fv2-row__top">
+                    <span class="fv2-row__name fv2-row__name--total">Total egresos</span>
+                    <span class="fv2-row__amount fv2-row__amount--total">
+                      {{ formatVisible(state.cs.data!.total_egresos_cop, state.v) }}
+                    </span>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </ng-container>
+
         </ng-container>
 
       </article>

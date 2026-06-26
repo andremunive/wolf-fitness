@@ -232,6 +232,11 @@
               <span class="er-row__leader" aria-hidden="true"></span>
               <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.mensualidades_cop) }}</span>
             </div>
+            <div class="er-row" *ngIf="state.data.flujo_operativo.entradas.cafeteria_cop > 0">
+              <span class="er-row__label">Cobros por cafetería</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.cafeteria_cop) }}</span>
+            </div>
           </div>
           <div class="er-row er-row--total fc-row-subtotal">
             <span class="er-row__label">TOTAL ENTRADAS</span>
@@ -256,17 +261,11 @@
               <span class="er-row__leader" aria-hidden="true"></span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_operativos_cop) }}</span>
             </div>
-            <!-- Nómina entrenadores: SIEMPRE visible (aunque $0), con dot indigo. -->
-            <div class="er-row er-row--nomina">
-              <span class="er-row__label">
-                <span class="er-row__nomina-dot" aria-hidden="true">●</span>
-                Nómina entrenadores
-              </span>
+            <!-- Nómina entrenadores: SIEMPRE visible (aunque $0). -->
+            <div class="er-row">
+              <span class="er-row__label">Nómina entrenadores</span>
               <span class="er-row__leader" aria-hidden="true"></span>
-              <span
-                class="er-row__amount er-row__amount--nomina"
-                [class.er-row__amount--zero]="state.data.flujo_operativo.salidas.nomina_entrenadores_cop === 0"
-              >
+              <span class="er-row__amount">
                 {{
                   state.data.flujo_operativo.salidas.nomina_entrenadores_cop === 0
                     ? formatCOP(0)
@@ -278,6 +277,11 @@
               <span class="er-row__label">Gastos financieros</span>
               <span class="er-row__leader" aria-hidden="true"></span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_financieros_cop) }}</span>
+            </div>
+            <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.insumos_cafeteria_cop > 0">
+              <span class="er-row__label">Insumos cafetería</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.insumos_cafeteria_cop) }}</span>
             </div>
           </div>
           <div class="er-row er-row--total fc-row-subtotal">

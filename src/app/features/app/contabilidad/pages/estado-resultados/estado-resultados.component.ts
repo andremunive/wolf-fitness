@@ -338,7 +338,7 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       y += 6;
     };
 
-    const drawTotalRow = (name: string, amount: string): void => {
+    const drawTotalRow = (name: string, amount: string, pct: string): void => {
       checkPageBreak(10);
       doc.setDrawColor(180, 180, 180);
       doc.setLineWidth(0.2);
@@ -349,10 +349,19 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       doc.setTextColor(0, 0, 0);
       doc.text(name.toUpperCase(), xL, y);
       doc.text(amount, xR, y, { align: 'right' });
+      // Porcentaje a la izquierda del monto, con color muted.
+      const amountW = doc.getTextWidth(amount);
+      const pctX = xR - amountW - 4;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(136, 136, 136);
+      doc.text(pct, pctX, y, { align: 'right' });
+      // Restaurar color para la siguiente llamada.
+      doc.setTextColor(0, 0, 0);
       y += 8;
     };
 
-    const drawUtilidad = (label: string, amount: number): void => {
+    const drawUtilidad = (label: string, amount: number, pct: string): void => {
       // El bloque de utilidad operativa NUNCA debe cortarse.
       checkPageBreak(20);
       doc.setDrawColor(0, 0, 0);
@@ -363,7 +372,15 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
       doc.text(label, xL, y);
-      doc.text(formatCOPAccounting(amount), xR, y, { align: 'right' });
+      const amountStr = formatCOPAccounting(amount);
+      doc.text(amountStr, xR, y, { align: 'right' });
+      // Porcentaje a la izquierda del monto: bold, 10pt, negro.
+      const amountW = doc.getTextWidth(amountStr);
+      const pctX = xR - amountW - 4;
+      doc.setFontSize(10);
+      doc.text(pct, pctX, y, { align: 'right' });
+      // Restaurar para los trazos de línea siguientes.
+      doc.setTextColor(0, 0, 0);
       y += 4;
       doc.line(xL, y, xR, y);
       y += 8;
@@ -372,7 +389,10 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
     // ─── SECCIÓN 1: INGRESOS ────────────────────────────────────────────
     drawSectionTitle('Ingresos');
     drawDetailRow('Ingresos por mensualidades', this.formatCOP(data.ingresos.mensualidades_cop));
-    drawTotalRow('Total ingresos', this.formatCOP(data.ingresos.total_cop));
+    if (data.ingresos.cafeteria_cop > 0) {
+      drawDetailRow('Ingresos por cafetería', this.formatCOP(data.ingresos.cafeteria_cop));
+    }
+    drawTotalRow('Total ingresos', this.formatCOP(data.ingresos.total_cop), '');
 
     // ─── SECCIÓN 2: COSTOS DIRECTOS ─────────────────────────────────────
     drawSectionTitle('Costos directos');
@@ -387,10 +407,25 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
         drawDetailRow(linea.categoria, this.formatCOP(linea.total_cop));
       }
     }
-    drawTotalRow('Total costos directos', this.formatCOP(data.costos_directos.total_cop));
+    drawTotalRow('Total costos directos', this.formatCOP(data.costos_directos.total_cop), this.formatPct(data.costos_directos.total_cop, data.ingresos.total_cop));
+
+    // ─── SECCIÓN 2b: COSTOS DIRECTOS — CAFETERÍA ────────────────────────
+    drawSectionTitle('Costos directos — Cafetería');
+    if (data.costos_cafeteria.lineas.length === 0) {
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(10);
+      doc.setTextColor(136, 136, 136);
+      doc.text('Sin costos de cafetería en este período.', xL, y);
+      y += 6;
+    } else {
+      for (const linea of data.costos_cafeteria.lineas) {
+        drawDetailRow(linea.categoria, this.formatCOP(linea.total_cop));
+      }
+    }
+    drawTotalRow('Total costos cafetería', this.formatCOP(data.costos_cafeteria.total_cop), this.formatPct(data.costos_cafeteria.total_cop, data.ingresos.total_cop));
 
     // ─── BLOQUE: UTILIDAD BRUTA ─────────────────────────────────────────
-    drawUtilidad('UTILIDAD BRUTA', data.utilidad_bruta_cop);
+    drawUtilidad('UTILIDAD BRUTA', data.utilidad_bruta_cop, this.formatPct(data.utilidad_bruta_cop, data.ingresos.total_cop));
 
     // ─── SECCIÓN 3: GASTOS ADMINISTRATIVOS ──────────────────────────────
     drawSectionTitle('Gastos administrativos');
@@ -405,7 +440,7 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
         drawDetailRow(linea.categoria, this.formatCOP(linea.total_cop));
       }
     }
-    drawTotalRow('Total gastos administrativos', this.formatCOP(data.gastos_administrativos.total_cop));
+    drawTotalRow('Total gastos administrativos', this.formatCOP(data.gastos_administrativos.total_cop), this.formatPct(data.gastos_administrativos.total_cop, data.ingresos.total_cop));
 
     // ─── SECCIÓN 4: GASTOS OPERATIVOS ───────────────────────────────────
     drawSectionTitle('Gastos operativos');
@@ -416,12 +451,13 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
         drawDetailRow(linea.categoria, this.formatCOP(linea.total_cop));
       }
     }
-    drawTotalRow('Total gastos operativos', this.formatCOP(data.gastos_operativos.total_cop));
+    drawTotalRow('Total gastos operativos', this.formatCOP(data.gastos_operativos.total_cop), this.formatPct(data.gastos_operativos.total_cop, data.ingresos.total_cop));
 
     // ─── BLOQUE: UTILIDAD / PÉRDIDA OPERATIVA ───────────────────────────
     drawUtilidad(
       this.utilidadOperativaLabel(data.utilidad_operativa_cop),
-      data.utilidad_operativa_cop
+      data.utilidad_operativa_cop,
+      this.formatPct(data.utilidad_operativa_cop, data.ingresos.total_cop)
     );
 
     // ─── SECCIÓN 5: GASTOS FINANCIEROS ──────────────────────────────────
@@ -437,12 +473,13 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
         drawDetailRow(linea.categoria, this.formatCOP(linea.total_cop));
       }
     }
-    drawTotalRow('Total gastos financieros', this.formatCOP(data.gastos_financieros.total_cop));
+    drawTotalRow('Total gastos financieros', this.formatCOP(data.gastos_financieros.total_cop), this.formatPct(data.gastos_financieros.total_cop, data.ingresos.total_cop));
 
     // ─── BLOQUE FINAL: RESULTADO DEL PERÍODO ────────────────────────────
     drawUtilidad(
       this.resultadoPeriodoLabel(data.resultado_periodo_cop),
-      data.resultado_periodo_cop
+      data.resultado_periodo_cop,
+      this.formatPct(data.resultado_periodo_cop, data.ingresos.total_cop)
     );
 
     // ─── Footer en todas las páginas ────────────────────────────────────
@@ -496,10 +533,16 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
     return (
       data.ingresos.total_cop === 0 &&
       data.costos_directos.total_cop === 0 &&
+      data.costos_cafeteria.total_cop === 0 &&
       data.gastos_administrativos.total_cop === 0 &&
       data.gastos_operativos.total_cop === 0 &&
       data.gastos_financieros.total_cop === 0
     );
+  }
+
+  formatPct(value: number, base: number): string {
+    if (!base) return '—';
+    return ((value / base) * 100).toFixed(1) + '%';
   }
 
   /** Convierte ISO YYYY-MM-DD → DD/MM/YYYY para el chip "datos hasta …". */

@@ -231,10 +231,17 @@
               <span class="er-row__leader" aria-hidden="true"></span>
               <span class="er-row__amount">{{ formatCOP(state.data.ingresos.mensualidades_cop) }}</span>
             </div>
+            <div class="er-row" *ngIf="state.data.ingresos.cafeteria_cop > 0">
+              <span class="er-row__label">Ingresos por cafetería</span>
+              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__amount">{{ formatCOP(state.data.ingresos.cafeteria_cop) }}</span>
+            </div>
           </div>
           <div class="er-row er-row--total">
             <span class="er-row__label">TOTAL INGRESOS</span>
-            <span class="er-row__amount">{{ formatCOP(state.data.ingresos.total_cop) }}</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.ingresos.total_cop) }}</span>
+            </div>
           </div>
         </section>
 
@@ -258,7 +265,37 @@
           </div>
           <div class="er-row er-row--total">
             <span class="er-row__label">TOTAL COSTOS DIRECTOS</span>
-            <span class="er-row__amount">{{ formatCOP(state.data.costos_directos.total_cop) }}</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.costos_directos.total_cop) }}</span>
+              <span class="er-row__pct">{{ formatPct(state.data.costos_directos.total_cop, state.data.ingresos.total_cop) }}</span>
+            </div>
+          </div>
+        </section>
+
+        <!-- ─────────── SECCIÓN 2b — COSTOS DIRECTOS — CAFETERÍA ─────────── -->
+        <section class="er-section">
+          <h3 class="er-section__title">Costos directos — Cafetería</h3>
+          <div class="er-section__rows">
+            <ng-container *ngIf="state.data.costos_cafeteria.lineas.length > 0; else sinCostosCafeteria">
+              <div
+                class="er-row"
+                *ngFor="let linea of state.data.costos_cafeteria.lineas; trackBy: trackByLineaCategoria"
+              >
+                <span class="er-row__label">{{ linea.categoria }}</span>
+                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
+              </div>
+            </ng-container>
+            <ng-template #sinCostosCafeteria>
+              <p class="er-empty">Sin costos de cafetería en este período.</p>
+            </ng-template>
+          </div>
+          <div class="er-row er-row--total">
+            <span class="er-row__label">TOTAL COSTOS CAFETERÍA</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.costos_cafeteria.total_cop) }}</span>
+              <span class="er-row__pct">{{ formatPct(state.data.costos_cafeteria.total_cop, state.data.ingresos.total_cop) }}</span>
+            </div>
           </div>
         </section>
 
@@ -271,14 +308,22 @@
         >
           <div class="er-utilidad__row">
             <span class="er-utilidad__label">UTILIDAD BRUTA</span>
-            <span
-              class="er-utilidad__amount"
-              [ngClass]="utilidadAmountClass(state.data.utilidad_bruta_cop)"
-            >
-              {{ formatCOP(state.data.utilidad_bruta_cop) }}
-            </span>
+            <div class="er-row__right">
+              <span
+                class="er-utilidad__amount"
+                [ngClass]="utilidadAmountClass(state.data.utilidad_bruta_cop)"
+              >
+                {{ formatCOP(state.data.utilidad_bruta_cop) }}
+              </span>
+              <span
+                class="er-row__pct er-row__pct--highlight"
+                [ngClass]="utilidadAmountClass(state.data.utilidad_bruta_cop)"
+              >
+                {{ formatPct(state.data.utilidad_bruta_cop, state.data.ingresos.total_cop) }}
+              </span>
+            </div>
           </div>
-          <p class="er-utilidad__formula">(Ingresos − Costos directos)</p>
+          <p class="er-utilidad__formula">(Ingresos − Costos directos gym − Costos cafetería)</p>
         </div>
 
         <!-- ─────────── SECCIÓN 3 — GASTOS ADMINISTRATIVOS ─────────── -->
@@ -301,7 +346,10 @@
           </div>
           <div class="er-row er-row--total">
             <span class="er-row__label">TOTAL GASTOS ADMINISTRATIVOS</span>
-            <span class="er-row__amount">{{ formatCOP(state.data.gastos_administrativos.total_cop) }}</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.gastos_administrativos.total_cop) }}</span>
+              <span class="er-row__pct">{{ formatPct(state.data.gastos_administrativos.total_cop, state.data.ingresos.total_cop) }}</span>
+            </div>
           </div>
         </section>
 
@@ -312,19 +360,11 @@
             <ng-container
               *ngFor="let linea of state.data.gastos_operativos.lineas; trackBy: trackByLineaCategoria"
             >
-              <!-- Nómina entrenadores: SIEMPRE visible (aunque $0), con dot indigo distintivo. -->
-              <div *ngIf="linea.es_nomina_entrenadores" class="er-row er-row--nomina">
-                <span class="er-row__label">
-                  <span class="er-row__nomina-dot" aria-hidden="true">●</span>
-                  {{ linea.categoria }}
-                </span>
+              <!-- Nómina entrenadores: SIEMPRE visible (aunque $0). -->
+              <div *ngIf="linea.es_nomina_entrenadores" class="er-row">
+                <span class="er-row__label">{{ linea.categoria }}</span>
                 <span class="er-row__leader" aria-hidden="true"></span>
-                <span
-                  class="er-row__amount er-row__amount--nomina"
-                  [class.er-row__amount--zero]="linea.total_cop === 0"
-                >
-                  {{ formatCOP(linea.total_cop) }}
-                </span>
+                <span class="er-row__amount">{{ formatCOP(linea.total_cop) }}</span>
               </div>
 
               <!-- Líneas normales de expense_records: solo si > 0. -->
@@ -337,7 +377,10 @@
           </div>
           <div class="er-row er-row--total">
             <span class="er-row__label">TOTAL GASTOS OPERATIVOS</span>
-            <span class="er-row__amount">{{ formatCOP(state.data.gastos_operativos.total_cop) }}</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.gastos_operativos.total_cop) }}</span>
+              <span class="er-row__pct">{{ formatPct(state.data.gastos_operativos.total_cop, state.data.ingresos.total_cop) }}</span>
+            </div>
           </div>
         </section>
 
@@ -360,12 +403,20 @@
             >
               {{ utilidadOperativaLabel(state.data.utilidad_operativa_cop) }}
             </span>
-            <span
-              class="er-utilidad__amount"
-              [ngClass]="utilidadAmountClass(state.data.utilidad_operativa_cop)"
-            >
-              {{ formatCOPSigned(state.data.utilidad_operativa_cop) }}
-            </span>
+            <div class="er-row__right">
+              <span
+                class="er-utilidad__amount"
+                [ngClass]="utilidadAmountClass(state.data.utilidad_operativa_cop)"
+              >
+                {{ formatCOPSigned(state.data.utilidad_operativa_cop) }}
+              </span>
+              <span
+                class="er-row__pct er-row__pct--highlight"
+                [ngClass]="utilidadAmountClass(state.data.utilidad_operativa_cop)"
+              >
+                {{ formatPct(state.data.utilidad_operativa_cop, state.data.ingresos.total_cop) }}
+              </span>
+            </div>
           </div>
           <p class="er-utilidad__formula">(Utilidad bruta − Gastos adm. − Gastos op.)</p>
         </div>
@@ -390,7 +441,10 @@
           </div>
           <div class="er-row er-row--total">
             <span class="er-row__label">TOTAL GASTOS FINANCIEROS</span>
-            <span class="er-row__amount">{{ formatCOP(state.data.gastos_financieros.total_cop) }}</span>
+            <div class="er-row__right">
+              <span class="er-row__amount">{{ formatCOP(state.data.gastos_financieros.total_cop) }}</span>
+              <span class="er-row__pct">{{ formatPct(state.data.gastos_financieros.total_cop, state.data.ingresos.total_cop) }}</span>
+            </div>
           </div>
         </section>
 
@@ -411,12 +465,20 @@
             >
               {{ resultadoPeriodoLabel(state.data.resultado_periodo_cop) }}
             </span>
-            <span
-              class="er-utilidad__amount"
-              [ngClass]="utilidadAmountClass(state.data.resultado_periodo_cop)"
-            >
-              {{ formatCOPSigned(state.data.resultado_periodo_cop) }}
-            </span>
+            <div class="er-row__right">
+              <span
+                class="er-utilidad__amount"
+                [ngClass]="utilidadAmountClass(state.data.resultado_periodo_cop)"
+              >
+                {{ formatCOPSigned(state.data.resultado_periodo_cop) }}
+              </span>
+              <span
+                class="er-row__pct er-row__pct--highlight"
+                [ngClass]="utilidadAmountClass(state.data.resultado_periodo_cop)"
+              >
+                {{ formatPct(state.data.resultado_periodo_cop, state.data.ingresos.total_cop) }}
+              </span>
+            </div>
           </div>
           <p class="er-utilidad__formula">(Utilidad operativa − Gastos financieros)</p>
         </div>

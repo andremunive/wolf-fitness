@@ -91,6 +91,44 @@
             </svg>
           </a>
 
+          <!-- Solo admin: cafetería -->
+          <a
+            *ngIf="profile.role === 'admin'"
+            routerLink="/app/cafeteria/ventas"
+            class="home-action-card"
+          >
+            <span class="home-action-card__icon" aria-hidden="true">
+              <!-- coffee icon — mismo que usa el toolbar en la sección "Cafetería" -->
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                stroke-width="1.75"
+              >
+                <path
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  d="M18 8h1a4 4 0 010 8h-1M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8zM6 1v3M10 1v3M14 1v3"
+                />
+              </svg>
+            </span>
+            <span class="home-action-card__label">Cafetería</span>
+            <svg
+              class="home-action-card__caret"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              aria-hidden="true"
+            >
+              <path
+                stroke-linecap="round"
+                stroke-linejoin="round"
+                d="M9 5l7 7-7 7"
+              />
+            </svg>
+          </a>
+
           <!-- Solo admin: estadísticas de finanzas -->
           <a
             *ngIf="profile.role === 'admin'"

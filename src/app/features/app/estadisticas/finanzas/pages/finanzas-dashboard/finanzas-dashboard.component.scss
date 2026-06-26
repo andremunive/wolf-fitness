@@ -1116,13 +1116,18 @@
   }
 }
 
-// ─── Tres columnas de desglose en la card consolidada ────────────────────
+// ─── Cuatro columnas de desglose en la card consolidada ──────────────────
+// Fase 10: se agregó la columna de cafetería (antes eran 3).
 .fv2-caja-card__breakdown {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
   position: relative;
   z-index: 1;
+
+  @media (min-width: 640px) {
+    grid-template-columns: repeat(4, 1fr);
+  }
 
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
@@ -1164,7 +1169,9 @@
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
 
-  &--amber { color: #d97706; }
+  &--amber           { color: #d97706; }
+  &--cafeteria-pos   { color: var(--fv2-success); }
+  &--cafeteria-neg   { color: var(--fv2-danger); }
 }
 
 .fv2-caja-stat__sublabel {

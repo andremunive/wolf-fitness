@@ -1,0 +1,39 @@
+<div class="catalogo-actions">
+  <button
+    type="button"
+    class="catalogo-actions__trigger"
+    [class.catalogo-actions__trigger--open]="isOpen"
+    (click)="toggle($event)"
+    [attr.aria-expanded]="isOpen"
+    aria-haspopup="menu"
+    [attr.aria-label]="'Acciones para ' + combo.name"
+  >
+    <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <circle cx="12" cy="5" r="1.6"/>
+      <circle cx="12" cy="12" r="1.6"/>
+      <circle cx="12" cy="19" r="1.6"/>
+    </svg>
+  </button>
+
+  <div
+    *ngIf="isOpen"
+    class="catalogo-actions__dropdown"
+    [ngStyle]="dropdownStyle"
+    role="menu"
+  >
+    <button
+      type="button"
+      class="catalogo-actions__item"
+      role="menuitem"
+      (click)="onEdit()"
+    >
+      <span class="catalogo-actions__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+          <path stroke-linecap="round" stroke-linejoin="round"
+            d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>
+        </svg>
+      </span>
+      <span class="catalogo-actions__label">Editar</span>
+    </button>
+  </div>
+</div>

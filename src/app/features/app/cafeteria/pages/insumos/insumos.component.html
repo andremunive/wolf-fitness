@@ -1,0 +1,828 @@
+<ng-container *ngIf="expensesState$ | async as state">
+
+<div class="insumos-page">
+
+  <!-- ══════════ HEADER ══════════ -->
+  <header class="insumos-page__header">
+    <div class="insumos-page__header-inner">
+      <div class="insumos-page__title-row">
+        <h1 class="insumos-page__title">Insumos</h1>
+        <div class="insumos-page__header-actions">
+          <button
+            type="button"
+            class="insumos-page__categories-btn"
+            (click)="openManageCategories()"
+            aria-label="Gestionar categorías de insumos"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.02-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z"/>
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            </svg>
+            <span>Categorías</span>
+          </button>
+          <button
+            type="button"
+            class="insumos-page__add-btn"
+            (click)="openNewModal()"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Registrar insumo</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="insumos-page__main">
+
+    <!-- Month navigator -->
+    <div class="month-nav" role="group" aria-label="Navegación de mes">
+      <button
+        type="button"
+        class="month-nav__btn"
+        (click)="goToPreviousMonth()"
+        aria-label="Mes anterior"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <span class="month-nav__label">{{ currentMonthLabel }}</span>
+      <button
+        type="button"
+        class="month-nav__btn"
+        [class.month-nav__btn--disabled]="isNextMonthBlocked"
+        [attr.aria-disabled]="isNextMonthBlocked ? 'true' : null"
+        [title]="isNextMonthBlocked ? 'Ya estás en el mes actual' : ''"
+        (click)="goToNextMonth()"
+        aria-label="Mes siguiente"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Summary cards -->
+    <div class="summary-cards" *ngIf="!state.loading">
+      <div class="summary-card">
+        <span class="summary-card__label">Total insumos del mes</span>
+        <span class="summary-card__value">{{ formatCop(totalAmount(state.expenses)) }}</span>
+      </div>
+      <div class="summary-card">
+        <span class="summary-card__label">Registros</span>
+        <span class="summary-card__value">{{ state.expenses.length }}</span>
+      </div>
+    </div>
+    <div class="summary-cards" *ngIf="state.loading" aria-hidden="true">
+      <div class="summary-card" *ngFor="let i of [1, 2]">
+        <div class="skeleton skeleton--line-sm" style="margin-bottom:6px"></div>
+        <div class="skeleton skeleton--line-lg"></div>
+      </div>
+    </div>
+
+    <!-- Category filter -->
+    <div class="filter-row" *ngIf="!state.loading && state.expenses.length > 0">
+      <select
+        class="category-filter"
+        (change)="onCategoryFilterChange($event)"
+        aria-label="Filtrar por categoría"
+      >
+        <option value="">Todas las categorías</option>
+        <option
+          *ngFor="let cat of getCategoriesInMonth(state.expenses); trackBy: trackByFilterId"
+          [value]="cat.id"
+          [selected]="selectedCategoryFilter === cat.id"
+        >{{ cat.name }}</option>
+      </select>
+    </div>
+
+    <!-- Error state -->
+    <div class="insumos-error" *ngIf="state.error" role="alert">
+      <svg class="insumos-error__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+      </svg>
+      <p class="insumos-error__msg">{{ state.error }}</p>
+    </div>
+
+    <!-- Skeleton -->
+    <ng-container *ngIf="state.loading">
+      <div class="insumos-table-shell" aria-hidden="true">
+        <div class="insumos-table-wrapper">
+          <table class="insumos-table">
+            <thead>
+              <tr>
+                <th>Fecha</th><th>Categoría</th><th>Proveedor</th><th>Monto</th><th>Método</th><th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr *ngFor="let i of skeletonRows" class="insumos-table__row">
+                <td class="insumos-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                <td class="insumos-table__cell"><div class="skeleton skeleton--pill"></div></td>
+                <td class="insumos-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                <td class="insumos-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                <td class="insumos-table__cell"><div class="skeleton skeleton--pill"></div></td>
+                <td class="insumos-table__cell"></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="insumos-cards" aria-hidden="true">
+        <div *ngFor="let i of skeletonRows" class="skeleton-card">
+          <div class="skeleton-card__header">
+            <div class="skeleton skeleton--pill"></div>
+            <div class="skeleton skeleton--line-lg"></div>
+          </div>
+          <div class="skeleton-card__meta">
+            <div class="skeleton skeleton--line-md"></div>
+            <div class="skeleton skeleton--pill"></div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Empty state -->
+    <div
+      class="insumos-empty"
+      *ngIf="!state.loading && !state.error && filterExpenses(state.expenses).length === 0"
+    >
+      <svg class="insumos-empty__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 3h1.386c.51 0 .955.343 1.087.835l.383 1.437M7.5 14.25a3 3 0 00-3 3h15.75m-12.75-3h11.218c1.121-2.3 2.1-4.684 2.924-7.138a60.114 60.114 0 00-16.536-1.84M7.5 14.25L5.106 5.272M6 20.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm12.75 0a.75.75 0 11-1.5 0 .75.75 0 011.5 0z"/>
+      </svg>
+      <p class="insumos-empty__title">
+        <ng-container *ngIf="state.expenses.length === 0">Sin insumos en este período.</ng-container>
+        <ng-container *ngIf="state.expenses.length > 0">Sin resultados para la categoría seleccionada.</ng-container>
+      </p>
+      <button
+        *ngIf="state.expenses.length === 0"
+        type="button"
+        class="insumos-empty__add-btn"
+        (click)="openNewModal()"
+      >
+        Registrar primer insumo
+      </button>
+    </div>
+
+    <!-- Table (tablet+) -->
+    <div
+      class="insumos-table-shell"
+      *ngIf="!state.loading && !state.error && filterExpenses(state.expenses).length > 0"
+    >
+      <div class="insumos-table-wrapper">
+        <table class="insumos-table">
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Categoría</th>
+              <th>Proveedor</th>
+              <th>Monto</th>
+              <th>Método</th>
+              <th><span class="visually-hidden">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let expense of filterExpenses(state.expenses); trackBy: trackByExpenseId"
+              class="insumos-table__row"
+            >
+              <td class="insumos-table__cell insumos-table__cell--date">
+                <div class="date-cell">
+                  <span>{{ formatDateShort(expense.expense_date) }}</span>
+                  <span
+                    *ngIf="hasDateMismatch(expense)"
+                    class="date-info-icon"
+                    [title]="'Registrado el ' + formatDateShort(expense.reported_date)"
+                    aria-label="Fecha de registro diferente"
+                  >
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                    </svg>
+                  </span>
+                </div>
+              </td>
+
+              <td class="insumos-table__cell">
+                <ng-container *ngIf="expense.category?.name; else noCat">
+                  <span
+                    class="category-badge"
+                    [style.background]="getCategoryColor(expense.category_id).bg"
+                    [style.border-color]="getCategoryColor(expense.category_id).border"
+                  >{{ expense.category!.name }}</span>
+                </ng-container>
+                <ng-template #noCat><span class="text-muted">—</span></ng-template>
+              </td>
+
+              <td class="insumos-table__cell">
+                <span *ngIf="expense.supplier; else noSupplier">{{ expense.supplier }}</span>
+                <ng-template #noSupplier><span class="text-muted">—</span></ng-template>
+              </td>
+
+              <td class="insumos-table__cell insumos-table__cell--amount">
+                {{ formatCop(expense.amount_cop) }}
+              </td>
+
+              <td class="insumos-table__cell">
+                <span class="method-badge">
+                  {{ getPaymentMethodIcon(expense.payment_method) }}
+                  {{ getPaymentMethodLabel(expense.payment_method) }}
+                </span>
+              </td>
+
+              <td class="insumos-table__cell insumos-table__cell--actions">
+                <app-insumos-actions-menu
+                  [expense]="expense"
+                  (detailRequested)="openDetailModal($event)"
+                  (editRequested)="openEditModal($event)"
+                  (voidRequested)="openVoidModal($event)"
+                ></app-insumos-actions-menu>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Mobile cards -->
+    <div
+      class="insumos-cards"
+      *ngIf="!state.loading && !state.error && filterExpenses(state.expenses).length > 0"
+    >
+      <div
+        class="insumos-card"
+        *ngFor="let expense of filterExpenses(state.expenses); trackBy: trackByExpenseId"
+      >
+        <div class="insumos-card__top">
+          <div class="insumos-card__left">
+            <ng-container *ngIf="expense.category?.name; else noCatMobile">
+              <span
+                class="category-badge"
+                [style.background]="getCategoryColor(expense.category_id).bg"
+                [style.border-color]="getCategoryColor(expense.category_id).border"
+              >{{ expense.category!.name }}</span>
+            </ng-container>
+            <ng-template #noCatMobile><span class="text-muted" style="font-size:12px;">Sin categoría</span></ng-template>
+            <div class="insumos-card__meta-row">
+              <span class="insumos-card__date">
+                {{ formatDateShort(expense.expense_date) }}
+                <span
+                  *ngIf="hasDateMismatch(expense)"
+                  class="date-info-icon"
+                  [title]="'Registrado el ' + formatDateShort(expense.reported_date)"
+                  aria-label="Fecha de registro diferente"
+                >
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+                  </svg>
+                </span>
+              </span>
+              <span *ngIf="expense.supplier" class="insumos-card__supplier">· {{ expense.supplier }}</span>
+            </div>
+          </div>
+          <div class="insumos-card__right">
+            <app-insumos-actions-menu
+              [expense]="expense"
+              (detailRequested)="openDetailModal($event)"
+              (editRequested)="openEditModal($event)"
+              (voidRequested)="openVoidModal($event)"
+            ></app-insumos-actions-menu>
+          </div>
+        </div>
+        <div class="insumos-card__bottom">
+          <span class="insumos-card__amount">{{ formatCop(expense.amount_cop) }}</span>
+          <span class="method-badge">
+            {{ getPaymentMethodIcon(expense.payment_method) }}
+            {{ getPaymentMethodLabel(expense.payment_method) }}
+          </span>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+</div>
+
+</ng-container>
+
+<!-- ══════════ MODAL REGISTRAR INSUMO ══════════ -->
+<div
+  *ngIf="activeModal === 'new'"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Registrar insumo"
+  (click)="closeModal()"
+>
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Registrar insumo</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <ng-container *ngTemplateOutlet="expenseFormTpl"></ng-container>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+      <button type="button" class="modal-footer__primary" (click)="submitExpense()" [disabled]="isSaving">
+        <ng-container *ngIf="!isSaving">Registrar insumo</ng-container>
+        <ng-container *ngIf="isSaving">Guardando...</ng-container>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL EDITAR INSUMO ══════════ -->
+<div
+  *ngIf="activeModal === 'edit'"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Editar insumo"
+  (click)="closeModal()"
+>
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Editar insumo</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <ng-container *ngTemplateOutlet="expenseFormTpl"></ng-container>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel" (click)="closeModal()" [disabled]="isSaving">Cancelar</button>
+      <button type="button" class="modal-footer__primary" (click)="submitEditExpense()" [disabled]="isSaving">
+        <ng-container *ngIf="!isSaving">Guardar cambios</ng-container>
+        <ng-container *ngIf="isSaving">Guardando...</ng-container>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL VER DETALLE ══════════ -->
+<div
+  *ngIf="activeModal === 'detail' && selectedExpense"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Detalle del insumo"
+  (click)="closeModal()"
+>
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Detalle del insumo</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-item__label">Fecha del gasto</span>
+          <span class="info-item__value">{{ formatDateShort(selectedExpense.expense_date) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Fecha de registro</span>
+          <span class="info-item__value">{{ formatDateShort(selectedExpense.reported_date) }}</span>
+        </div>
+        <div class="info-item info-item--full">
+          <span class="info-item__label">Categoría</span>
+          <span class="info-item__value">
+            <ng-container *ngIf="selectedExpense.category?.name; else detailNoCat">
+              <span
+                class="category-badge"
+                [style.background]="getCategoryColor(selectedExpense.category_id).bg"
+                [style.border-color]="getCategoryColor(selectedExpense.category_id).border"
+              >{{ selectedExpense.category!.name }}</span>
+            </ng-container>
+            <ng-template #detailNoCat><span class="text-muted">—</span></ng-template>
+          </span>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Monto</span>
+          <span class="info-item__value info-item__value--amount">{{ formatCop(selectedExpense.amount_cop) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Método de pago</span>
+          <span class="info-item__value">
+            {{ getPaymentMethodIcon(selectedExpense.payment_method) }}
+            {{ getPaymentMethodLabel(selectedExpense.payment_method) }}
+          </span>
+        </div>
+        <div class="info-item info-item--full">
+          <span class="info-item__label">Proveedor</span>
+          <span class="info-item__value">{{ selectedExpense.supplier || '—' }}</span>
+        </div>
+        <div class="info-item info-item--full" *ngIf="selectedExpense.notes">
+          <span class="info-item__label">Notas</span>
+          <span class="info-item__value">{{ selectedExpense.notes }}</span>
+        </div>
+        <div class="info-item info-item--full">
+          <span class="info-item__label">Registrado por</span>
+          <span class="info-item__value">{{ selectedExpense.created_by_name || '—' }}</span>
+        </div>
+        <div class="info-item info-item--full">
+          <span class="info-item__label">Creado el</span>
+          <span class="info-item__value">{{ formatDateTime(selectedExpense.created_at) }}</span>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__secondary" (click)="openEditFromDetail()">Editar</button>
+      <button type="button" class="modal-footer__cancel modal-footer__cancel--flex" (click)="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL ANULAR INSUMO ══════════ -->
+<div
+  *ngIf="activeModal === 'void' && selectedExpense"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Anular insumo"
+  (click)="closeModal()"
+>
+  <div class="modal-sheet modal-sheet--sm" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Anular registro</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="void-confirm">
+        <svg class="void-confirm__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+        </svg>
+        <p class="void-confirm__text">
+          ¿Anular este registro de
+          <strong>{{ formatCop(selectedExpense.amount_cop) }}</strong>
+          de
+          <strong>{{ selectedExpense.category?.name || 'sin categoría' }}</strong>
+          del
+          <strong>{{ formatDateShort(selectedExpense.expense_date) }}</strong>?
+        </p>
+        <p class="void-confirm__warning">Esta acción no se puede deshacer.</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel" (click)="closeModal()" [disabled]="isVoiding">Cancelar</button>
+      <button type="button" class="modal-footer__danger" (click)="confirmVoid()" [disabled]="isVoiding">
+        <ng-container *ngIf="!isVoiding">Anular registro</ng-container>
+        <ng-container *ngIf="isVoiding">Anulando...</ng-container>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL GESTIONAR CATEGORÍAS ══════════ -->
+<div
+  *ngIf="activeModal === 'manage-categories'"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Categorías de insumos"
+  (click)="closeModal()"
+>
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Categorías de insumos</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+    <div class="modal-body">
+
+      <div *ngIf="isLoadingAllCategories" class="categories-loading" aria-label="Cargando categorías...">
+        <div *ngFor="let i of [1,2,3]" class="skeleton" style="height:44px; border-radius:10px; margin-bottom:8px;"></div>
+      </div>
+
+      <ul class="categories-list" *ngIf="!isLoadingAllCategories">
+        <li
+          *ngFor="let cat of allCategories; trackBy: trackByCategoryId"
+          class="category-item"
+          [class.category-item--inactive]="!cat.is_active"
+        >
+          <div class="category-item__info">
+            <span
+              class="category-badge"
+              [style.background]="getCategoryColor(cat.id).bg"
+              [style.border-color]="getCategoryColor(cat.id).border"
+            >{{ cat.name }}</span>
+            <span class="category-item__desc" *ngIf="cat.description">{{ cat.description }}</span>
+          </div>
+          <label class="toggle-switch" [attr.aria-label]="(cat.is_active ? 'Desactivar ' : 'Activar ') + cat.name">
+            <input
+              type="checkbox"
+              [checked]="cat.is_active"
+              [disabled]="togglingCategoryId === cat.id"
+              (change)="toggleCategory(cat)"
+            />
+            <span class="toggle-switch__track">
+              <span class="toggle-switch__thumb"></span>
+            </span>
+          </label>
+        </li>
+        <li *ngIf="allCategories.length === 0" class="categories-empty">Sin categorías aún.</li>
+      </ul>
+
+      <div class="inline-new-category" *ngIf="showManageNewCategory">
+        <h3 class="inline-new-category__title">Nueva categoría</h3>
+        <div class="form-field">
+          <label class="form-field__label" for="manage-cat-name">
+            Nombre <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="manage-cat-name"
+            type="text"
+            class="form-field__input"
+            [formControl]="manageCategoryForm.controls['name']"
+            placeholder="Ej. Bebidas"
+            maxlength="80"
+          />
+          <span
+            class="form-field__error"
+            *ngIf="manageCategoryForm.controls['name'].invalid && manageCategoryForm.controls['name'].touched"
+          >El nombre es requerido.</span>
+        </div>
+        <div class="form-field">
+          <label class="form-field__label" for="manage-cat-desc">Descripción</label>
+          <input
+            id="manage-cat-desc"
+            type="text"
+            class="form-field__input"
+            [formControl]="manageCategoryForm.controls['description']"
+            placeholder="Opcional"
+            maxlength="200"
+          />
+        </div>
+        <div class="manage-feedback manage-feedback--error" *ngIf="manageCategoryError" role="alert">
+          {{ manageCategoryError }}
+        </div>
+        <div class="inline-new-category__actions">
+          <button
+            type="button"
+            class="inline-new-category__cancel"
+            (click)="cancelManageNewCategory()"
+            [disabled]="isSavingManageCategory"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="inline-new-category__save"
+            (click)="saveManageNewCategory()"
+            [disabled]="manageCategoryForm.invalid || isSavingManageCategory"
+          >
+            <ng-container *ngIf="!isSavingManageCategory">Crear categoría</ng-container>
+            <ng-container *ngIf="isSavingManageCategory">Creando...</ng-container>
+          </button>
+        </div>
+      </div>
+
+    </div>
+    <div class="modal-footer">
+      <button
+        *ngIf="!showManageNewCategory"
+        type="button"
+        class="modal-footer__secondary"
+        (click)="openManageNewCategory()"
+        [disabled]="isLoadingAllCategories"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:15px;height:15px;flex-shrink:0;">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+        </svg>
+        Nueva categoría
+      </button>
+      <button type="button" class="modal-footer__cancel modal-footer__cancel--flex" (click)="closeModal()">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ SHARED FORM TEMPLATE ══════════ -->
+<ng-template #expenseFormTpl>
+  <div class="modal-form">
+
+    <div class="modal-feedback modal-feedback--error" *ngIf="saveError" role="alert">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+      </svg>
+      {{ saveError }}
+    </div>
+
+    <!-- Fecha -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-date">
+        Fecha <span class="form-field__required" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="expense-date"
+        type="date"
+        class="form-field__input"
+        [class.form-field__input--error]="expenseForm.controls['expense_date'].invalid && expenseForm.controls['expense_date'].touched"
+        [formControl]="expenseForm.controls['expense_date']"
+        [max]="today"
+      />
+      <span
+        class="form-field__error"
+        *ngIf="expenseForm.controls['expense_date'].invalid && expenseForm.controls['expense_date'].touched"
+      >La fecha es requerida.</span>
+    </div>
+
+    <!-- Categoría -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-category">
+        Categoría <span class="form-field__required" aria-hidden="true">*</span>
+      </label>
+
+      <ng-container *ngIf="!showNewCategoryInline">
+        <div class="autocomplete-wrap">
+          <input
+            id="expense-category"
+            type="text"
+            class="form-field__input"
+            [class.form-field__input--error]="categoryInvalid"
+            [value]="categoryQuery"
+            (input)="onCategoryQueryInput($event)"
+            (focus)="openCategoryDropdown()"
+            (blur)="onCategoryBlur()"
+            placeholder="Buscar o escribir categoría..."
+            autocomplete="off"
+          />
+          <div class="autocomplete-dropdown" *ngIf="showCategoryDropdown">
+            <button
+              *ngFor="let cat of filteredCategories; trackBy: trackByCategoryId"
+              type="button"
+              class="autocomplete-dropdown__item"
+              (mousedown)="selectCategory(cat)"
+            >{{ cat.name }}</button>
+            <div class="autocomplete-dropdown__divider"></div>
+            <button
+              type="button"
+              class="autocomplete-dropdown__item autocomplete-dropdown__item--create"
+              (mousedown)="openNewCategoryInline()"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true" style="width:14px;height:14px;flex-shrink:0;">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              Nueva categoría
+            </button>
+          </div>
+        </div>
+        <span class="form-field__error" *ngIf="categoryInvalid">Selecciona una categoría.</span>
+      </ng-container>
+
+      <!-- Mini-form inline nueva categoría -->
+      <div class="mini-category-form" *ngIf="showNewCategoryInline">
+        <div class="mini-category-form__header">
+          <span class="mini-category-form__title">Nueva categoría</span>
+        </div>
+        <div class="form-field">
+          <label class="form-field__label" for="inline-cat-name">
+            Nombre <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="inline-cat-name"
+            type="text"
+            class="form-field__input"
+            [formControl]="newCategoryForm.controls['name']"
+            placeholder="Ej. Bebidas"
+            maxlength="80"
+          />
+          <span
+            class="form-field__error"
+            *ngIf="newCategoryForm.controls['name'].invalid && newCategoryForm.controls['name'].touched"
+          >El nombre es requerido.</span>
+        </div>
+        <div class="form-field">
+          <label class="form-field__label" for="inline-cat-desc">Descripción</label>
+          <input
+            id="inline-cat-desc"
+            type="text"
+            class="form-field__input"
+            [formControl]="newCategoryForm.controls['description']"
+            placeholder="Opcional"
+            maxlength="200"
+          />
+        </div>
+        <div class="manage-feedback manage-feedback--error" *ngIf="newCategoryError" role="alert">
+          {{ newCategoryError }}
+        </div>
+        <div class="mini-category-form__actions">
+          <button
+            type="button"
+            class="inline-new-category__cancel"
+            (click)="cancelNewCategoryInline()"
+            [disabled]="isSavingCategory"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="inline-new-category__save"
+            (click)="saveNewCategoryInline()"
+            [disabled]="newCategoryForm.invalid || isSavingCategory"
+          >
+            <ng-container *ngIf="!isSavingCategory">Crear categoría</ng-container>
+            <ng-container *ngIf="isSavingCategory">Creando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Monto -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-amount">
+        Monto (COP) <span class="form-field__required" aria-hidden="true">*</span>
+      </label>
+      <input
+        id="expense-amount"
+        type="text"
+        inputmode="numeric"
+        class="form-field__input"
+        [class.form-field__input--error]="expenseForm.controls['amount_cop'].invalid && expenseForm.controls['amount_cop'].touched"
+        [value]="amountDisplay"
+        (input)="onAmountInput($event)"
+        placeholder="Ej. 50.000"
+        autocomplete="off"
+      />
+      <span
+        class="form-field__error"
+        *ngIf="expenseForm.controls['amount_cop'].invalid && expenseForm.controls['amount_cop'].touched"
+      >Ingresa un monto válido mayor a 0.</span>
+    </div>
+
+    <!-- Método de pago -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-method">
+        Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+      </label>
+      <select
+        id="expense-method"
+        class="form-field__input form-field__select"
+        [class.form-field__input--error]="expenseForm.controls['payment_method'].invalid && expenseForm.controls['payment_method'].touched"
+        [formControl]="expenseForm.controls['payment_method']"
+      >
+        <option value="" disabled>Seleccionar...</option>
+        <option value="cash">💵 Efectivo</option>
+        <option value="transfer">🏦 Transferencia</option>
+        <option value="nequi">📱 Nequi</option>
+        <option value="other">🔹 Otro</option>
+      </select>
+      <span
+        class="form-field__error"
+        *ngIf="expenseForm.controls['payment_method'].invalid && expenseForm.controls['payment_method'].touched"
+      >Selecciona el método de pago.</span>
+    </div>
+
+    <!-- Proveedor -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-supplier">Proveedor</label>
+      <input
+        id="expense-supplier"
+        type="text"
+        class="form-field__input"
+        [formControl]="expenseForm.controls['supplier']"
+        placeholder="Ej. Distribuidora Norte"
+        maxlength="100"
+      />
+    </div>
+
+    <!-- Notas -->
+    <div class="form-field">
+      <label class="form-field__label" for="expense-notes">Notas</label>
+      <textarea
+        id="expense-notes"
+        class="form-field__textarea"
+        [formControl]="expenseForm.controls['notes']"
+        placeholder="Observaciones opcionales..."
+        maxlength="300"
+        rows="3"
+      ></textarea>
+    </div>
+
+  </div>
+</ng-template>

@@ -16,6 +16,12 @@ export interface LineaFinanciera {
 
 export interface IngresosData {
   mensualidades_cop: number;
+  cafeteria_cop: number;
+  total_cop: number;
+}
+
+export interface CostosCafeteriaData {
+  lineas: LineaFinanciera[];
   total_cop: number;
 }
 
@@ -43,6 +49,7 @@ export interface EstadoResultadosResponse {
   periodo: PeriodoInfo;
   ingresos: IngresosData;
   costos_directos: CostosDirectosData;
+  costos_cafeteria: CostosCafeteriaData;
   utilidad_bruta_cop: number;
   gastos_administrativos: GastosAdministrativosData;
   gastos_operativos: GastosOperativosData;

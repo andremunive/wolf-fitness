@@ -46,6 +46,639 @@ export type Database = {
           },
         ]
       }
+      cafeteria_combo_consumptions: {
+        Row: {
+          combo_purchase_id: string
+          consumed_at: string
+          created_at: string
+          id: string
+          registered_by: string
+        }
+        Insert: {
+          combo_purchase_id: string
+          consumed_at?: string
+          created_at?: string
+          id?: string
+          registered_by: string
+        }
+        Update: {
+          combo_purchase_id?: string
+          consumed_at?: string
+          created_at?: string
+          id?: string
+          registered_by?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_combo_consumptions_combo_purchase_id_fkey"
+            columns: ["combo_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_combo_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_consumptions_registered_by_fkey"
+            columns: ["registered_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_combo_purchases: {
+        Row: {
+          amount_received_cop: number
+          balance_cop: number
+          buyer_type: string
+          client_id: string | null
+          combo_id: string
+          combo_price_snapshot_cop: number
+          consolidation_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          is_completed: boolean
+          payment_method: string | null
+          purchase_date: string
+          status: string
+          total_units: number
+          trainer_id: string | null
+          units_consumed: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_received_cop?: number
+          balance_cop?: number
+          buyer_type: string
+          client_id?: string | null
+          combo_id: string
+          combo_price_snapshot_cop: number
+          consolidation_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          payment_method?: string | null
+          purchase_date?: string
+          status?: string
+          total_units: number
+          trainer_id?: string | null
+          units_consumed?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_received_cop?: number
+          balance_cop?: number
+          buyer_type?: string
+          client_id?: string | null
+          combo_id?: string
+          combo_price_snapshot_cop?: number
+          consolidation_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          is_completed?: boolean
+          payment_method?: string | null
+          purchase_date?: string
+          status?: string
+          total_units?: number
+          trainer_id?: string | null
+          units_consumed?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_combo_purchases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_purchases_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_purchases_combo_id_fkey"
+            columns: ["combo_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_combos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_purchases_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_purchases_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combo_purchases_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_combos: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          price_cop: number
+          product_id: string
+          quantity: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_cop: number
+          product_id: string
+          quantity: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_cop?: number
+          product_id?: string
+          quantity?: number
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_combos_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combos_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_combos_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_consolidations: {
+        Row: {
+          consolidated_at: string | null
+          consolidated_by: string | null
+          created_at: string
+          id: string
+          net_cop: number
+          period_end: string
+          period_start: string
+          status: string
+          total_expenses_cop: number
+          total_sales_cop: number
+        }
+        Insert: {
+          consolidated_at?: string | null
+          consolidated_by?: string | null
+          created_at?: string
+          id?: string
+          net_cop?: number
+          period_end: string
+          period_start: string
+          status?: string
+          total_expenses_cop?: number
+          total_sales_cop?: number
+        }
+        Update: {
+          consolidated_at?: string | null
+          consolidated_by?: string | null
+          created_at?: string
+          id?: string
+          net_cop?: number
+          period_end?: string
+          period_start?: string
+          status?: string
+          total_expenses_cop?: number
+          total_sales_cop?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_consolidations_consolidated_by_fkey"
+            columns: ["consolidated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_expense_categories: {
+        Row: {
+          created_at: string
+          created_by: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_expense_categories_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_expenses: {
+        Row: {
+          amount_cop: number
+          category_id: string
+          created_at: string
+          created_by: string
+          expense_date: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          payment_method: string
+          reported_date: string
+          supplier: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_cop: number
+          category_id: string
+          created_at?: string
+          created_by: string
+          expense_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method: string
+          reported_date?: string
+          supplier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          category_id?: string
+          created_at?: string
+          created_by?: string
+          expense_date?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method?: string
+          reported_date?: string
+          supplier?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_expenses_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_expenses_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_installments: {
+        Row: {
+          amount_cop: number
+          combo_purchase_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          notes: string | null
+          payment_date: string
+          payment_method: string
+          sale_id: string | null
+          voided_at: string | null
+        }
+        Insert: {
+          amount_cop: number
+          combo_purchase_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method: string
+          sale_id?: string | null
+          voided_at?: string | null
+        }
+        Update: {
+          amount_cop?: number
+          combo_purchase_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          notes?: string | null
+          payment_date?: string
+          payment_method?: string
+          sale_id?: string | null
+          voided_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_installments_combo_purchase_id_fkey"
+            columns: ["combo_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_combo_purchases"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_installments_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_installments_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_product_price_history: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          price_cop: number
+          product_id: string
+          valid_from: string
+          valid_until: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          price_cop: number
+          product_id: string
+          valid_from: string
+          valid_until?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          price_cop?: number
+          product_id?: string
+          valid_from?: string
+          valid_until?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_product_price_history_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_product_price_history_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_products: {
+        Row: {
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          name: string
+          price_cop: number
+          size_label: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          name: string
+          price_cop: number
+          size_label: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          price_cop?: number
+          size_label?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_products_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_products_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      cafeteria_sales: {
+        Row: {
+          amount_received_cop: number
+          balance_cop: number
+          buyer_type: string
+          client_id: string | null
+          consolidation_id: string | null
+          created_at: string
+          created_by: string
+          id: string
+          is_active: boolean
+          notes: string | null
+          payment_method: string | null
+          product_id: string
+          product_price_snapshot_cop: number
+          quantity: number
+          reported_date: string
+          sale_date: string
+          status: string
+          trainer_id: string | null
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          amount_received_cop?: number
+          balance_cop?: number
+          buyer_type: string
+          client_id?: string | null
+          consolidation_id?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method?: string | null
+          product_id: string
+          product_price_snapshot_cop: number
+          quantity?: number
+          reported_date?: string
+          sale_date?: string
+          status?: string
+          trainer_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          amount_received_cop?: number
+          balance_cop?: number
+          buyer_type?: string
+          client_id?: string | null
+          consolidation_id?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          is_active?: boolean
+          notes?: string | null
+          payment_method?: string | null
+          product_id?: string
+          product_price_snapshot_cop?: number
+          quantity?: number
+          reported_date?: string
+          sale_date?: string
+          status?: string
+          trainer_id?: string | null
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "cafeteria_sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_trainer_id_fkey"
+            columns: ["trainer_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_measurements: {
         Row: {
           abdomen_cm: number | null
@@ -1897,7 +2530,6 @@ export type Database = {
       get_expense_summary_by_category: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
-          category_emoji: string
           category_id: string
           category_name: string
           record_count: number
@@ -2181,6 +2813,7 @@ export const Constants = {
     },
   },
 } as const
+
 // ---------------------------------------------------------------------------
 // Aliases de conveniencia — usar en lugar de los tipos genéricos de Database
 // ---------------------------------------------------------------------------
@@ -2330,3 +2963,53 @@ export type LoanUpdate = Database["public"]["Tables"]["loans"]["Update"]
 // loan_payments
 export type LoanPayment = Database["public"]["Tables"]["loan_payments"]["Row"]
 export type LoanPaymentInsert = Database["public"]["Tables"]["loan_payments"]["Insert"]
+
+// ─── Cafetería ────────────────────────────────────────────────────────────────
+
+// cafeteria_products
+export type CafeteriaProduct = Database["public"]["Tables"]["cafeteria_products"]["Row"]
+export type CafeteriaProductInsert = Database["public"]["Tables"]["cafeteria_products"]["Insert"]
+export type CafeteriaProductUpdate = Database["public"]["Tables"]["cafeteria_products"]["Update"]
+
+// cafeteria_product_price_history
+export type CafeteriaProductPriceHistory = Database["public"]["Tables"]["cafeteria_product_price_history"]["Row"]
+export type CafeteriaProductPriceHistoryInsert = Database["public"]["Tables"]["cafeteria_product_price_history"]["Insert"]
+
+// cafeteria_combos
+export type CafeteriaCombo = Database["public"]["Tables"]["cafeteria_combos"]["Row"]
+export type CafeteriaComboInsert = Database["public"]["Tables"]["cafeteria_combos"]["Insert"]
+export type CafeteriaComboUpdate = Database["public"]["Tables"]["cafeteria_combos"]["Update"]
+
+// cafeteria_sales
+export type CafeteriaSale = Database["public"]["Tables"]["cafeteria_sales"]["Row"]
+export type CafeteriaSaleInsert = Database["public"]["Tables"]["cafeteria_sales"]["Insert"]
+export type CafeteriaSaleUpdate = Database["public"]["Tables"]["cafeteria_sales"]["Update"]
+
+// cafeteria_installments
+export type CafeteriaInstallment = Database["public"]["Tables"]["cafeteria_installments"]["Row"]
+export type CafeteriaInstallmentInsert = Database["public"]["Tables"]["cafeteria_installments"]["Insert"]
+export type CafeteriaInstallmentUpdate = Database["public"]["Tables"]["cafeteria_installments"]["Update"]
+
+// cafeteria_combo_purchases
+export type CafeteriaComboPurchase = Database["public"]["Tables"]["cafeteria_combo_purchases"]["Row"]
+export type CafeteriaComboPurchaseInsert = Database["public"]["Tables"]["cafeteria_combo_purchases"]["Insert"]
+export type CafeteriaComboPurchaseUpdate = Database["public"]["Tables"]["cafeteria_combo_purchases"]["Update"]
+
+// cafeteria_combo_consumptions
+export type CafeteriaComboConsumption = Database["public"]["Tables"]["cafeteria_combo_consumptions"]["Row"]
+export type CafeteriaComboConsumptionInsert = Database["public"]["Tables"]["cafeteria_combo_consumptions"]["Insert"]
+
+// cafeteria_expense_categories
+export type CafeteriaExpenseCategory = Database["public"]["Tables"]["cafeteria_expense_categories"]["Row"]
+export type CafeteriaExpenseCategoryInsert = Database["public"]["Tables"]["cafeteria_expense_categories"]["Insert"]
+export type CafeteriaExpenseCategoryUpdate = Database["public"]["Tables"]["cafeteria_expense_categories"]["Update"]
+
+// cafeteria_expenses
+export type CafeteriaExpense = Database["public"]["Tables"]["cafeteria_expenses"]["Row"]
+export type CafeteriaExpenseInsert = Database["public"]["Tables"]["cafeteria_expenses"]["Insert"]
+export type CafeteriaExpenseUpdate = Database["public"]["Tables"]["cafeteria_expenses"]["Update"]
+
+// cafeteria_consolidations
+export type CafeteriaConsolidation = Database["public"]["Tables"]["cafeteria_consolidations"]["Row"]
+export type CafeteriaConsolidationInsert = Database["public"]["Tables"]["cafeteria_consolidations"]["Insert"]
+export type CafeteriaConsolidationUpdate = Database["public"]["Tables"]["cafeteria_consolidations"]["Update"]

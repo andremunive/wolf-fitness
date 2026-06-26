@@ -1,0 +1,1425 @@
+<div class="catalogo-page">
+
+  <ng-container *ngIf="viewState$ | async as state">
+
+    <!-- ── Header ── -->
+    <header class="catalogo-page__header">
+      <div class="catalogo-page__header-inner">
+        <div class="catalogo-page__title-row">
+          <h1 class="catalogo-page__title">Catálogo</h1>
+          <button
+            type="button"
+            class="catalogo-page__add-btn"
+            (click)="openNewProductModal()"
+            aria-label="Agregar nueva presentación"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            <span>Nueva presentación</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <!-- ── Main ── -->
+    <main class="catalogo-page__main">
+
+      <!-- ══════════════════════════════════════════════════════════════
+           SECCIÓN PRESENTACIONES
+      ══════════════════════════════════════════════════════════════ -->
+      <section class="catalogo-section">
+        <h2 class="catalogo-section__title">Presentaciones</h2>
+
+        <!-- ── Loading skeleton ── -->
+        <ng-container *ngIf="state.loading">
+          <div class="catalogo-table-shell" aria-hidden="true">
+            <div class="catalogo-table-wrapper">
+              <table class="catalogo-table">
+                <thead>
+                  <tr>
+                    <th scope="col">PRODUCTO</th>
+                    <th scope="col">PRESENTACIÓN</th>
+                    <th scope="col">PRECIO</th>
+                    <th scope="col">ESTADO</th>
+                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr *ngFor="let row of skeletonRows" class="catalogo-table__row">
+                    <td class="catalogo-table__cell">
+                      <div class="skeleton skeleton--line-lg"></div>
+                    </td>
+                    <td class="catalogo-table__cell">
+                      <div class="skeleton skeleton--pill"></div>
+                    </td>
+                    <td class="catalogo-table__cell">
+                      <div class="skeleton skeleton--line-md"></div>
+                    </td>
+                    <td class="catalogo-table__cell">
+                      <div class="skeleton skeleton--toggle"></div>
+                    </td>
+                    <td class="catalogo-table__cell">
+                      <div class="skeleton skeleton--icon"></div>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <!-- Mobile skeleton cards -->
+          <div class="catalogo-cards" aria-hidden="true">
+            <div *ngFor="let row of skeletonRows" class="catalogo-card skeleton-card">
+              <div class="skeleton-card__header">
+                <div class="skeleton skeleton--line-lg"></div>
+                <div class="skeleton skeleton--icon"></div>
+              </div>
+              <div class="skeleton-card__meta">
+                <div class="skeleton skeleton--pill"></div>
+                <div class="skeleton skeleton--line-md"></div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+        <!-- ── Error state ── -->
+        <div *ngIf="state.error && !state.loading" class="catalogo-empty" role="alert">
+          <div class="catalogo-empty__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+          </div>
+          <p class="catalogo-empty__title">Error al cargar</p>
+          <p class="catalogo-empty__msg">{{ state.error }}</p>
+          <button type="button" class="catalogo-empty__retry-btn" (click)="refresh()">Reintentar</button>
+        </div>
+
+        <!-- ── Empty state ── -->
+        <div *ngIf="!state.loading && !state.error && state.products.length === 0" class="catalogo-empty">
+          <div class="catalogo-empty__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+            </svg>
+          </div>
+          <p class="catalogo-empty__title">Sin presentaciones registradas</p>
+          <p class="catalogo-empty__msg">Crea la primera presentación del catálogo.</p>
+          <button
+            type="button"
+            class="catalogo-empty__add-btn"
+            (click)="openNewProductModal()"
+          >+ Nueva presentación</button>
+        </div>
+
+        <!-- ── Table (tablet / desktop) ── -->
+        <ng-container *ngIf="!state.loading && !state.error && state.products.length > 0">
+          <div class="catalogo-table-shell">
+            <div class="catalogo-table-wrapper" role="region" aria-label="Tabla de presentaciones">
+              <table class="catalogo-table">
+                <thead>
+                  <tr>
+                    <th scope="col">PRODUCTO</th>
+                    <th scope="col">PRESENTACIÓN</th>
+                    <th scope="col">PRECIO</th>
+                    <th scope="col">ESTADO</th>
+                    <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    *ngFor="let product of state.products; trackBy: trackByProductId"
+                    class="catalogo-table__row"
+                    [class.catalogo-table__row--inactive]="!product.is_active"
+                  >
+                    <!-- Producto -->
+                    <td class="catalogo-table__cell catalogo-table__cell--name">
+                      {{ product.name }}
+                    </td>
+
+                    <!-- Presentación badge -->
+                    <td class="catalogo-table__cell">
+                      <span class="size-badge">{{ product.size_label }}</span>
+                    </td>
+
+                    <!-- Precio -->
+                    <td class="catalogo-table__cell catalogo-table__cell--price">
+                      {{ formatCop(product.price_cop) }}
+                    </td>
+
+                    <!-- Estado: toggle switch -->
+                    <td class="catalogo-table__cell catalogo-table__cell--status">
+                      <button
+                        type="button"
+                        class="toggle-switch"
+                        [class.toggle-switch--on]="product.is_active"
+                        [disabled]="isTogglingProduct(product.id)"
+                        (click)="toggleProduct(product)"
+                        [attr.aria-label]="product.is_active ? 'Desactivar ' + product.name : 'Activar ' + product.name"
+                        [attr.aria-checked]="product.is_active"
+                        role="switch"
+                      >
+                        <span class="toggle-switch__thumb"></span>
+                      </button>
+                    </td>
+
+                    <!-- Acciones: menú 3 puntos -->
+                    <td class="catalogo-table__cell catalogo-table__cell--actions">
+                      <app-catalogo-actions-menu
+                        [product]="product"
+                        (editRequested)="openEditModal($event)"
+                        (updatePriceRequested)="openUpdatePriceModal($event)"
+                        (priceHistoryRequested)="openPriceHistoryModal($event)"
+                      ></app-catalogo-actions-menu>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- ── Cards (mobile) ── -->
+          <div class="catalogo-cards">
+            <div
+              *ngFor="let product of state.products; trackBy: trackByProductId"
+              class="catalogo-card"
+              [class.catalogo-card--inactive]="!product.is_active"
+            >
+              <div class="catalogo-card__top">
+                <div class="catalogo-card__info">
+                  <p class="catalogo-card__name">{{ product.name }}</p>
+                  <div class="catalogo-card__meta">
+                    <span class="size-badge">{{ product.size_label }}</span>
+                    <span class="catalogo-card__price">{{ formatCop(product.price_cop) }}</span>
+                  </div>
+                </div>
+                <div class="catalogo-card__controls">
+                  <button
+                    type="button"
+                    class="toggle-switch"
+                    [class.toggle-switch--on]="product.is_active"
+                    [disabled]="isTogglingProduct(product.id)"
+                    (click)="toggleProduct(product)"
+                    [attr.aria-label]="product.is_active ? 'Desactivar ' + product.name : 'Activar ' + product.name"
+                    [attr.aria-checked]="product.is_active"
+                    role="switch"
+                  >
+                    <span class="toggle-switch__thumb"></span>
+                  </button>
+                  <app-catalogo-actions-menu
+                    [product]="product"
+                    (editRequested)="openEditModal($event)"
+                    (updatePriceRequested)="openUpdatePriceModal($event)"
+                    (priceHistoryRequested)="openPriceHistoryModal($event)"
+                  ></app-catalogo-actions-menu>
+                </div>
+              </div>
+            </div>
+          </div>
+        </ng-container>
+
+      </section>
+
+      <!-- ══════════════════════════════════════════════════════════════
+           SECCIÓN COMBOS
+      ══════════════════════════════════════════════════════════════ -->
+      <ng-container *ngIf="combosState$ | async as combosState">
+        <section class="catalogo-section combos-section">
+
+          <!-- Section header -->
+          <div class="catalogo-section__header-row">
+            <h2 class="catalogo-section__title">Combos</h2>
+            <button
+              type="button"
+              class="catalogo-page__add-btn"
+              (click)="openNewComboModal(state.products)"
+              aria-label="Agregar nuevo combo"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+              </svg>
+              <span>Nuevo combo</span>
+            </button>
+          </div>
+
+          <!-- ── Loading skeleton ── -->
+          <ng-container *ngIf="combosState.loading">
+            <div class="catalogo-table-shell" aria-hidden="true">
+              <div class="catalogo-table-wrapper">
+                <table class="catalogo-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">COMBO</th>
+                      <th scope="col">PRODUCTO</th>
+                      <th scope="col">UNIDADES</th>
+                      <th scope="col">PRECIO</th>
+                      <th scope="col">P. UNITARIO</th>
+                      <th scope="col">ESTADO</th>
+                      <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr *ngFor="let row of skeletonRows" class="catalogo-table__row">
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--toggle"></div></td>
+                      <td class="catalogo-table__cell"><div class="skeleton skeleton--icon"></div></td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <!-- Mobile skeleton cards -->
+            <div class="catalogo-cards" aria-hidden="true">
+              <div *ngFor="let row of skeletonRows" class="catalogo-card skeleton-card">
+                <div class="skeleton-card__header">
+                  <div class="skeleton skeleton--line-lg"></div>
+                  <div class="skeleton skeleton--icon"></div>
+                </div>
+                <div class="skeleton-card__meta">
+                  <div class="skeleton skeleton--pill"></div>
+                  <div class="skeleton skeleton--line-md"></div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+          <!-- ── Error state ── -->
+          <div *ngIf="combosState.error && !combosState.loading" class="catalogo-empty" role="alert">
+            <div class="catalogo-empty__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+              </svg>
+            </div>
+            <p class="catalogo-empty__title">Error al cargar</p>
+            <p class="catalogo-empty__msg">{{ combosState.error }}</p>
+            <button type="button" class="catalogo-empty__retry-btn" (click)="refreshCombos()">Reintentar</button>
+          </div>
+
+          <!-- ── Empty state ── -->
+          <div *ngIf="!combosState.loading && !combosState.error && combosState.combos.length === 0" class="catalogo-empty">
+            <div class="catalogo-empty__icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M21 11.25v8.25a1.5 1.5 0 01-1.5 1.5H5.25a1.5 1.5 0 01-1.5-1.5v-8.25M12 4.875A2.625 2.625 0 109.375 7.5H12m0-2.625V7.5m0-2.625A2.625 2.625 0 1114.625 7.5H12m0 0V21m-8.625-9.75h18c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125h-18c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+              </svg>
+            </div>
+            <p class="catalogo-empty__title">Sin combos registrados</p>
+            <p class="catalogo-empty__msg">Crea el primer combo del catálogo.</p>
+            <button
+              type="button"
+              class="catalogo-empty__add-btn"
+              (click)="openNewComboModal(state.products)"
+            >+ Nuevo combo</button>
+          </div>
+
+          <!-- ── Table (tablet / desktop) ── -->
+          <ng-container *ngIf="!combosState.loading && !combosState.error && combosState.combos.length > 0">
+            <div class="catalogo-table-shell">
+              <div class="catalogo-table-wrapper" role="region" aria-label="Tabla de combos">
+                <table class="catalogo-table">
+                  <thead>
+                    <tr>
+                      <th scope="col">COMBO</th>
+                      <th scope="col">PRODUCTO</th>
+                      <th scope="col">UNIDADES</th>
+                      <th scope="col">PRECIO</th>
+                      <th scope="col">P. UNITARIO</th>
+                      <th scope="col">ESTADO</th>
+                      <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      *ngFor="let combo of combosState.combos; trackBy: trackByComboId"
+                      class="catalogo-table__row"
+                      [class.catalogo-table__row--inactive]="!combo.is_active"
+                    >
+                      <!-- Combo name -->
+                      <td class="catalogo-table__cell catalogo-table__cell--name">
+                        {{ combo.name }}
+                      </td>
+
+                      <!-- Producto -->
+                      <td class="catalogo-table__cell">
+                        <ng-container *ngIf="combo.product; else noProduct">
+                          <span class="combo-product-name">{{ combo.product.name }}</span>
+                          <span class="size-badge">{{ combo.product.size_label }}</span>
+                        </ng-container>
+                        <ng-template #noProduct>
+                          <span class="combo-muted">—</span>
+                        </ng-template>
+                      </td>
+
+                      <!-- Unidades -->
+                      <td class="catalogo-table__cell">
+                        <span class="combo-qty">{{ combo.quantity }}</span>
+                        <span class="combo-qty-label"> uds.</span>
+                      </td>
+
+                      <!-- Precio -->
+                      <td class="catalogo-table__cell catalogo-table__cell--price">
+                        {{ formatCop(combo.price_cop) }}
+                      </td>
+
+                      <!-- P. Unitario -->
+                      <td class="catalogo-table__cell">
+                        <ng-container *ngIf="getComboSavingPercentFromCombo(combo) as savingPct; else noSaving">
+                          <span class="combo-unit-price combo-unit-price--saving">
+                            {{ formatCop(getComboUnitPriceFromCombo(combo)) }}
+                          </span>
+                          <span class="combo-saving-badge">Ahorro {{ savingPct }}%</span>
+                        </ng-container>
+                        <ng-template #noSaving>
+                          <span class="combo-unit-price combo-unit-price--muted">
+                            {{ formatCop(getComboUnitPriceFromCombo(combo)) }}
+                          </span>
+                        </ng-template>
+                      </td>
+
+                      <!-- Estado: toggle switch -->
+                      <td class="catalogo-table__cell catalogo-table__cell--status">
+                        <button
+                          type="button"
+                          class="toggle-switch"
+                          [class.toggle-switch--on]="combo.is_active"
+                          [disabled]="isTogglingCombo(combo.id)"
+                          (click)="toggleCombo(combo)"
+                          [attr.aria-label]="combo.is_active ? 'Desactivar ' + combo.name : 'Activar ' + combo.name"
+                          [attr.aria-checked]="combo.is_active"
+                          role="switch"
+                        >
+                          <span class="toggle-switch__thumb"></span>
+                        </button>
+                      </td>
+
+                      <!-- Acciones: menú 3 puntos -->
+                      <td class="catalogo-table__cell catalogo-table__cell--actions">
+                        <app-catalogo-combos-actions-menu
+                          [combo]="combo"
+                          (editRequested)="openEditComboModal($event, state.products)"
+                        ></app-catalogo-combos-actions-menu>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- ── Cards (mobile) ── -->
+            <div class="catalogo-cards">
+              <div
+                *ngFor="let combo of combosState.combos; trackBy: trackByComboId"
+                class="catalogo-card combo-card"
+                [class.catalogo-card--inactive]="!combo.is_active"
+              >
+                <div class="catalogo-card__top">
+                  <div class="catalogo-card__info">
+                    <p class="catalogo-card__name">{{ combo.name }}</p>
+                    <div class="catalogo-card__meta combo-card__meta">
+                      <ng-container *ngIf="combo.product">
+                        <span class="combo-product-name">{{ combo.product.name }}</span>
+                        <span class="size-badge">{{ combo.product.size_label }}</span>
+                      </ng-container>
+                    </div>
+                    <div class="combo-card__details">
+                      <span class="combo-qty-chip">{{ combo.quantity }} uds.</span>
+                      <span class="catalogo-card__price">{{ formatCop(combo.price_cop) }}</span>
+                    </div>
+                    <div class="combo-card__unit-row">
+                      <ng-container *ngIf="getComboSavingPercentFromCombo(combo) as savingPct; else noSavingCard">
+                        <span class="combo-unit-price combo-unit-price--saving">
+                          {{ formatCop(getComboUnitPriceFromCombo(combo)) }} / ud.
+                        </span>
+                        <span class="combo-saving-badge">Ahorro {{ savingPct }}%</span>
+                      </ng-container>
+                      <ng-template #noSavingCard>
+                        <span class="combo-unit-price combo-unit-price--muted">
+                          {{ formatCop(getComboUnitPriceFromCombo(combo)) }} / ud.
+                        </span>
+                      </ng-template>
+                    </div>
+                  </div>
+                  <div class="catalogo-card__controls">
+                    <button
+                      type="button"
+                      class="toggle-switch"
+                      [class.toggle-switch--on]="combo.is_active"
+                      [disabled]="isTogglingCombo(combo.id)"
+                      (click)="toggleCombo(combo)"
+                      [attr.aria-label]="combo.is_active ? 'Desactivar ' + combo.name : 'Activar ' + combo.name"
+                      [attr.aria-checked]="combo.is_active"
+                      role="switch"
+                    >
+                      <span class="toggle-switch__thumb"></span>
+                    </button>
+                    <app-catalogo-combos-actions-menu
+                      [combo]="combo"
+                      (editRequested)="openEditComboModal($event, state.products)"
+                    ></app-catalogo-combos-actions-menu>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </ng-container>
+
+        </section>
+      </ng-container>
+
+    </main>
+
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Nueva presentación
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'new-product'">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-new-title"
+      (click)="closeNewProductModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closeNewProductModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <h2 id="modal-new-title" class="modal-header__title">Nueva presentación</h2>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closeNewProductModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+          <form [formGroup]="newProductForm" class="modal-form" novalidate>
+
+            <!-- Nombre -->
+            <div class="form-field">
+              <label class="form-field__label" for="new-name">
+                Nombre del producto
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="new-name"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="newProductForm.get('name')?.invalid && newProductForm.get('name')?.touched"
+                formControlName="name"
+                maxlength="100"
+                placeholder="Ej: Granizado de proteína"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="newProductForm.get('name')?.errors?.['required'] && newProductForm.get('name')?.touched">
+                El nombre es obligatorio.
+              </p>
+            </div>
+
+            <!-- Presentación -->
+            <div class="form-field">
+              <label class="form-field__label" for="new-size">
+                Presentación
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="new-size"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="newProductForm.get('size_label')?.invalid && newProductForm.get('size_label')?.touched"
+                formControlName="size_label"
+                maxlength="20"
+                placeholder="Ej: 5.5oz, 8oz"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="newProductForm.get('size_label')?.errors?.['required'] && newProductForm.get('size_label')?.touched">
+                La presentación es obligatoria.
+              </p>
+            </div>
+
+            <!-- Precio -->
+            <div class="form-field">
+              <label class="form-field__label" for="new-price">
+                Precio (COP)
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="new-price"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="newProductForm.get('price_cop')?.invalid && newProductForm.get('price_cop')?.touched"
+                [value]="newProductPriceRaw"
+                (input)="onNewPriceInput($event)"
+                (blur)="onNewPriceBlur()"
+                placeholder="Ej: $3.500"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="newProductForm.get('price_cop')?.errors?.['required'] && newProductForm.get('price_cop')?.touched">
+                El precio es obligatorio.
+              </p>
+              <p class="form-field__error"
+                *ngIf="newProductForm.get('price_cop')?.errors?.['min'] && newProductForm.get('price_cop')?.touched">
+                El precio debe ser mayor a cero.
+              </p>
+            </div>
+
+          </form>
+
+          <!-- Feedback error -->
+          <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <span>{{ saveError }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="modal-footer__cancel"
+            (click)="closeNewProductModal()"
+            [disabled]="isSaving"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="modal-footer__primary"
+            (click)="submitNewProduct()"
+            [disabled]="isSaving || newProductForm.invalid"
+          >
+            <ng-container *ngIf="!isSaving">Crear presentación</ng-container>
+            <ng-container *ngIf="isSaving">Guardando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Editar presentación
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'edit-product' && selectedProduct">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-edit-title"
+      (click)="closeEditModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closeEditModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <h2 id="modal-edit-title" class="modal-header__title">Editar presentación</h2>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closeEditModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+          <form [formGroup]="editProductForm" class="modal-form" novalidate>
+
+            <!-- Nombre -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-name">
+                Nombre del producto
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="edit-name"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="editProductForm.get('name')?.invalid && editProductForm.get('name')?.touched"
+                formControlName="name"
+                maxlength="100"
+                placeholder="Ej: Granizado de proteína"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="editProductForm.get('name')?.errors?.['required'] && editProductForm.get('name')?.touched">
+                El nombre es obligatorio.
+              </p>
+            </div>
+
+            <!-- Presentación -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-size">
+                Presentación
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="edit-size"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="editProductForm.get('size_label')?.invalid && editProductForm.get('size_label')?.touched"
+                formControlName="size_label"
+                maxlength="20"
+                placeholder="Ej: 5.5oz, 8oz"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="editProductForm.get('size_label')?.errors?.['required'] && editProductForm.get('size_label')?.touched">
+                La presentación es obligatoria.
+              </p>
+            </div>
+
+            <!-- Precio — solo lectura -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-price-readonly">
+                Precio (COP)
+                <span class="form-field__readonly-badge" aria-label="Campo de solo lectura">Solo lectura</span>
+              </label>
+              <input
+                id="edit-price-readonly"
+                type="text"
+                class="form-field__input form-field__input--readonly"
+                [value]="formatCop(selectedProduct!.price_cop)"
+                readonly
+                aria-readonly="true"
+              />
+              <p class="form-field__hint">
+                Para cambiar el precio usa "Actualizar precio" en el menú de acciones.
+              </p>
+            </div>
+
+          </form>
+
+          <!-- Feedback error -->
+          <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <span>{{ saveError }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="modal-footer__cancel"
+            (click)="closeEditModal()"
+            [disabled]="isSaving"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="modal-footer__primary"
+            (click)="submitEditProduct()"
+            [disabled]="isSaving || editProductForm.invalid"
+          >
+            <ng-container *ngIf="!isSaving">Guardar cambios</ng-container>
+            <ng-container *ngIf="isSaving">Guardando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Actualizar precio
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'update-price' && selectedProduct">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-price-title"
+      (click)="closeUpdatePriceModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closeUpdatePriceModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <div>
+            <h2 id="modal-price-title" class="modal-header__title">Actualizar precio</h2>
+            <p class="modal-header__subtitle">{{ selectedProduct!.name }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closeUpdatePriceModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Precio actual -->
+          <ng-container *ngIf="!isPriceHistoryLoading; else priceLoading">
+            <div class="current-price-block" *ngIf="currentPriceEntry">
+              <p class="current-price-block__label">Precio actual</p>
+              <p class="current-price-block__value">{{ formatCop(currentPriceEntry.price_cop) }}</p>
+              <p class="current-price-block__since">
+                Vigente desde {{ formatDateOnly(currentPriceEntry.valid_from) }}
+              </p>
+            </div>
+          </ng-container>
+          <ng-template #priceLoading>
+            <div class="skeleton skeleton--line-lg" style="margin-bottom:16px;" aria-hidden="true"></div>
+          </ng-template>
+
+          <form [formGroup]="updatePriceForm" class="modal-form" novalidate>
+            <!-- Nuevo precio -->
+            <div class="form-field">
+              <label class="form-field__label" for="update-price">
+                Nuevo precio (COP)
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="update-price"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="updatePriceForm.get('new_price')?.invalid && updatePriceForm.get('new_price')?.touched"
+                [value]="updatePriceRaw"
+                (input)="onUpdatePriceInput($event)"
+                (blur)="onUpdatePriceBlur()"
+                placeholder="Ej: $4.000"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="updatePriceForm.get('new_price')?.errors?.['required'] && updatePriceForm.get('new_price')?.touched">
+                El precio es obligatorio.
+              </p>
+              <p class="form-field__error"
+                *ngIf="updatePriceForm.get('new_price')?.errors?.['min'] && updatePriceForm.get('new_price')?.touched">
+                El precio debe ser mayor a cero.
+              </p>
+            </div>
+          </form>
+
+          <!-- Nota amber -->
+          <div class="price-warning-note" role="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+            </svg>
+            <span>El precio anterior quedará registrado en el historial. Los registros de ventas anteriores no se ven afectados.</span>
+          </div>
+
+          <!-- Feedback error -->
+          <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <span>{{ saveError }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="modal-footer__cancel"
+            (click)="closeUpdatePriceModal()"
+            [disabled]="isSaving"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="modal-footer__primary"
+            (click)="submitUpdatePrice()"
+            [disabled]="isSaving || updatePriceForm.invalid"
+          >
+            <ng-container *ngIf="!isSaving">Actualizar precio</ng-container>
+            <ng-container *ngIf="isSaving">Actualizando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Historial de precios
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'price-history' && selectedProduct">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-history-title"
+      (click)="closePriceHistoryModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closePriceHistoryModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <div>
+            <h2 id="modal-history-title" class="modal-header__title">Historial de precios</h2>
+            <p class="modal-header__subtitle">{{ selectedProduct!.name }}</p>
+          </div>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closePriceHistoryModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Loading -->
+          <ng-container *ngIf="isPriceHistoryLoading">
+            <div class="skeleton skeleton--line-lg" aria-hidden="true" style="margin-bottom:12px;"></div>
+            <div class="skeleton skeleton--line-md" aria-hidden="true" style="margin-bottom:12px;"></div>
+            <div class="skeleton skeleton--line-md" aria-hidden="true"></div>
+          </ng-container>
+
+          <!-- Only original price — show special message -->
+          <div
+            *ngIf="!isPriceHistoryLoading && priceHistory.length === 1"
+            class="history-single-msg"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+            </svg>
+            <p>Sin cambios de precio registrados — este es el precio original.</p>
+          </div>
+
+          <!-- History list -->
+          <ul
+            *ngIf="!isPriceHistoryLoading && priceHistory.length > 1"
+            class="history-list"
+            aria-label="Historial de precios"
+          >
+            <li
+              *ngFor="let entry of priceHistory; trackBy: trackByHistoryId"
+              class="history-entry"
+            >
+              <div class="history-entry__top">
+                <span class="history-entry__price">{{ formatCop(entry.price_cop) }}</span>
+                <span
+                  class="history-entry__badge"
+                  [class.history-entry__badge--current]="entry.valid_until === null"
+                  [class.history-entry__badge--past]="entry.valid_until !== null"
+                >
+                  {{ entry.valid_until === null ? 'Vigente' : 'Anterior' }}
+                </span>
+              </div>
+              <p class="history-entry__dates">
+                <ng-container *ngIf="entry.valid_until === null">
+                  Desde {{ formatDateOnly(entry.valid_from) }} → <strong>Precio vigente</strong>
+                </ng-container>
+                <ng-container *ngIf="entry.valid_until !== null">
+                  Desde {{ formatDateOnly(entry.valid_from) }} → {{ formatDateOnly(entry.valid_until) }}
+                </ng-container>
+              </p>
+            </li>
+          </ul>
+
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer modal-footer--single">
+          <button
+            type="button"
+            class="modal-footer__primary"
+            (click)="closePriceHistoryModal()"
+          >Cerrar</button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Nuevo combo
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'new-combo'">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-new-combo-title"
+      (click)="closeNewComboModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closeNewComboModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <h2 id="modal-new-combo-title" class="modal-header__title">Nuevo combo</h2>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closeNewComboModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Sin productos activos -->
+          <ng-container *ngIf="activeProducts.length === 0; else newComboFormBlock">
+            <div class="combo-no-products">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
+                <path stroke-linecap="round" stroke-linejoin="round"
+                  d="M20.25 7.5l-.625 10.632a2.25 2.25 0 01-2.247 2.118H6.622a2.25 2.25 0 01-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125z"/>
+              </svg>
+              <p>Primero debes crear al menos una presentación activa.</p>
+              <button type="button" class="combo-no-products__close-btn" (click)="closeNewComboModal()">
+                Cerrar
+              </button>
+            </div>
+          </ng-container>
+
+          <ng-template #newComboFormBlock>
+            <form [formGroup]="newComboForm" class="modal-form" novalidate>
+
+              <!-- Nombre -->
+              <div class="form-field">
+                <label class="form-field__label" for="new-combo-name">
+                  Nombre del combo
+                  <span class="form-field__required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="new-combo-name"
+                  type="text"
+                  class="form-field__input"
+                  [class.form-field__input--error]="newComboForm.get('name')?.invalid && newComboForm.get('name')?.touched"
+                  formControlName="name"
+                  maxlength="100"
+                  placeholder="Ej: Pack 10 granizados"
+                  autocomplete="off"
+                />
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('name')?.errors?.['required'] && newComboForm.get('name')?.touched">
+                  El nombre es obligatorio.
+                </p>
+              </div>
+
+              <!-- Producto -->
+              <div class="form-field">
+                <label class="form-field__label" for="new-combo-product">
+                  Producto
+                  <span class="form-field__required" aria-hidden="true">*</span>
+                </label>
+                <select
+                  id="new-combo-product"
+                  class="form-field__input form-field__select"
+                  [class.form-field__input--error]="newComboForm.get('product_id')?.invalid && newComboForm.get('product_id')?.touched"
+                  formControlName="product_id"
+                >
+                  <option value="" disabled selected>Selecciona un producto</option>
+                  <option
+                    *ngFor="let p of activeProducts; trackBy: trackByProductSelect"
+                    [value]="p.id"
+                  >{{ p.name }} — {{ p.size_label }} — {{ formatCop(p.price_cop) }}</option>
+                </select>
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('product_id')?.errors?.['required'] && newComboForm.get('product_id')?.touched">
+                  Debes seleccionar un producto.
+                </p>
+                <p class="form-field__hint" *ngIf="getSelectedProductForForm(newComboForm) as selProd">
+                  Precio individual: {{ formatCop(selProd.price_cop) }}
+                </p>
+              </div>
+
+              <!-- Cantidad -->
+              <div class="form-field">
+                <label class="form-field__label" for="new-combo-qty">
+                  Cantidad de unidades
+                  <span class="form-field__required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="new-combo-qty"
+                  type="number"
+                  class="form-field__input"
+                  [class.form-field__input--error]="newComboForm.get('quantity')?.invalid && newComboForm.get('quantity')?.touched"
+                  formControlName="quantity"
+                  min="2"
+                  placeholder="Ej: 10"
+                  inputmode="numeric"
+                  autocomplete="off"
+                />
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('quantity')?.errors?.['required'] && newComboForm.get('quantity')?.touched">
+                  La cantidad es obligatoria.
+                </p>
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('quantity')?.errors?.['min'] && newComboForm.get('quantity')?.touched">
+                  La cantidad mínima es 2.
+                </p>
+              </div>
+
+              <!-- Precio -->
+              <div class="form-field">
+                <label class="form-field__label" for="new-combo-price">
+                  Precio del combo (COP)
+                  <span class="form-field__required" aria-hidden="true">*</span>
+                </label>
+                <input
+                  id="new-combo-price"
+                  type="text"
+                  class="form-field__input"
+                  [class.form-field__input--error]="newComboForm.get('price_cop')?.invalid && newComboForm.get('price_cop')?.touched"
+                  [value]="newComboPriceRaw"
+                  (input)="onNewComboPriceInput($event)"
+                  (blur)="onNewComboPriceBlur()"
+                  placeholder="Ej: $25.000"
+                  inputmode="numeric"
+                  autocomplete="off"
+                />
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('price_cop')?.errors?.['required'] && newComboForm.get('price_cop')?.touched">
+                  El precio es obligatorio.
+                </p>
+                <p class="form-field__error"
+                  *ngIf="newComboForm.get('price_cop')?.errors?.['min'] && newComboForm.get('price_cop')?.touched">
+                  El precio debe ser mayor a cero.
+                </p>
+              </div>
+
+            </form>
+
+            <!-- Preview -->
+            <ng-container *ngIf="getComboUnitPrice(newComboForm) as unitPrice">
+              <div class="combo-preview" role="note">
+                <p class="combo-preview__row">
+                  <span class="combo-preview__label">Precio unitario:</span>
+                  <span class="combo-preview__value">{{ formatCop(unitPrice) }}</span>
+                </p>
+                <ng-container *ngIf="getSelectedProductForForm(newComboForm) as selProd">
+                  <p class="combo-preview__row">
+                    <span class="combo-preview__label">vs precio individual:</span>
+                    <span class="combo-preview__value">{{ formatCop(selProd.price_cop) }}</span>
+                  </p>
+                  <ng-container *ngIf="getComboSavingAmount(newComboForm) as savingAmt">
+                    <p class="combo-preview__row combo-preview__row--saving">
+                      <span class="combo-preview__label">Ahorro por unidad:</span>
+                      <span class="combo-preview__saving">
+                        {{ formatCop(savingAmt) }} ({{ getComboSavingPercent(newComboForm) }}%)
+                        <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="combo-preview__check">
+                          <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
+                        </svg>
+                      </span>
+                    </p>
+                  </ng-container>
+                  <ng-container *ngIf="!getComboSavingAmount(newComboForm)">
+                    <p class="combo-preview__row combo-preview__row--no-saving">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="combo-preview__warn">
+                        <path stroke-linecap="round" stroke-linejoin="round"
+                          d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                      </svg>
+                      <span>Sin ahorro vs precio individual</span>
+                    </p>
+                  </ng-container>
+                </ng-container>
+              </div>
+            </ng-container>
+          </ng-template>
+
+          <!-- Feedback error -->
+          <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <span>{{ saveError }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="modal-footer__cancel"
+            (click)="closeNewComboModal()"
+            [disabled]="isSaving"
+          >Cancelar</button>
+          <button
+            *ngIf="activeProducts.length > 0"
+            type="button"
+            class="modal-footer__primary"
+            (click)="submitNewCombo()"
+            [disabled]="isSaving || newComboForm.invalid"
+          >
+            <ng-container *ngIf="!isSaving">Crear combo</ng-container>
+            <ng-container *ngIf="isSaving">Guardando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+  <!-- ══════════════════════════════════════════════════════════════
+       MODAL — Editar combo
+  ══════════════════════════════════════════════════════════════ -->
+  <ng-container *ngIf="activeModal === 'edit-combo' && selectedCombo">
+    <div
+      class="modal-backdrop"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modal-edit-combo-title"
+      (click)="closeEditComboModal()"
+    >
+      <div
+        class="modal-sheet"
+        (click)="$event.stopPropagation()"
+        appFocusTrap
+        (appFocusTrapEscape)="closeEditComboModal()"
+      >
+        <!-- Header -->
+        <div class="modal-header">
+          <h2 id="modal-edit-combo-title" class="modal-header__title">Editar combo</h2>
+          <button
+            type="button"
+            class="modal-header__close"
+            (click)="closeEditComboModal()"
+            aria-label="Cerrar modal"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Body -->
+        <div class="modal-body">
+
+          <!-- Nota informativa -->
+          <div class="combo-info-note" role="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M11.25 11.25l.041-.02a.75.75 0 011.063.852l-.708 2.836a.75.75 0 001.063.853l.041-.021M21 12a9 9 0 11-18 0 9 9 0 0118 0zm-9-3.75h.008v.008H12V8.25z"/>
+            </svg>
+            <span>Los combos activos de clientes no se ven afectados — conservan el precio al momento de su compra.</span>
+          </div>
+
+          <form [formGroup]="editComboForm" class="modal-form" novalidate>
+
+            <!-- Nombre -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-combo-name">
+                Nombre del combo
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="edit-combo-name"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="editComboForm.get('name')?.invalid && editComboForm.get('name')?.touched"
+                formControlName="name"
+                maxlength="100"
+                placeholder="Ej: Pack 10 granizados"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('name')?.errors?.['required'] && editComboForm.get('name')?.touched">
+                El nombre es obligatorio.
+              </p>
+            </div>
+
+            <!-- Producto -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-combo-product">
+                Producto
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <select
+                id="edit-combo-product"
+                class="form-field__input form-field__select"
+                [class.form-field__input--error]="editComboForm.get('product_id')?.invalid && editComboForm.get('product_id')?.touched"
+                formControlName="product_id"
+              >
+                <option value="" disabled>Selecciona un producto</option>
+                <option
+                  *ngFor="let p of activeProducts; trackBy: trackByProductSelect"
+                  [value]="p.id"
+                >{{ p.name }} — {{ p.size_label }} — {{ formatCop(p.price_cop) }}</option>
+              </select>
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('product_id')?.errors?.['required'] && editComboForm.get('product_id')?.touched">
+                Debes seleccionar un producto.
+              </p>
+              <p class="form-field__hint" *ngIf="getSelectedProductForForm(editComboForm) as selProd">
+                Precio individual: {{ formatCop(selProd.price_cop) }}
+              </p>
+            </div>
+
+            <!-- Cantidad -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-combo-qty">
+                Cantidad de unidades
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="edit-combo-qty"
+                type="number"
+                class="form-field__input"
+                [class.form-field__input--error]="editComboForm.get('quantity')?.invalid && editComboForm.get('quantity')?.touched"
+                formControlName="quantity"
+                min="2"
+                placeholder="Ej: 10"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('quantity')?.errors?.['required'] && editComboForm.get('quantity')?.touched">
+                La cantidad es obligatoria.
+              </p>
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('quantity')?.errors?.['min'] && editComboForm.get('quantity')?.touched">
+                La cantidad mínima es 2.
+              </p>
+            </div>
+
+            <!-- Precio -->
+            <div class="form-field">
+              <label class="form-field__label" for="edit-combo-price">
+                Precio del combo (COP)
+                <span class="form-field__required" aria-hidden="true">*</span>
+              </label>
+              <input
+                id="edit-combo-price"
+                type="text"
+                class="form-field__input"
+                [class.form-field__input--error]="editComboForm.get('price_cop')?.invalid && editComboForm.get('price_cop')?.touched"
+                [value]="editComboPriceRaw"
+                (input)="onEditComboPriceInput($event)"
+                (blur)="onEditComboPriceBlur()"
+                placeholder="Ej: $25.000"
+                inputmode="numeric"
+                autocomplete="off"
+              />
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('price_cop')?.errors?.['required'] && editComboForm.get('price_cop')?.touched">
+                El precio es obligatorio.
+              </p>
+              <p class="form-field__error"
+                *ngIf="editComboForm.get('price_cop')?.errors?.['min'] && editComboForm.get('price_cop')?.touched">
+                El precio debe ser mayor a cero.
+              </p>
+            </div>
+
+          </form>
+
+          <!-- Preview -->
+          <ng-container *ngIf="getComboUnitPrice(editComboForm) as unitPrice">
+            <div class="combo-preview" role="note">
+              <p class="combo-preview__row">
+                <span class="combo-preview__label">Precio unitario:</span>
+                <span class="combo-preview__value">{{ formatCop(unitPrice) }}</span>
+              </p>
+              <ng-container *ngIf="getSelectedProductForForm(editComboForm) as selProd">
+                <p class="combo-preview__row">
+                  <span class="combo-preview__label">vs precio individual:</span>
+                  <span class="combo-preview__value">{{ formatCop(selProd.price_cop) }}</span>
+                </p>
+                <ng-container *ngIf="getComboSavingAmount(editComboForm) as savingAmt">
+                  <p class="combo-preview__row combo-preview__row--saving">
+                    <span class="combo-preview__label">Ahorro por unidad:</span>
+                    <span class="combo-preview__saving">
+                      {{ formatCop(savingAmt) }} ({{ getComboSavingPercent(editComboForm) }}%)
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="combo-preview__check">
+                        <path fill-rule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clip-rule="evenodd"/>
+                      </svg>
+                    </span>
+                  </p>
+                </ng-container>
+                <ng-container *ngIf="!getComboSavingAmount(editComboForm)">
+                  <p class="combo-preview__row combo-preview__row--no-saving">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true" class="combo-preview__warn">
+                      <path stroke-linecap="round" stroke-linejoin="round"
+                        d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>
+                    </svg>
+                    <span>Sin ahorro vs precio individual</span>
+                  </p>
+                </ng-container>
+              </ng-container>
+            </div>
+          </ng-container>
+
+          <!-- Feedback error -->
+          <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+            </svg>
+            <span>{{ saveError }}</span>
+          </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="modal-footer__cancel"
+            (click)="closeEditComboModal()"
+            [disabled]="isSaving"
+          >Cancelar</button>
+          <button
+            type="button"
+            class="modal-footer__primary"
+            (click)="submitEditCombo()"
+            [disabled]="isSaving || editComboForm.invalid"
+          >
+            <ng-container *ngIf="!isSaving">Guardar cambios</ng-container>
+            <ng-container *ngIf="isSaving">Guardando...</ng-container>
+          </button>
+        </div>
+      </div>
+    </div>
+  </ng-container>
+
+</div>

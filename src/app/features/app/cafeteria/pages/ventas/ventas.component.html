@@ -1,0 +1,1819 @@
+<ng-container *ngIf="salesState$ | async as salesState">
+<ng-container *ngIf="combosState$ | async as combosState">
+
+<div class="ventas-page">
+
+  <!-- ══════════ HEADER ══════════ -->
+  <header class="ventas-page__header">
+    <div class="ventas-page__header-inner">
+      <div class="ventas-page__title-row">
+        <h1 class="ventas-page__title">Ventas</h1>
+        <button
+          type="button"
+          class="ventas-page__add-btn"
+          (click)="openNewSaleModal()"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+          </svg>
+          <span>Nueva venta</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="ventas-page__main">
+
+    <!-- Month navigator -->
+    <div class="month-nav" role="group" aria-label="Navegación de mes">
+      <button
+        type="button"
+        class="month-nav__btn"
+        (click)="goToPreviousMonth()"
+        aria-label="Mes anterior"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <span class="month-nav__label">{{ currentMonthLabel }}</span>
+      <button
+        type="button"
+        class="month-nav__btn"
+        [class.month-nav__btn--disabled]="isNextMonthBlocked"
+        [attr.aria-disabled]="isNextMonthBlocked ? 'true' : null"
+        [title]="isNextMonthBlocked ? 'Ya estás en el mes actual' : ''"
+        (click)="goToNextMonth()"
+        aria-label="Mes siguiente"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Summary cards -->
+    <ng-container *ngIf="tableView === 'individual'">
+      <div class="summary-cards" *ngIf="!salesState.loading">
+        <div class="summary-card">
+          <span class="summary-card__label">Total ingresos</span>
+          <span class="summary-card__value">{{ formatCop(totalIngresos(salesState.sales)) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">Ventas registradas</span>
+          <span class="summary-card__value">{{ totalRegistradas(salesState.sales) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">Saldo pendiente</span>
+          <span class="summary-card__value summary-card__value--danger">{{ formatCop(saldoPendiente(salesState.sales)) }}</span>
+        </div>
+      </div>
+      <div class="summary-cards" *ngIf="salesState.loading" aria-hidden="true">
+        <div class="summary-card" *ngFor="let i of [1, 2, 3]">
+          <div class="skeleton skeleton--line-sm" style="margin-bottom:6px"></div>
+          <div class="skeleton skeleton--line-lg"></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="tableView === 'combos'">
+      <div class="summary-cards" *ngIf="!combosState.loading">
+        <div class="summary-card">
+          <span class="summary-card__label">Total ingresos</span>
+          <span class="summary-card__value">{{ formatCop(totalIngresosCombo(combosState.purchases)) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">Combos vendidos</span>
+          <span class="summary-card__value">{{ totalCombosVendidos(combosState.purchases) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">Saldo pendiente</span>
+          <span class="summary-card__value summary-card__value--danger">{{ formatCop(saldoPendienteCombo(combosState.purchases)) }}</span>
+        </div>
+      </div>
+      <div class="summary-cards" *ngIf="combosState.loading" aria-hidden="true">
+        <div class="summary-card" *ngFor="let i of [1, 2, 3]">
+          <div class="skeleton skeleton--line-sm" style="margin-bottom:6px"></div>
+          <div class="skeleton skeleton--line-lg"></div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Table view toggle -->
+    <div class="table-view-toggle" role="group" aria-label="Vista de tabla">
+      <button
+        type="button"
+        class="table-view-toggle__btn"
+        [class.table-view-toggle__btn--active]="tableView === 'individual'"
+        (click)="setTableView('individual')"
+      >Ventas individuales</button>
+      <button
+        type="button"
+        class="table-view-toggle__btn"
+        [class.table-view-toggle__btn--active]="tableView === 'combos'"
+        (click)="setTableView('combos')"
+      >Combos</button>
+    </div>
+
+    <!-- Status filter pills -->
+    <div class="status-filter" role="group" aria-label="Filtrar por estado">
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'all'" (click)="setFilter('all')">Todos</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'paid'" (click)="setFilter('paid')">Pagado</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'partial'" (click)="setFilter('partial')">Parcial</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'pending'" (click)="setFilter('pending')">Pendiente</button>
+    </div>
+
+    <!-- ════════════════════ INDIVIDUAL SALES VIEW ════════════════════ -->
+    <ng-container *ngIf="tableView === 'individual'">
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="salesState.loading">
+        <div class="ventas-table-shell" aria-hidden="true">
+          <div class="ventas-table-wrapper">
+            <table class="ventas-table">
+              <thead>
+                <tr>
+                  <th>FECHA</th><th>PRODUCTO</th><th>COMPRADOR</th>
+                  <th>TOTAL</th><th>RECIBIDO</th><th>SALDO</th><th>ESTADO</th>
+                  <th><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of skeletonRows" class="ventas-table__row">
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--pill"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--icon"></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="ventas-cards" aria-hidden="true">
+          <div *ngFor="let row of skeletonRows" class="ventas-card skeleton-card">
+            <div class="skeleton-card__header">
+              <div class="skeleton skeleton--line-lg"></div>
+              <div class="skeleton skeleton--pill"></div>
+            </div>
+            <div class="skeleton-card__meta">
+              <div class="skeleton skeleton--line-md"></div>
+              <div class="skeleton skeleton--line-sm"></div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Error state -->
+      <div *ngIf="salesState.error && !salesState.loading" class="ventas-empty" role="alert">
+        <div class="ventas-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <p class="ventas-empty__title">Error al cargar</p>
+        <p class="ventas-empty__msg">{{ salesState.error }}</p>
+        <button type="button" class="ventas-empty__retry-btn" (click)="goToPreviousMonth(); goToNextMonth()">Reintentar</button>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!salesState.loading && !salesState.error && filterSales(salesState.sales).length === 0" class="ventas-empty">
+        <div class="ventas-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <p class="ventas-empty__title">Sin ventas en este período.</p>
+        <p *ngIf="statusFilter !== 'all'" class="ventas-empty__msg">Prueba cambiando el filtro de estado.</p>
+        <button
+          *ngIf="statusFilter === 'all'"
+          type="button"
+          class="ventas-empty__add-btn"
+          (click)="openNewSaleModal()"
+        >+ Nueva venta</button>
+      </div>
+
+      <!-- Table (tablet/desktop) -->
+      <ng-container *ngIf="!salesState.loading && !salesState.error && filterSales(salesState.sales).length > 0">
+        <div class="ventas-table-shell">
+          <div class="ventas-table-wrapper" role="region" aria-label="Tabla de ventas">
+            <table class="ventas-table">
+              <thead>
+                <tr>
+                  <th scope="col">FECHA</th>
+                  <th scope="col">PRODUCTO</th>
+                  <th scope="col">COMPRADOR</th>
+                  <th scope="col">TOTAL</th>
+                  <th scope="col">RECIBIDO</th>
+                  <th scope="col">SALDO</th>
+                  <th scope="col">ESTADO</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let sale of filterSales(salesState.sales); trackBy: trackBySaleId"
+                  class="ventas-table__row"
+                >
+                  <td class="ventas-table__cell ventas-table__cell--date">
+                    <span>{{ formatDateShort(sale.sale_date) }}</span>
+                    <span
+                      *ngIf="hasDifferentRegistrationDate(sale)"
+                      class="date-info-icon"
+                      [title]="'Registrado el ' + formatDateShort(sale.reported_date)"
+                      aria-label="Fecha de registro diferente"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                        <circle cx="12" cy="12" r="10"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/>
+                      </svg>
+                    </span>
+                  </td>
+                  <td class="ventas-table__cell ventas-table__cell--product">
+                    <span class="product-name">
+                      {{ sale.product?.name ?? '—' }}<ng-container *ngIf="sale.quantity > 1"> × {{ sale.quantity }}</ng-container>
+                    </span>
+                    <span *ngIf="sale.product?.size_label" class="size-badge">{{ sale.product!.size_label }}</span>
+                  </td>
+                  <td class="ventas-table__cell">
+                    <div class="buyer-cell">
+                      <span class="buyer-name">{{ getBuyerName(sale) }}</span>
+                      <span
+                        class="buyer-badge"
+                        [class.buyer-badge--client]="getBuyerType(sale) === 'client'"
+                        [class.buyer-badge--trainer]="getBuyerType(sale) === 'trainer'"
+                      >
+                        <ng-container *ngIf="getBuyerType(sale) === 'client'">Cliente</ng-container>
+                        <ng-container *ngIf="getBuyerType(sale) === 'trainer'">Entrenador</ng-container>
+                      </span>
+                    </div>
+                  </td>
+                  <td class="ventas-table__cell ventas-table__cell--amount">
+                    {{ formatCop(getSaleTotal(sale)) }}
+                  </td>
+                  <td class="ventas-table__cell ventas-table__cell--received">
+                    <span class="received-amount">{{ formatCop(sale.amount_received_cop) }}</span>
+                    <div class="progress-bar">
+                      <div
+                        class="progress-bar__fill"
+                        [class.progress-bar__fill--full]="isFullyPaid(sale)"
+                        [style.width.%]="getProgressPercent(sale)"
+                      ></div>
+                    </div>
+                  </td>
+                  <td class="ventas-table__cell ventas-table__cell--balance"
+                      [class.ventas-table__cell--balance-danger]="sale.balance_cop > 0"
+                      [class.ventas-table__cell--balance-muted]="sale.balance_cop === 0">
+                    {{ sale.balance_cop === 0 ? '$0' : formatCop(sale.balance_cop) }}
+                  </td>
+                  <td class="ventas-table__cell">
+                    <span
+                      class="status-badge"
+                      [class.status-badge--paid]="sale.status === 'paid'"
+                      [class.status-badge--partial]="sale.status === 'partial'"
+                      [class.status-badge--pending]="sale.status === 'pending'"
+                    >
+                      <span class="status-badge__dot" aria-hidden="true"></span>
+                      {{ getStatusLabel(sale.status) }}
+                    </span>
+                  </td>
+                  <td class="ventas-table__cell ventas-table__cell--actions">
+                    <app-ventas-actions-menu
+                      [sale]="sale"
+                      (detailRequested)="openDetailModal($event)"
+                      (installmentRequested)="openInstallmentModal($event)"
+                    ></app-ventas-actions-menu>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cards (mobile) -->
+        <div class="ventas-cards">
+          <div
+            *ngFor="let sale of filterSales(salesState.sales); trackBy: trackBySaleId"
+            class="ventas-card"
+          >
+            <div class="ventas-card__top">
+              <div class="ventas-card__left">
+                <div class="ventas-card__product-row">
+                  <span class="ventas-card__product-name">
+                    {{ sale.product?.name ?? '—' }}<ng-container *ngIf="sale.quantity > 1"> × {{ sale.quantity }}</ng-container>
+                  </span>
+                  <span *ngIf="sale.product?.size_label" class="size-badge">{{ sale.product!.size_label }}</span>
+                </div>
+                <div class="ventas-card__buyer-row">
+                  <span class="buyer-name">{{ getBuyerName(sale) }}</span>
+                  <span
+                    class="buyer-badge"
+                    [class.buyer-badge--client]="getBuyerType(sale) === 'client'"
+                    [class.buyer-badge--trainer]="getBuyerType(sale) === 'trainer'"
+                  >
+                    <ng-container *ngIf="getBuyerType(sale) === 'client'">Cliente</ng-container>
+                    <ng-container *ngIf="getBuyerType(sale) === 'trainer'">Entrenador</ng-container>
+                  </span>
+                </div>
+              </div>
+              <div class="ventas-card__right">
+                <span
+                  class="status-badge"
+                  [class.status-badge--paid]="sale.status === 'paid'"
+                  [class.status-badge--partial]="sale.status === 'partial'"
+                  [class.status-badge--pending]="sale.status === 'pending'"
+                >
+                  <span class="status-badge__dot" aria-hidden="true"></span>
+                  {{ getStatusLabel(sale.status) }}
+                </span>
+                <app-ventas-actions-menu
+                  [sale]="sale"
+                  (detailRequested)="openDetailModal($event)"
+                  (installmentRequested)="openInstallmentModal($event)"
+                ></app-ventas-actions-menu>
+              </div>
+            </div>
+            <div class="ventas-card__amounts">
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Total</span>
+                <span class="ventas-card__amount-value">{{ formatCop(getSaleTotal(sale)) }}</span>
+              </div>
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Recibido</span>
+                <span class="ventas-card__amount-value">{{ formatCop(sale.amount_received_cop) }}</span>
+              </div>
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Saldo</span>
+                <span
+                  class="ventas-card__amount-value"
+                  [class.ventas-card__amount-value--danger]="sale.balance_cop > 0"
+                  [class.ventas-card__amount-value--muted]="sale.balance_cop === 0"
+                >
+                  {{ sale.balance_cop === 0 ? '$0' : formatCop(sale.balance_cop) }}
+                </span>
+              </div>
+            </div>
+            <div class="ventas-card__progress">
+              <div class="progress-bar">
+                <div
+                  class="progress-bar__fill"
+                  [class.progress-bar__fill--full]="isFullyPaid(sale)"
+                  [style.width.%]="getProgressPercent(sale)"
+                ></div>
+              </div>
+            </div>
+            <div class="ventas-card__date">
+              {{ formatDateShort(sale.sale_date) }}
+              <span
+                *ngIf="hasDifferentRegistrationDate(sale)"
+                class="date-info-icon"
+                [title]="'Registrado el ' + formatDateShort(sale.reported_date)"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 16v-4M12 8h.01"/>
+                </svg>
+              </span>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+    </ng-container>
+    <!-- /INDIVIDUAL SALES VIEW -->
+
+    <!-- ════════════════════ COMBOS VIEW ════════════════════ -->
+    <ng-container *ngIf="tableView === 'combos'">
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="combosState.loading">
+        <div class="ventas-table-shell" aria-hidden="true">
+          <div class="ventas-table-wrapper">
+            <table class="ventas-table">
+              <thead>
+                <tr>
+                  <th>FECHA</th><th>COMBO</th><th>CLIENTE</th>
+                  <th>UNIDADES</th><th>PRECIO</th><th>RECIBIDO</th><th>SALDO</th><th>ESTADO</th>
+                  <th><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let row of skeletonRows" class="ventas-table__row">
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-lg"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--line-md"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--pill"></div></td>
+                  <td class="ventas-table__cell"><div class="skeleton skeleton--icon"></div></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="ventas-cards" aria-hidden="true">
+          <div *ngFor="let row of skeletonRows" class="ventas-card skeleton-card">
+            <div class="skeleton-card__header">
+              <div class="skeleton skeleton--line-lg"></div>
+              <div class="skeleton skeleton--pill"></div>
+            </div>
+            <div class="skeleton-card__meta">
+              <div class="skeleton skeleton--line-md"></div>
+              <div class="skeleton skeleton--line-sm"></div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Error state -->
+      <div *ngIf="combosState.error && !combosState.loading" class="ventas-empty" role="alert">
+        <div class="ventas-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/>
+          </svg>
+        </div>
+        <p class="ventas-empty__title">Error al cargar</p>
+        <p class="ventas-empty__msg">{{ combosState.error }}</p>
+      </div>
+
+      <!-- Empty state -->
+      <div *ngIf="!combosState.loading && !combosState.error && filterPurchases(combosState.purchases).length === 0" class="ventas-empty">
+        <div class="ventas-empty__icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+            <path stroke-linecap="round" stroke-linejoin="round"
+              d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
+          </svg>
+        </div>
+        <p class="ventas-empty__title">Sin combos en este período.</p>
+        <p *ngIf="statusFilter !== 'all'" class="ventas-empty__msg">Prueba cambiando el filtro de estado.</p>
+        <button
+          *ngIf="statusFilter === 'all'"
+          type="button"
+          class="ventas-empty__add-btn"
+          (click)="openNewSaleModal(); setSaleType('combo')"
+        >+ Nueva venta</button>
+      </div>
+
+      <!-- Table (tablet/desktop) -->
+      <ng-container *ngIf="!combosState.loading && !combosState.error && filterPurchases(combosState.purchases).length > 0">
+        <div class="ventas-table-shell">
+          <div class="ventas-table-wrapper" role="region" aria-label="Tabla de combos">
+            <table class="ventas-table">
+              <thead>
+                <tr>
+                  <th scope="col">FECHA</th>
+                  <th scope="col">COMBO</th>
+                  <th scope="col">CLIENTE</th>
+                  <th scope="col">UNIDADES</th>
+                  <th scope="col">PRECIO</th>
+                  <th scope="col">RECIBIDO</th>
+                  <th scope="col">SALDO</th>
+                  <th scope="col">ESTADO</th>
+                  <th scope="col"><span class="visually-hidden">Acciones</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  *ngFor="let p of filterPurchases(combosState.purchases); trackBy: trackByPurchaseId"
+                  class="ventas-table__row"
+                >
+                  <!-- FECHA -->
+                  <td class="ventas-table__cell ventas-table__cell--date">{{ formatDateShort(p.purchase_date) }}</td>
+
+                  <!-- COMBO -->
+                  <td class="ventas-table__cell ventas-table__cell--product">
+                    <span class="product-name">{{ p.combo?.name ?? '—' }}</span>
+                    <span *ngIf="p.combo?.product?.name" class="size-badge">{{ p.combo!.product!.name }}</span>
+                  </td>
+
+                  <!-- CLIENTE -->
+                  <td class="ventas-table__cell">
+                    <div class="buyer-cell">
+                      <span class="buyer-name">{{ getComboBuyerName(p) }}</span>
+                      <span class="buyer-badge buyer-badge--client" *ngIf="p.client_id">Cliente</span>
+                      <span class="buyer-badge buyer-badge--trainer" *ngIf="p.trainer_id && !p.client_id">Entrenador</span>
+                    </div>
+                  </td>
+
+                  <!-- UNIDADES -->
+                  <td class="ventas-table__cell ventas-table__cell--units">
+                    <span class="units-fraction">{{ p.units_consumed }} / {{ p.total_units }}</span>
+                    <div class="progress-bar progress-bar--units">
+                      <div
+                        class="progress-bar__fill"
+                        [class.progress-bar__fill--full]="p.is_completed"
+                        [style.width.%]="getComboConsumptionPercent(p)"
+                      ></div>
+                    </div>
+                  </td>
+
+                  <!-- PRECIO -->
+                  <td class="ventas-table__cell ventas-table__cell--amount">{{ formatCop(p.combo_price_snapshot_cop) }}</td>
+
+                  <!-- RECIBIDO -->
+                  <td class="ventas-table__cell ventas-table__cell--received">
+                    <span class="received-amount">{{ formatCop(p.amount_received_cop) }}</span>
+                    <div class="progress-bar">
+                      <div
+                        class="progress-bar__fill"
+                        [class.progress-bar__fill--full]="p.status === 'paid'"
+                        [style.width.%]="getComboPaymentProgressPercent(p)"
+                      ></div>
+                    </div>
+                  </td>
+
+                  <!-- SALDO -->
+                  <td class="ventas-table__cell ventas-table__cell--balance"
+                      [class.ventas-table__cell--balance-danger]="p.balance_cop > 0"
+                      [class.ventas-table__cell--balance-muted]="p.balance_cop === 0">
+                    {{ p.balance_cop === 0 ? '$0' : formatCop(p.balance_cop) }}
+                  </td>
+
+                  <!-- ESTADO -->
+                  <td class="ventas-table__cell">
+                    <span
+                      class="status-badge"
+                      [class.status-badge--paid]="p.status === 'paid'"
+                      [class.status-badge--partial]="p.status === 'partial'"
+                      [class.status-badge--pending]="p.status === 'pending'"
+                    >
+                      <span class="status-badge__dot" aria-hidden="true"></span>
+                      {{ getStatusLabel(p.status) }}
+                    </span>
+                  </td>
+
+                  <!-- ACCIONES -->
+                  <td class="ventas-table__cell ventas-table__cell--actions">
+                    <app-ventas-combos-actions-menu
+                      [purchase]="p"
+                      (detailRequested)="openComboDetailModal($event)"
+                      (consumptionRequested)="openConsumptionFromMenu($event)"
+                      (installmentRequested)="openComboInstallmentFromMenu($event)"
+                    ></app-ventas-combos-actions-menu>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Cards (mobile) -->
+        <div class="ventas-cards">
+          <div
+            *ngFor="let p of filterPurchases(combosState.purchases); trackBy: trackByPurchaseId"
+            class="ventas-card"
+          >
+            <div class="ventas-card__top">
+              <div class="ventas-card__left">
+                <div class="ventas-card__product-row">
+                  <span class="ventas-card__product-name">{{ p.combo?.name ?? '—' }}</span>
+                  <span *ngIf="p.combo?.product?.name" class="size-badge">{{ p.combo!.product!.name }}</span>
+                </div>
+                <div class="ventas-card__buyer-row">
+                  <span class="buyer-name">{{ getComboBuyerName(p) }}</span>
+                  <span class="buyer-badge buyer-badge--client" *ngIf="p.client_id">Cliente</span>
+                  <span class="buyer-badge buyer-badge--trainer" *ngIf="p.trainer_id && !p.client_id">Entrenador</span>
+                </div>
+              </div>
+              <div class="ventas-card__right">
+                <span
+                  class="status-badge"
+                  [class.status-badge--paid]="p.status === 'paid'"
+                  [class.status-badge--partial]="p.status === 'partial'"
+                  [class.status-badge--pending]="p.status === 'pending'"
+                >
+                  <span class="status-badge__dot" aria-hidden="true"></span>
+                  {{ getStatusLabel(p.status) }}
+                </span>
+                <app-ventas-combos-actions-menu
+                  [purchase]="p"
+                  (detailRequested)="openComboDetailModal($event)"
+                  (consumptionRequested)="openConsumptionFromMenu($event)"
+                  (installmentRequested)="openComboInstallmentFromMenu($event)"
+                ></app-ventas-combos-actions-menu>
+              </div>
+            </div>
+
+            <!-- Unidades -->
+            <div class="ventas-card__units-row">
+              <span class="ventas-card__units-label">Unidades</span>
+              <span class="ventas-card__units-fraction">{{ p.units_consumed }} / {{ p.total_units }}</span>
+            </div>
+            <div class="ventas-card__progress">
+              <div class="progress-bar">
+                <div
+                  class="progress-bar__fill"
+                  [class.progress-bar__fill--full]="p.is_completed"
+                  [style.width.%]="getComboConsumptionPercent(p)"
+                ></div>
+              </div>
+            </div>
+
+            <div class="ventas-card__amounts">
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Precio</span>
+                <span class="ventas-card__amount-value">{{ formatCop(p.combo_price_snapshot_cop) }}</span>
+              </div>
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Recibido</span>
+                <span class="ventas-card__amount-value">{{ formatCop(p.amount_received_cop) }}</span>
+              </div>
+              <div class="ventas-card__amount-item">
+                <span class="ventas-card__amount-label">Saldo</span>
+                <span
+                  class="ventas-card__amount-value"
+                  [class.ventas-card__amount-value--danger]="p.balance_cop > 0"
+                  [class.ventas-card__amount-value--muted]="p.balance_cop === 0"
+                >
+                  {{ p.balance_cop === 0 ? '$0' : formatCop(p.balance_cop) }}
+                </span>
+              </div>
+            </div>
+
+            <div class="ventas-card__date">{{ formatDateShort(p.purchase_date) }}</div>
+          </div>
+        </div>
+      </ng-container>
+
+    </ng-container>
+    <!-- /COMBOS VIEW -->
+
+  </main>
+</div>
+
+</ng-container>
+</ng-container>
+
+<!-- ══════════ MODAL: NUEVA VENTA ══════════ -->
+<div
+  *ngIf="activeModal === 'new-sale'"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Nueva venta"
+  (click)="closeNewSaleModal()"
+>
+  <div
+    class="modal-sheet"
+    (click)="$event.stopPropagation()"
+    appFocusTrap
+    (appFocusTrapEscape)="closeNewSaleModal()"
+  >
+    <!-- Header -->
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-header__title">Nueva venta</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeNewSaleModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- Tipo de venta: pills -->
+      <div class="sale-type-pills" role="group" aria-label="Tipo de venta">
+        <button
+          type="button"
+          class="sale-type-pill"
+          [class.sale-type-pill--active]="saleType === 'individual'"
+          (click)="setSaleType('individual')"
+        >Venta individual</button>
+        <button
+          type="button"
+          class="sale-type-pill"
+          [class.sale-type-pill--active]="saleType === 'combo'"
+          (click)="setSaleType('combo')"
+        >Combo</button>
+      </div>
+
+      <!-- ─── Formulario individual ─── -->
+      <form
+        *ngIf="saleType === 'individual'"
+        [formGroup]="newSaleForm"
+        class="modal-form"
+        (ngSubmit)="submitNewSale()"
+      >
+
+        <!-- Producto -->
+        <div class="form-field">
+          <label class="form-field__label" for="ns-product">
+            Producto <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <div *ngIf="isLoadingFormData" class="skeleton skeleton--line-lg" style="height:48px;border-radius:12px;width:100%"></div>
+          <select
+            *ngIf="!isLoadingFormData"
+            id="ns-product"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="newSaleForm.get('product_id')?.invalid && newSaleForm.get('product_id')?.touched"
+            formControlName="product_id"
+          >
+            <option value="" disabled [selected]="!newSaleForm.get('product_id')?.value">Seleccionar producto...</option>
+            <option
+              *ngFor="let p of activeProducts; trackBy: trackByProductId"
+              [value]="p.id"
+            >{{ p.name }} — {{ p.size_label }} — {{ formatCop(p.price_cop) }}</option>
+          </select>
+          <p *ngIf="getSelectedProduct() as product" class="form-field__hint">
+            Precio individual: {{ formatCop(product.price_cop) }}
+          </p>
+          <span
+            *ngIf="newSaleForm.get('product_id')?.invalid && newSaleForm.get('product_id')?.touched"
+            class="form-field__error"
+          >Selecciona un producto.</span>
+        </div>
+
+        <!-- Cantidad -->
+        <div class="form-field">
+          <label class="form-field__label" for="ns-qty">
+            Cantidad <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="ns-qty"
+            type="number"
+            inputmode="numeric"
+            class="form-field__input"
+            [class.form-field__input--error]="newSaleForm.get('quantity')?.invalid && newSaleForm.get('quantity')?.touched"
+            formControlName="quantity"
+            min="1"
+          />
+          <span
+            *ngIf="newSaleForm.get('quantity')?.invalid && newSaleForm.get('quantity')?.touched"
+            class="form-field__error"
+          >Mínimo 1.</span>
+        </div>
+
+        <!-- Preview total -->
+        <div *ngIf="getFormTotal() > 0" class="total-preview">
+          Total: <strong>{{ formatCop(getFormTotal()) }}</strong>
+          <span class="total-preview__detail">({{ newSaleForm.get('quantity')?.value }} × {{ formatCop(getSelectedProduct()?.price_cop ?? 0) }})</span>
+        </div>
+
+        <!-- Comprador -->
+        <div class="form-field">
+          <span class="form-field__label">
+            Comprador <span class="form-field__required" aria-hidden="true">*</span>
+          </span>
+          <div class="buyer-type-radios">
+            <label class="radio-label">
+              <input type="radio" name="buyer_type" [checked]="buyerType === 'client'" (change)="setBuyerType('client')" />
+              <span>Cliente</span>
+            </label>
+            <label class="radio-label">
+              <input type="radio" name="buyer_type" [checked]="buyerType === 'trainer'" (change)="setBuyerType('trainer')" />
+              <span>Entrenador</span>
+            </label>
+          </div>
+
+          <!-- Client autocomplete -->
+          <div *ngIf="buyerType === 'client'" class="autocomplete-wrap">
+            <input
+              type="text"
+              class="form-field__input"
+              placeholder="Buscar cliente..."
+              autocomplete="off"
+              [value]="clientQuery"
+              (input)="onClientQueryInput($event)"
+              (blur)="onClientBlur()"
+              (focus)="showClientDropdown = true"
+            />
+            <div *ngIf="showClientDropdown && filteredClients.length > 0" class="autocomplete-dropdown">
+              <button
+                *ngFor="let c of filteredClients; trackBy: trackByClientId"
+                type="button"
+                class="autocomplete-dropdown__item"
+                (mousedown)="selectClient(c)"
+              >{{ c.full_name }}</button>
+            </div>
+          </div>
+
+          <!-- Active combo banner -->
+          <ng-container *ngIf="buyerType === 'client' && selectedClientId">
+            <div *ngIf="isLoadingActiveCombos" class="active-combo-banner active-combo-banner--loading" aria-hidden="true">
+              <div class="skeleton skeleton--line-md"></div>
+            </div>
+            <div
+              *ngFor="let ac of clientActiveCombos; trackBy: trackByActiveComboId"
+              class="active-combo-banner"
+            >
+              <span class="active-combo-banner__icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round"
+                    d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z"/>
+                </svg>
+              </span>
+              <div class="active-combo-banner__content">
+                <span class="active-combo-banner__title">Combo activo: {{ ac.combo?.name ?? '—' }}</span>
+                <span class="active-combo-banner__detail">
+                  Consumidos: {{ ac.units_consumed }} · Restantes: {{ ac.total_units - ac.units_consumed }}
+                </span>
+              </div>
+              <button
+                type="button"
+                class="active-combo-banner__action"
+                (click)="openComboDetailFromBanner(ac)"
+              >Registrar consumo →</button>
+            </div>
+          </ng-container>
+
+          <!-- Trainer autocomplete -->
+          <div *ngIf="buyerType === 'trainer'" class="autocomplete-wrap">
+            <input
+              type="text"
+              class="form-field__input"
+              placeholder="Buscar entrenador..."
+              autocomplete="off"
+              [value]="trainerQuery"
+              (input)="onTrainerQueryInput($event)"
+              (blur)="onTrainerBlur()"
+              (focus)="showTrainerDropdown = true"
+            />
+            <div *ngIf="showTrainerDropdown && filteredTrainers.length > 0" class="autocomplete-dropdown">
+              <button
+                *ngFor="let t of filteredTrainers; trackBy: trackByTrainerId"
+                type="button"
+                class="autocomplete-dropdown__item"
+                (mousedown)="selectTrainer(t)"
+              >{{ t.full_name }}</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Fecha de venta -->
+        <div class="form-field">
+          <label class="form-field__label" for="ns-date">
+            Fecha de venta <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="ns-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="newSaleForm.get('sale_date')?.invalid && newSaleForm.get('sale_date')?.touched"
+            formControlName="sale_date"
+            [max]="today"
+          />
+          <span
+            *ngIf="newSaleForm.get('sale_date')?.invalid && newSaleForm.get('sale_date')?.touched"
+            class="form-field__error"
+          >La fecha es requerida.</span>
+        </div>
+
+        <!-- Monto recibido -->
+        <div class="form-field">
+          <label class="form-field__label" for="ns-amount">Monto recibido (COP)</label>
+          <input
+            id="ns-amount"
+            type="text"
+            inputmode="numeric"
+            class="form-field__input"
+            placeholder="0"
+            autocomplete="off"
+            [value]="amountReceivedRaw"
+            (input)="onAmountReceivedInput($event)"
+            (blur)="onAmountReceivedBlur()"
+          />
+          <div *ngIf="getAmountHint() === 'partial'" class="amount-hint amount-hint--partial">
+            Saldo pendiente: {{ formatCop(getFormTotal() - (newSaleForm.get('amount_received_cop')?.value ?? 0)) }}
+          </div>
+          <div *ngIf="getAmountHint() === 'exact'" class="amount-hint amount-hint--exact">
+            Pago completo ✓
+          </div>
+          <div *ngIf="getAmountHint() === 'over'" class="amount-hint amount-hint--over">
+            El monto supera el total
+          </div>
+        </div>
+
+        <!-- Método de pago -->
+        <div *ngIf="isPaymentMethodRequired()" class="form-field">
+          <label class="form-field__label" for="ns-method">
+            Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="ns-method"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="newSaleForm.get('payment_method')?.invalid && newSaleForm.get('payment_method')?.touched"
+            formControlName="payment_method"
+          >
+            <option value="" disabled [selected]="!newSaleForm.get('payment_method')?.value">Seleccionar...</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="other">Otro</option>
+          </select>
+          <span
+            *ngIf="newSaleForm.get('payment_method')?.invalid && newSaleForm.get('payment_method')?.touched"
+            class="form-field__error"
+          >Selecciona el método de pago.</span>
+        </div>
+
+        <!-- Notas -->
+        <div class="form-field">
+          <label class="form-field__label" for="ns-notes">Notas (opcional)</label>
+          <textarea
+            id="ns-notes"
+            class="form-field__textarea"
+            placeholder="Observaciones..."
+            formControlName="notes"
+            maxlength="300"
+            rows="3"
+          ></textarea>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ saveError }}
+        </div>
+
+      </form>
+
+      <!-- ─── Formulario combo ─── -->
+      <form
+        *ngIf="saleType === 'combo'"
+        [formGroup]="newComboForm"
+        class="modal-form"
+        (ngSubmit)="submitNewCombo()"
+      >
+
+        <!-- Combo -->
+        <div class="form-field">
+          <label class="form-field__label" for="nc-combo">
+            Combo <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <div *ngIf="isLoadingFormData" class="skeleton skeleton--line-lg" style="height:48px;border-radius:12px;width:100%"></div>
+          <select
+            *ngIf="!isLoadingFormData"
+            id="nc-combo"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="newComboForm.get('combo_id')?.invalid && newComboForm.get('combo_id')?.touched"
+            formControlName="combo_id"
+            (change)="onComboIdChange()"
+          >
+            <option value="" disabled [selected]="!newComboForm.get('combo_id')?.value">Seleccionar combo...</option>
+            <option
+              *ngFor="let c of activeCombos; trackBy: trackByComboId"
+              [value]="c.id"
+            >{{ c.name }} — {{ c.product?.name ?? '' }} ({{ c.product?.size_label ?? '' }}) — {{ c.quantity }} unid · {{ formatCop(c.price_cop) }} ({{ formatCop(c.price_cop / c.quantity) }} c/u)</option>
+          </select>
+          <span
+            *ngIf="newComboForm.get('combo_id')?.invalid && newComboForm.get('combo_id')?.touched"
+            class="form-field__error"
+          >Selecciona un combo.</span>
+
+          <!-- Combo preview mini-card -->
+          <div *ngIf="getSelectedCombo() as combo" class="combo-preview-card">
+            <span class="combo-preview-card__name">{{ combo.name }}</span>
+            <span class="combo-preview-card__detail">{{ combo.quantity }} unidades · {{ formatCop(combo.price_cop / combo.quantity) }} c/u</span>
+            <span class="combo-preview-card__total">Total: {{ formatCop(combo.price_cop) }}</span>
+          </div>
+        </div>
+
+        <!-- Comprador (cliente solo) -->
+        <div class="form-field">
+          <span class="form-field__label">
+            Cliente <span class="form-field__required" aria-hidden="true">*</span>
+          </span>
+          <div class="autocomplete-wrap">
+            <input
+              type="text"
+              class="form-field__input"
+              placeholder="Buscar cliente..."
+              autocomplete="off"
+              [value]="comboClientQuery"
+              (input)="onComboClientQueryInput($event)"
+              (blur)="onComboClientBlur()"
+              (focus)="showComboClientDropdown = true"
+            />
+            <div *ngIf="showComboClientDropdown && filteredComboClients.length > 0" class="autocomplete-dropdown">
+              <button
+                *ngFor="let c of filteredComboClients; trackBy: trackByClientId"
+                type="button"
+                class="autocomplete-dropdown__item"
+                (mousedown)="selectComboClient(c)"
+              >{{ c.full_name }}</button>
+            </div>
+          </div>
+
+          <!-- Duplicate warning -->
+          <div *ngIf="isCheckingComboConflict" class="combo-conflict-checking" aria-live="polite">
+            Verificando disponibilidad...
+          </div>
+          <div *ngIf="comboDuplicateWarning && !isCheckingComboConflict" class="combo-conflict-warning" role="alert">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <span>{{ comboDuplicateWarning }}</span>
+          </div>
+        </div>
+
+        <!-- Fecha de compra -->
+        <div class="form-field">
+          <label class="form-field__label" for="nc-date">
+            Fecha de compra <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="nc-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="newComboForm.get('purchase_date')?.invalid && newComboForm.get('purchase_date')?.touched"
+            formControlName="purchase_date"
+            [max]="today"
+          />
+          <span
+            *ngIf="newComboForm.get('purchase_date')?.invalid && newComboForm.get('purchase_date')?.touched"
+            class="form-field__error"
+          >La fecha es requerida.</span>
+        </div>
+
+        <!-- Monto recibido -->
+        <div class="form-field">
+          <label class="form-field__label" for="nc-amount">Monto recibido (COP)</label>
+          <input
+            id="nc-amount"
+            type="text"
+            inputmode="numeric"
+            class="form-field__input"
+            placeholder="0"
+            autocomplete="off"
+            [value]="comboAmountReceivedRaw"
+            (input)="onComboAmountReceivedInput($event)"
+            (blur)="onComboAmountReceivedBlur()"
+          />
+          <div *ngIf="getComboAmountHint() === 'partial'" class="amount-hint amount-hint--partial">
+            Saldo pendiente: {{ formatCop((getSelectedCombo()?.price_cop ?? 0) - (newComboForm.get('amount_received_cop')?.value ?? 0)) }}
+          </div>
+          <div *ngIf="getComboAmountHint() === 'exact'" class="amount-hint amount-hint--exact">
+            Pago completo ✓
+          </div>
+          <div *ngIf="getComboAmountHint() === 'over'" class="amount-hint amount-hint--over">
+            El monto supera el total
+          </div>
+        </div>
+
+        <!-- Método de pago -->
+        <div *ngIf="isComboPaymentMethodRequired()" class="form-field">
+          <label class="form-field__label" for="nc-method">
+            Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="nc-method"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="newComboForm.get('payment_method')?.invalid && newComboForm.get('payment_method')?.touched"
+            formControlName="payment_method"
+          >
+            <option value="" disabled [selected]="!newComboForm.get('payment_method')?.value">Seleccionar...</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="other">Otro</option>
+          </select>
+          <span
+            *ngIf="newComboForm.get('payment_method')?.invalid && newComboForm.get('payment_method')?.touched"
+            class="form-field__error"
+          >Selecciona el método de pago.</span>
+        </div>
+
+        <!-- Error -->
+        <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          {{ saveError }}
+        </div>
+
+      </form>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-footer__cancel"
+        (click)="closeNewSaleModal()"
+        [disabled]="isSaving"
+      >Cancelar</button>
+      <button
+        *ngIf="saleType === 'individual'"
+        type="button"
+        class="modal-footer__primary"
+        (click)="submitNewSale()"
+        [disabled]="isSaving"
+      >
+        <ng-container *ngIf="isSaving; else labelNS">Registrando...</ng-container>
+        <ng-template #labelNS>Registrar venta</ng-template>
+      </button>
+      <button
+        *ngIf="saleType === 'combo'"
+        type="button"
+        class="modal-footer__primary"
+        (click)="submitNewCombo()"
+        [disabled]="isSaving || isComboFormBlocked"
+      >
+        <ng-container *ngIf="isSaving; else labelNC">Registrando...</ng-container>
+        <ng-template #labelNC>Registrar venta</ng-template>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: DETALLE (individual) ══════════ -->
+<div
+  *ngIf="activeModal === 'detail' && selectedSale"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Detalle de venta"
+  (click)="closeDetailModal()"
+>
+  <div
+    class="modal-sheet modal-sheet--lg"
+    (click)="$event.stopPropagation()"
+    appFocusTrap
+    (appFocusTrapEscape)="closeDetailModal()"
+  >
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">
+          {{ selectedSale.product?.name ?? '—' }}
+          <span *ngIf="selectedSale.product?.size_label" class="size-badge">{{ selectedSale.product!.size_label }}</span>
+        </h2>
+        <div class="modal-header__badges">
+          <span
+            class="buyer-badge"
+            [class.buyer-badge--client]="getBuyerType(selectedSale) === 'client'"
+            [class.buyer-badge--trainer]="getBuyerType(selectedSale) === 'trainer'"
+          >
+            <ng-container *ngIf="getBuyerType(selectedSale) === 'client'">Cliente</ng-container>
+            <ng-container *ngIf="getBuyerType(selectedSale) === 'trainer'">Entrenador</ng-container>
+          </span>
+          <span
+            class="status-badge"
+            [class.status-badge--paid]="selectedSale.status === 'paid'"
+            [class.status-badge--partial]="selectedSale.status === 'partial'"
+            [class.status-badge--pending]="selectedSale.status === 'pending'"
+          >
+            <span class="status-badge__dot" aria-hidden="true"></span>
+            {{ getStatusLabel(selectedSale.status) }}
+          </span>
+        </div>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeDetailModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="summary-cards summary-cards--modal">
+        <div class="summary-card">
+          <span class="summary-card__label">TOTAL</span>
+          <span class="summary-card__value">{{ formatCop(getSaleTotal(selectedSale)) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">RECIBIDO</span>
+          <span class="summary-card__value summary-card__value--paid">{{ formatCop(selectedSale.amount_received_cop) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">SALDO</span>
+          <span
+            class="summary-card__value"
+            [class.summary-card__value--danger]="selectedSale.balance_cop > 0"
+            [class.summary-card__value--muted]="selectedSale.balance_cop === 0"
+          >{{ selectedSale.balance_cop === 0 ? '$0' : formatCop(selectedSale.balance_cop) }}</span>
+        </div>
+      </div>
+
+      <div class="progress-bar progress-bar--full">
+        <div
+          class="progress-bar__fill"
+          [class.progress-bar__fill--full]="isFullyPaid(selectedSale)"
+          [style.width.%]="getProgressPercent(selectedSale)"
+        ></div>
+      </div>
+
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-item__label">Comprador</span>
+          <div class="info-item__buyer">
+            <span class="info-item__value">{{ getBuyerName(selectedSale) }}</span>
+            <span
+              class="buyer-badge buyer-badge--sm"
+              [class.buyer-badge--client]="getBuyerType(selectedSale) === 'client'"
+              [class.buyer-badge--trainer]="getBuyerType(selectedSale) === 'trainer'"
+            >
+              <ng-container *ngIf="getBuyerType(selectedSale) === 'client'">Cliente</ng-container>
+              <ng-container *ngIf="getBuyerType(selectedSale) === 'trainer'">Entrenador</ng-container>
+            </span>
+          </div>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Fecha de venta</span>
+          <span class="info-item__value">{{ formatDateShort(selectedSale.sale_date) }}</span>
+        </div>
+        <div *ngIf="hasDifferentRegistrationDate(selectedSale)" class="info-item">
+          <span class="info-item__label">Fecha de registro</span>
+          <span class="info-item__value">{{ formatDateShort(selectedSale.reported_date) }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Cantidad</span>
+          <span class="info-item__value">{{ selectedSale.quantity }}</span>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Precio unitario (snapshot)</span>
+          <span class="info-item__value">{{ formatCop(selectedSale.product_price_snapshot_cop) }}</span>
+        </div>
+        <div *ngIf="selectedSale.payment_method" class="info-item">
+          <span class="info-item__label">Método de pago inicial</span>
+          <span class="info-item__value">{{ getMethodLabel(selectedSale.payment_method) }}</span>
+        </div>
+        <div *ngIf="selectedSale.notes" class="info-item info-item--full">
+          <span class="info-item__label">Notas</span>
+          <span class="info-item__value">{{ selectedSale.notes }}</span>
+        </div>
+      </div>
+
+      <div class="installments-section">
+        <div class="installments-section__header">
+          <span class="installments-section__title">Historial de abonos</span>
+          <span *ngIf="!isLoadingInstallments" class="installments-section__count">{{ installments.length }}</span>
+        </div>
+        <div *ngIf="isLoadingInstallments" class="installments-loading" aria-label="Cargando abonos...">
+          <div *ngFor="let i of [1, 2]" class="installment-skeleton"></div>
+        </div>
+        <p *ngIf="!isLoadingInstallments && installments.length === 0" class="installments-empty">
+          Sin abonos registrados.
+        </p>
+        <div *ngIf="!isLoadingInstallments && installments.length > 0" class="installments-list">
+          <div
+            *ngFor="let inst of installments; trackBy: trackByInstallmentId"
+            class="installment-row"
+          >
+            <span class="installment-row__date">{{ formatDateShort(inst.payment_date) }}</span>
+            <span class="installment-row__method">{{ getMethodLabel(inst.payment_method) }}</span>
+            <span class="installment-row__amount">{{ formatCop(inst.amount_cop) }}</span>
+          </div>
+          <div class="installments-total">
+            <span class="installments-total__label">Total abonado</span>
+            <span class="installments-total__value">{{ formatCop(installmentsTotal) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <ng-container *ngIf="selectedSale.status !== 'paid'; else paidLabel">
+        <button type="button" class="modal-footer__cancel" (click)="closeDetailModal()">Cerrar</button>
+        <button type="button" class="modal-footer__primary" (click)="openInstallmentFromDetail()">Registrar abono</button>
+      </ng-container>
+      <ng-template #paidLabel>
+        <p class="paid-message">Venta completamente pagada.</p>
+        <button type="button" class="modal-footer__cancel" (click)="closeDetailModal()">Cerrar</button>
+      </ng-template>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: ABONO (individual) ══════════ -->
+<div
+  *ngIf="activeModal === 'installment' && selectedSale"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Registrar abono"
+  (click)="closeInstallmentModal()"
+>
+  <div
+    class="modal-sheet"
+    (click)="$event.stopPropagation()"
+    appFocusTrap
+    (appFocusTrapEscape)="closeInstallmentModal()"
+  >
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-header__title">Registrar abono</h2>
+        <p class="modal-header__subtitle">
+          {{ selectedSale.product?.name ?? '—' }} — {{ getBuyerName(selectedSale) }}
+        </p>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeInstallmentModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="compact-summary">
+        <span>Total: <strong>{{ formatCop(getSaleTotal(selectedSale)) }}</strong></span>
+        <span class="compact-summary__sep" aria-hidden="true">·</span>
+        <span>Saldo: <strong>{{ formatCop(selectedSale.balance_cop) }}</strong></span>
+      </div>
+
+      <form [formGroup]="installmentForm" class="modal-form" (ngSubmit)="submitInstallment()">
+        <div class="form-field">
+          <label class="form-field__label" for="inst-amount">
+            Monto del abono (COP) <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="inst-amount"
+            type="text"
+            inputmode="numeric"
+            class="form-field__input"
+            [class.form-field__input--error]="installmentForm.get('amount_cop')?.invalid && installmentForm.get('amount_cop')?.touched"
+            placeholder="0"
+            autocomplete="off"
+            [value]="installmentAmountRaw"
+            (input)="onInstallmentAmountInput($event)"
+            (blur)="onInstallmentAmountBlur(); installmentForm.get('amount_cop')!.markAsTouched()"
+          />
+          <span
+            *ngIf="installmentForm.get('amount_cop')?.invalid && installmentForm.get('amount_cop')?.touched"
+            class="form-field__error"
+          >El monto debe ser mayor a cero.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="inst-date">
+            Fecha del abono <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="inst-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="installmentForm.get('payment_date')?.invalid && installmentForm.get('payment_date')?.touched"
+            formControlName="payment_date"
+            [max]="today"
+          />
+          <span
+            *ngIf="installmentForm.get('payment_date')?.invalid && installmentForm.get('payment_date')?.touched"
+            class="form-field__error"
+          >La fecha es requerida.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="inst-method">
+            Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="inst-method"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="installmentForm.get('payment_method')?.invalid && installmentForm.get('payment_method')?.touched"
+            formControlName="payment_method"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="other">Otro</option>
+          </select>
+          <span
+            *ngIf="installmentForm.get('payment_method')?.invalid && installmentForm.get('payment_method')?.touched"
+            class="form-field__error"
+          >Selecciona el método de pago.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="inst-notes">Notas (opcional)</label>
+          <input
+            id="inst-notes"
+            type="text"
+            class="form-field__input"
+            formControlName="notes"
+            placeholder="Observaciones..."
+            maxlength="300"
+          />
+        </div>
+      </form>
+
+      <div *ngIf="installmentForm.get('amount_cop')?.value as enteredAmount" class="result-preview">
+        <div class="result-preview__row">
+          <span class="result-preview__label">Saldo actual</span>
+          <span class="result-preview__value">{{ formatCop(selectedSale.balance_cop) }}</span>
+        </div>
+        <div class="result-preview__row">
+          <span class="result-preview__label">Este abono</span>
+          <span class="result-preview__value result-preview__value--deduct">− {{ formatCop(enteredAmount) }}</span>
+        </div>
+        <div class="result-preview__divider"></div>
+        <div class="result-preview__row">
+          <span class="result-preview__label result-preview__label--strong">Nuevo saldo</span>
+          <span
+            class="result-preview__value result-preview__value--strong"
+            [class.result-preview__value--success]="getInstallmentNewBalance() === 0"
+          >{{ formatCop(getInstallmentNewBalance()) }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ saveError }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-footer__cancel"
+        (click)="closeInstallmentModal()"
+        [disabled]="isSaving"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="modal-footer__primary"
+        (click)="submitInstallment()"
+        [disabled]="installmentForm.invalid || isSaving"
+      >
+        <ng-container *ngIf="isSaving; else labelInst">Registrando...</ng-container>
+        <ng-template #labelInst>Registrar abono</ng-template>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: DETALLE DE COMBO ══════════ -->
+<div
+  *ngIf="activeModal === 'combo-detail' && selectedPurchase"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Detalle de combo"
+  (click)="closeComboDetailModal()"
+>
+  <div
+    class="modal-sheet modal-sheet--lg"
+    (click)="$event.stopPropagation()"
+    appFocusTrap
+    (appFocusTrapEscape)="closeComboDetailModal()"
+  >
+    <!-- Header -->
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">{{ selectedPurchase.combo?.name ?? 'Combo' }}</h2>
+        <div class="modal-header__badges">
+          <span
+            class="status-badge"
+            [class.status-badge--paid]="selectedPurchase.status === 'paid'"
+            [class.status-badge--partial]="selectedPurchase.status === 'partial'"
+            [class.status-badge--pending]="selectedPurchase.status === 'pending'"
+          >
+            <span class="status-badge__dot" aria-hidden="true"></span>
+            {{ getStatusLabel(selectedPurchase.status) }}
+          </span>
+          <span class="status-badge status-badge--completed" *ngIf="selectedPurchase.is_completed">
+            <span class="status-badge__dot" aria-hidden="true"></span>
+            Completado
+          </span>
+          <span class="status-badge status-badge--in-progress" *ngIf="!selectedPurchase.is_completed">
+            <span class="status-badge__dot" aria-hidden="true"></span>
+            En curso
+          </span>
+        </div>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeComboDetailModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Body -->
+    <div class="modal-body">
+
+      <!-- 3 cards resumen (pago) -->
+      <div class="summary-cards summary-cards--modal">
+        <div class="summary-card">
+          <span class="summary-card__label">TOTAL PRECIO</span>
+          <span class="summary-card__value">{{ formatCop(selectedPurchase.combo_price_snapshot_cop) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">RECIBIDO</span>
+          <span class="summary-card__value summary-card__value--paid">{{ formatCop(selectedPurchase.amount_received_cop) }}</span>
+        </div>
+        <div class="summary-card">
+          <span class="summary-card__label">SALDO PAGO</span>
+          <span
+            class="summary-card__value"
+            [class.summary-card__value--danger]="selectedPurchase.balance_cop > 0"
+            [class.summary-card__value--muted]="selectedPurchase.balance_cop === 0"
+          >{{ selectedPurchase.balance_cop === 0 ? '$0' : formatCop(selectedPurchase.balance_cop) }}</span>
+        </div>
+      </div>
+
+      <!-- Barra progreso de pago -->
+      <div class="progress-bar progress-bar--full">
+        <div
+          class="progress-bar__fill"
+          [class.progress-bar__fill--full]="selectedPurchase.status === 'paid'"
+          [style.width.%]="getComboPaymentProgressPercent(selectedPurchase)"
+        ></div>
+      </div>
+
+      <!-- Progreso de consumo -->
+      <div class="combo-consumption-section">
+        <div class="combo-consumption-section__header">
+          <span class="combo-consumption-section__icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75">
+              <path stroke-linecap="round" stroke-linejoin="round"
+                d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/>
+            </svg>
+          </span>
+          <span class="combo-consumption-section__title">
+            Unidades consumidas: {{ selectedPurchase.units_consumed }} de {{ selectedPurchase.total_units }}
+          </span>
+        </div>
+        <div class="progress-bar progress-bar--full progress-bar--thick">
+          <div
+            class="progress-bar__fill"
+            [class.progress-bar__fill--full]="selectedPurchase.is_completed"
+            [style.width.%]="getComboConsumptionPercent(selectedPurchase)"
+          ></div>
+        </div>
+        <span class="combo-consumption-section__remaining" *ngIf="!selectedPurchase.is_completed">
+          Quedan: {{ selectedPurchase.total_units - selectedPurchase.units_consumed }} unidades
+        </span>
+        <span class="combo-consumption-section__done" *ngIf="selectedPurchase.is_completed">
+          ✓ Combo completado
+        </span>
+      </div>
+
+      <!-- Info básica -->
+      <div class="info-grid">
+        <div class="info-item">
+          <span class="info-item__label">Cliente</span>
+          <div class="info-item__buyer">
+            <span class="info-item__value">{{ getComboBuyerName(selectedPurchase) }}</span>
+            <span class="buyer-badge buyer-badge--sm buyer-badge--client" *ngIf="selectedPurchase.client_id">Cliente</span>
+          </div>
+        </div>
+        <div class="info-item">
+          <span class="info-item__label">Fecha de compra</span>
+          <span class="info-item__value">{{ formatDateShort(selectedPurchase.purchase_date) }}</span>
+        </div>
+        <div class="info-item" *ngIf="selectedPurchase.payment_method">
+          <span class="info-item__label">Método de pago inicial</span>
+          <span class="info-item__value">{{ getMethodLabel(selectedPurchase.payment_method) }}</span>
+        </div>
+        <div class="info-item" *ngIf="selectedPurchase.combo?.product?.name">
+          <span class="info-item__label">Producto</span>
+          <span class="info-item__value">{{ selectedPurchase.combo!.product!.name }} {{ selectedPurchase.combo!.product!.size_label }}</span>
+        </div>
+      </div>
+
+      <!-- Historial de consumos -->
+      <div class="installments-section">
+        <div class="installments-section__header">
+          <span class="installments-section__title">Historial de consumos</span>
+          <span *ngIf="!isLoadingComboDetail" class="installments-section__count">{{ comboConsumptions.length }}</span>
+        </div>
+        <div *ngIf="isLoadingComboDetail" class="installments-loading" aria-label="Cargando consumos...">
+          <div *ngFor="let i of [1, 2]" class="installment-skeleton"></div>
+        </div>
+        <p *ngIf="!isLoadingComboDetail && comboConsumptions.length === 0" class="installments-empty">
+          Sin consumos registrados.
+        </p>
+        <div *ngIf="!isLoadingComboDetail && comboConsumptions.length > 0" class="installments-list">
+          <div
+            *ngFor="let con of comboConsumptions; trackBy: trackByConsumptionId"
+            class="installment-row"
+          >
+            <span class="installment-row__date">{{ formatDateTime(con.consumed_at) }}</span>
+            <span *ngIf="con.registered_by_name" class="installment-row__method">{{ con.registered_by_name }}</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Historial de abonos -->
+      <div class="installments-section">
+        <div class="installments-section__header">
+          <span class="installments-section__title">Historial de abonos</span>
+          <span *ngIf="!isLoadingComboDetail" class="installments-section__count">{{ comboInstallments.length }}</span>
+        </div>
+        <div *ngIf="isLoadingComboDetail" class="installments-loading" aria-label="Cargando abonos...">
+          <div *ngFor="let i of [1, 2]" class="installment-skeleton"></div>
+        </div>
+        <p *ngIf="!isLoadingComboDetail && comboInstallments.length === 0" class="installments-empty">
+          Sin abonos registrados.
+        </p>
+        <div *ngIf="!isLoadingComboDetail && comboInstallments.length > 0" class="installments-list">
+          <div
+            *ngFor="let inst of comboInstallments; trackBy: trackByInstallmentId"
+            class="installment-row"
+          >
+            <span class="installment-row__date">{{ formatDateShort(inst.payment_date) }}</span>
+            <span class="installment-row__method">{{ getMethodLabel(inst.payment_method) }}</span>
+            <span class="installment-row__amount">{{ formatCop(inst.amount_cop) }}</span>
+          </div>
+          <div class="installments-total">
+            <span class="installments-total__label">Total abonado</span>
+            <span class="installments-total__value">{{ formatCop(comboInstallmentsTotal) }}</span>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Footer -->
+    <div class="modal-footer">
+      <ng-container *ngIf="selectedPurchase.is_completed && selectedPurchase.balance_cop === 0; else comboActions">
+        <p class="paid-message">Combo completado y pagado ✓</p>
+        <button type="button" class="modal-footer__cancel" (click)="closeComboDetailModal()">Cerrar</button>
+      </ng-container>
+      <ng-template #comboActions>
+        <button type="button" class="modal-footer__cancel" (click)="closeComboDetailModal()">Cerrar</button>
+        <button
+          *ngIf="!selectedPurchase.is_completed"
+          type="button"
+          class="modal-footer__secondary"
+          (click)="registerConsumptionFromDetail()"
+          [disabled]="isRegisteringConsumption"
+        >
+          <ng-container *ngIf="isRegisteringConsumption; else labelConsume">Registrando...</ng-container>
+          <ng-template #labelConsume>Registrar consumo</ng-template>
+        </button>
+        <button
+          *ngIf="selectedPurchase.balance_cop > 0"
+          type="button"
+          class="modal-footer__primary"
+          (click)="openComboInstallmentFromDetail()"
+        >Abonar</button>
+      </ng-template>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL: ABONO (combo) ══════════ -->
+<div
+  *ngIf="activeModal === 'combo-installment' && selectedPurchase"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Registrar abono a combo"
+  (click)="closeComboInstallmentModal()"
+>
+  <div
+    class="modal-sheet"
+    (click)="$event.stopPropagation()"
+    appFocusTrap
+    (appFocusTrapEscape)="closeComboInstallmentModal()"
+  >
+    <div class="modal-header">
+      <div>
+        <h2 class="modal-header__title">Registrar abono</h2>
+        <p class="modal-header__subtitle">
+          {{ selectedPurchase.combo?.name ?? 'Combo' }} — {{ getComboBuyerName(selectedPurchase) }}
+        </p>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeComboInstallmentModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="compact-summary">
+        <span>Total: <strong>{{ formatCop(selectedPurchase.combo_price_snapshot_cop) }}</strong></span>
+        <span class="compact-summary__sep" aria-hidden="true">·</span>
+        <span>Saldo: <strong>{{ formatCop(selectedPurchase.balance_cop) }}</strong></span>
+      </div>
+
+      <form [formGroup]="comboInstallmentForm" class="modal-form" (ngSubmit)="submitComboInstallment()">
+        <div class="form-field">
+          <label class="form-field__label" for="cinst-amount">
+            Monto del abono (COP) <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cinst-amount"
+            type="text"
+            inputmode="numeric"
+            class="form-field__input"
+            [class.form-field__input--error]="comboInstallmentForm.get('amount_cop')?.invalid && comboInstallmentForm.get('amount_cop')?.touched"
+            placeholder="0"
+            autocomplete="off"
+            [value]="comboInstallmentAmountRaw"
+            (input)="onComboInstallmentAmountInput($event)"
+            (blur)="onComboInstallmentAmountBlur(); comboInstallmentForm.get('amount_cop')!.markAsTouched()"
+          />
+          <span
+            *ngIf="comboInstallmentForm.get('amount_cop')?.invalid && comboInstallmentForm.get('amount_cop')?.touched"
+            class="form-field__error"
+          >El monto debe ser mayor a cero.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="cinst-date">
+            Fecha del abono <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <input
+            id="cinst-date"
+            type="date"
+            class="form-field__input"
+            [class.form-field__input--error]="comboInstallmentForm.get('payment_date')?.invalid && comboInstallmentForm.get('payment_date')?.touched"
+            formControlName="payment_date"
+            [max]="today"
+          />
+          <span
+            *ngIf="comboInstallmentForm.get('payment_date')?.invalid && comboInstallmentForm.get('payment_date')?.touched"
+            class="form-field__error"
+          >La fecha es requerida.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="cinst-method">
+            Método de pago <span class="form-field__required" aria-hidden="true">*</span>
+          </label>
+          <select
+            id="cinst-method"
+            class="form-field__input form-field__select"
+            [class.form-field__input--error]="comboInstallmentForm.get('payment_method')?.invalid && comboInstallmentForm.get('payment_method')?.touched"
+            formControlName="payment_method"
+          >
+            <option value="" disabled>Seleccionar...</option>
+            <option value="cash">Efectivo</option>
+            <option value="transfer">Transferencia</option>
+            <option value="nequi">Nequi</option>
+            <option value="other">Otro</option>
+          </select>
+          <span
+            *ngIf="comboInstallmentForm.get('payment_method')?.invalid && comboInstallmentForm.get('payment_method')?.touched"
+            class="form-field__error"
+          >Selecciona el método de pago.</span>
+        </div>
+
+        <div class="form-field">
+          <label class="form-field__label" for="cinst-notes">Notas (opcional)</label>
+          <input
+            id="cinst-notes"
+            type="text"
+            class="form-field__input"
+            formControlName="notes"
+            placeholder="Observaciones..."
+            maxlength="300"
+          />
+        </div>
+      </form>
+
+      <div *ngIf="comboInstallmentForm.get('amount_cop')?.value as enteredAmount" class="result-preview">
+        <div class="result-preview__row">
+          <span class="result-preview__label">Saldo actual</span>
+          <span class="result-preview__value">{{ formatCop(selectedPurchase.balance_cop) }}</span>
+        </div>
+        <div class="result-preview__row">
+          <span class="result-preview__label">Este abono</span>
+          <span class="result-preview__value result-preview__value--deduct">− {{ formatCop(enteredAmount) }}</span>
+        </div>
+        <div class="result-preview__divider"></div>
+        <div class="result-preview__row">
+          <span class="result-preview__label result-preview__label--strong">Nuevo saldo</span>
+          <span
+            class="result-preview__value result-preview__value--strong"
+            [class.result-preview__value--success]="getComboInstallmentNewBalance() === 0"
+          >{{ formatCop(getComboInstallmentNewBalance()) }}</span>
+        </div>
+      </div>
+
+      <div *ngIf="saveError" class="modal-feedback modal-feedback--error" role="alert">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+        </svg>
+        {{ saveError }}
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button
+        type="button"
+        class="modal-footer__cancel"
+        (click)="closeComboInstallmentModal()"
+        [disabled]="isSaving"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="modal-footer__primary"
+        (click)="submitComboInstallment()"
+        [disabled]="comboInstallmentForm.invalid || isSaving"
+      >
+        <ng-container *ngIf="isSaving; else labelCI">Registrando...</ng-container>
+        <ng-template #labelCI>Registrar abono</ng-template>
+      </button>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,659 @@
+<ng-container *ngIf="dashboardState$ | async as state">
+<ng-container *ngIf="modo$ | async as modo">
+<ng-container *ngIf="periodoSeleccionado$ | async as periodo">
+
+<div class="fv2-page">
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       HERO
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-hero">
+
+    <!-- ── Zona izquierda (60%) ─────────────────────────────────────── -->
+    <div class="fv2-hero__left">
+
+      <!-- Breadcrumb -->
+      <div class="fv2-breadcrumb">
+        <span>CAFETERÍA</span>
+        <span class="fv2-breadcrumb__sep">—</span>
+        <span>DASHBOARD</span>
+        <span class="fv2-breadcrumb__sep">—</span>
+        <span class="fv2-breadcrumb__current">{{ periodoLabel | uppercase }}</span>
+        <span
+          *ngIf="state.status === 'loaded' && state.data.periodo.es_parcial"
+          class="caf-status-chip"
+        >
+          <span class="caf-status-chip__dot" aria-hidden="true"></span>
+          en curso
+        </span>
+      </div>
+
+      <!-- Loading state -->
+      <ng-container *ngIf="state.status === 'loading'">
+        <div class="fv2-skeleton-block">
+          <div class="fv2-skeleton fv2-skeleton--label"></div>
+          <div class="fv2-skeleton fv2-skeleton--hero"></div>
+          <div class="fv2-skeleton fv2-skeleton--meta"></div>
+          <div class="fv2-skeleton fv2-skeleton--formula"></div>
+        </div>
+      </ng-container>
+
+      <!-- Error state -->
+      <ng-container *ngIf="state.status === 'error'">
+        <div class="fv2-error-block">
+          <p class="fv2-muted">Error al cargar el dashboard: {{ state.error }}</p>
+          <button class="fv2-link-btn" type="button" (click)="retry()">Reintentar</button>
+        </div>
+      </ng-container>
+
+      <!-- Loaded state -->
+      <ng-container *ngIf="state.status === 'loaded'">
+        <p class="fv2-caption">Utilidad del período</p>
+
+        <div class="fv2-hero__number-row">
+          <span
+            class="caf-hero__number"
+            [ngClass]="heroNumberClass(state.data.resumen.utilidad_cop)"
+          >{{ formatCop(state.data.resumen.utilidad_cop) }}</span>
+
+          <ng-container *ngIf="state.data.ingresos_anteriores.ingresos_cop > 0">
+            <span class="fv2-pill" [ngClass]="heroDelta(state.data).cssClass">
+              {{ heroDelta(state.data).text }}
+            </span>
+          </ng-container>
+        </div>
+
+        <p class="fv2-hero__formula">
+          {{ state.data.resumen.ventas_count }} ventas individuales
+          · {{ state.data.resumen.combos_count }} compras de combo
+        </p>
+        <p class="fv2-hero__formula">
+          + Ingresos {{ formatCop(state.data.resumen.ingresos_cop) }}
+          · − Costos {{ formatCop(state.data.resumen.costos_cop) }}
+        </p>
+      </ng-container>
+
+    </div>
+
+    <!-- ── Zona derecha (40%) ───────────────────────────────────────── -->
+    <div class="fv2-hero__right">
+      <div class="fv2-card fv2-card--floating caf-gauge-card">
+
+        <!-- Gauge -->
+        <div class="fv2-card__body caf-gauge-card__body">
+          <div class="fv2-gauge-col">
+
+            <!-- Loading gauge skeleton -->
+            <ng-container *ngIf="state.status === 'loading'">
+              <div class="fv2-skeleton fv2-skeleton--gauge"></div>
+            </ng-container>
+
+            <!-- Loaded gauge -->
+            <ng-container *ngIf="state.status === 'loaded'">
+              <ng-container *ngIf="buildGauge(state.data.resumen.margen_pct) as gauge">
+                <div class="fv2-gauge">
+                  <svg
+                    class="fv2-gauge__svg"
+                    [attr.width]="gauge.width"
+                    [attr.height]="gauge.height"
+                    [attr.viewBox]="gauge.viewBox"
+                    fill="none"
+                    aria-hidden="true"
+                  >
+                    <path
+                      [attr.d]="gauge.trackD"
+                      stroke="#e5e7eb"
+                      stroke-width="12"
+                      stroke-linecap="round"
+                      fill="none"
+                    />
+                    <path
+                      *ngIf="gauge.barD"
+                      class="fv2-gauge__bar"
+                      [attr.d]="gauge.barD"
+                      [attr.stroke]="gauge.color"
+                      stroke-width="12"
+                      stroke-linecap="round"
+                      fill="none"
+                    />
+                  </svg>
+                  <div class="fv2-gauge__center">
+                    <span class="fv2-gauge__pct" [class.fv2-gauge__pct--muted]="state.data.resumen.margen_pct === null">
+                      {{ gauge.pctLabel }}<span *ngIf="state.data.resumen.margen_pct !== null" class="fv2-gauge__suffix">%</span>
+                    </span>
+                    <span class="fv2-gauge__grade" [style.color]="gauge.color">{{ gauge.grade }}</span>
+                  </div>
+                </div>
+              </ng-container>
+            </ng-container>
+
+          </div>
+
+          <div class="fv2-context-col">
+            <span class="fv2-context__label">MARGEN CAFETERÍA</span>
+            <h3 class="fv2-context__title">Utilidad / Ingresos</h3>
+            <ng-container *ngIf="state.status === 'loaded'">
+              <p class="fv2-context__desc">
+                {{ buildGauge(state.data.resumen.margen_pct).description }}
+              </p>
+            </ng-container>
+          </div>
+        </div>
+
+        <!-- Separador -->
+        <div class="fv2-card__sep"></div>
+
+        <!-- Selector de período compacto -->
+        <div class="fv2-card__footer caf-period-selector">
+
+          <!-- Toggle Mensual / Trimestral -->
+          <div class="fv2-pills">
+            <button
+              *ngFor="let m of modos; trackBy: trackByModo"
+              type="button"
+              class="fv2-pill-tab"
+              [class.fv2-pill-tab--active]="modo === m"
+              (click)="cambiarModo(m)"
+            >{{ modoLabels[m] }}</button>
+          </div>
+
+          <!-- Navegación ◀ período ▶ -->
+          <div class="fv2-month-nav fv2-month-nav--compact">
+            <button
+              type="button"
+              class="fv2-month-nav__btn"
+              aria-label="Período anterior"
+              (click)="navegarPeriodo(-1)"
+            >◀</button>
+
+            <span class="fv2-month-nav__label">{{ periodoLabel }}</span>
+
+            <button
+              type="button"
+              class="fv2-month-nav__btn"
+              aria-label="Período siguiente"
+              [disabled]="isAtCurrentPeriod"
+              (click)="navegarPeriodo(1)"
+            >▶</button>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECCIÓN 01 — Indicadores del período
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <div class="fv2-section__header">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">01 /</span>
+          <h2 class="fv2-section__title">Indicadores</h2>
+        </div>
+        <p class="fv2-section__subtitle">
+          {{ seccion01Subtitle(modo, periodo) }}
+        </p>
+      </div>
+    </div>
+
+    <!-- Loading skeleton -->
+    <ng-container *ngIf="state.status === 'loading'">
+      <div class="fv2-cards-grid">
+        <div *ngFor="let _ of [1,2,3,4]" class="fv2-card--metric">
+          <div class="fv2-card-metric__skeleton">
+            <div class="fv2-skeleton fv2-skeleton--label-sm"></div>
+            <div class="fv2-skeleton fv2-skeleton--card-value"></div>
+            <div class="fv2-skeleton fv2-skeleton--line fv2-skeleton--short"></div>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+    <!-- Error -->
+    <ng-container *ngIf="state.status === 'error'">
+      <p class="fv2-muted">No se pudieron cargar los indicadores.</p>
+    </ng-container>
+
+    <!-- Cards -->
+    <ng-container *ngIf="state.status === 'loaded'">
+      <div class="fv2-cards-grid">
+        <div
+          *ngFor="let card of buildCards(state.data)"
+          class="fv2-card--metric"
+        >
+          <div class="fv2-card-metric__top">
+            <div class="fv2-card-metric__label-row">
+              <span class="fv2-card-metric__dot" [style.background]="card.color"></span>
+              <span class="fv2-card-metric__label">{{ card.label }}</span>
+            </div>
+          </div>
+
+          <div class="fv2-card-metric__value">
+            {{ isCardValueNumber(card.value) ? formatCop(card.value!) : '—' }}
+          </div>
+
+          <div class="fv2-card-metric__meta">
+            <ng-container *ngIf="card.deltaAbsCop !== null && card.deltaPct !== null; else noCardDelta">
+              <span class="fv2-pill" [ngClass]="cardDeltaClass(card.deltaAbsCop, card.deltaPct)">
+                {{ cardDeltaText(card.deltaAbsCop, card.deltaPct) }}
+              </span>
+            </ng-container>
+            <ng-template #noCardDelta>
+              <span class="fv2-pill fv2-pill--flat">Sin cambio</span>
+            </ng-template>
+          </div>
+
+          <div class="fv2-card-metric__bottom">
+            <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
+          </div>
+        </div>
+      </div>
+    </ng-container>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECCIÓN 02 — Rendimiento por producto
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <div class="fv2-section__header">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">02 /</span>
+          <h2 class="fv2-section__title">Rendimiento por producto</h2>
+        </div>
+        <p class="fv2-section__subtitle">Ventas, ingresos y utilidad por presentación</p>
+      </div>
+    </div>
+
+    <ng-container *ngIf="state.status === 'loading'">
+      <div class="caf-table-skeleton">
+        <div *ngFor="let _ of [1,2,3]" class="fv2-skeleton fv2-skeleton--line caf-skeleton-row"></div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="state.status === 'loaded'">
+
+      <!-- Empty state -->
+      <ng-container *ngIf="state.data.por_producto.length === 0">
+        <div class="fv2-empty-state">
+          <span class="fv2-empty-state__icon" aria-hidden="true">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#9ca3af" stroke-width="1.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+            </svg>
+          </span>
+          <p class="fv2-empty-state__title">Sin ventas en este período.</p>
+        </div>
+      </ng-container>
+
+      <!-- Tabla -->
+      <ng-container *ngIf="state.data.por_producto.length > 0">
+        <div class="caf-table-wrap">
+          <table class="caf-table">
+            <thead class="caf-table__head">
+              <tr>
+                <th class="caf-table__th">PRODUCTO</th>
+                <th class="caf-table__th caf-table__th--num">UNIDADES</th>
+                <th class="caf-table__th caf-table__th--num">INGRESOS</th>
+                <th class="caf-table__th caf-table__th--num">COSTOS</th>
+                <th class="caf-table__th caf-table__th--num">UTILIDAD</th>
+                <th class="caf-table__th caf-table__th--num">MARGEN</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let row of buildProductoRows(state.data); trackBy: trackByProductId"
+                class="caf-table__row"
+              >
+                <td class="caf-table__td caf-table__td--product">
+                  <span class="caf-product__name">{{ row.product_name }}</span>
+                  <span class="caf-badge caf-badge--neutral caf-product__size">{{ row.size_label }}</span>
+                </td>
+                <td class="caf-table__td caf-table__td--num">{{ row.unidades_vendidas }}</td>
+                <td class="caf-table__td caf-table__td--num caf-amount--tabular">{{ formatCop(row.ingresos_cop) }}</td>
+                <td class="caf-table__td caf-table__td--num caf-amount--tabular caf-amount--danger">{{ formatCop(row.costo_proporcional_cop) }}</td>
+                <td class="caf-table__td caf-table__td--num caf-amount--tabular"
+                  [class.caf-amount--positive]="row.utilidad_cop > 0"
+                  [class.caf-amount--negative]="row.utilidad_cop < 0"
+                  [class.caf-amount--muted]="row.utilidad_cop === 0"
+                >{{ formatCop(row.utilidad_cop) }}</td>
+                <td class="caf-table__td caf-table__td--num">
+                  <ng-container *ngIf="row.margen_pct !== null; else noMargen">
+                    <span class="caf-badge" [ngClass]="row.margenBadgeClass">
+                      {{ row.margen_pct.toFixed(1) }}%
+                    </span>
+                  </ng-container>
+                  <ng-template #noMargen><span class="caf-amount--muted">—</span></ng-template>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </ng-container>
+
+    </ng-container>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECCIÓN 03 — Ranking de compradores
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <div class="fv2-section__header fv2-section__header--with-actions">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">03 /</span>
+          <h2 class="fv2-section__title">Ranking de compradores</h2>
+        </div>
+        <p class="fv2-section__subtitle">Clientes y entrenadores por consumo</p>
+      </div>
+
+      <div class="fv2-pills" *ngIf="state.status === 'loaded'">
+        <button
+          type="button"
+          class="fv2-pill-tab"
+          [class.fv2-pill-tab--active]="rankingToggle === 'valor'"
+          (click)="onRankingToggle('valor')"
+        >Por valor $</button>
+        <button
+          type="button"
+          class="fv2-pill-tab"
+          [class.fv2-pill-tab--active]="rankingToggle === 'unidades'"
+          (click)="onRankingToggle('unidades')"
+        >Por unidades</button>
+      </div>
+    </div>
+
+    <ng-container *ngIf="state.status === 'loading'">
+      <div class="caf-ranking-skeleton">
+        <div *ngFor="let _ of [1,2,3,4,5]" class="fv2-skeleton fv2-skeleton--line caf-skeleton-row"></div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="state.status === 'loaded'">
+
+      <ng-container *ngIf="state.data.ranking_compradores.length === 0">
+        <div class="fv2-empty-state">
+          <p class="fv2-empty-state__title">Sin compradores en este período.</p>
+        </div>
+      </ng-container>
+
+      <ng-container *ngIf="state.data.ranking_compradores.length > 0">
+        <div class="caf-ranking">
+          <div
+            *ngFor="let item of buildRanking(state.data, rankingToggle); trackBy: trackByBuyerId"
+            class="caf-ranking__item"
+          >
+            <div class="caf-ranking__top">
+              <!-- Avatar -->
+              <div
+                class="caf-avatar"
+                [style.background]="item.avatarBg"
+                [style.color]="item.avatarFg"
+                aria-hidden="true"
+              >{{ item.initials }}</div>
+
+              <!-- Info -->
+              <div class="caf-ranking__info">
+                <div class="caf-ranking__name-row">
+                  <span class="caf-ranking__name">{{ item.buyer_name }}</span>
+                  <span
+                    class="caf-badge"
+                    [class.caf-badge--brand]="item.buyer_type === 'client'"
+                    [class.caf-badge--indigo]="item.buyer_type === 'trainer'"
+                  >{{ item.buyer_type === 'client' ? 'Cliente' : 'Entrenador' }}</span>
+                </div>
+                <span class="caf-ranking__meta">
+                  #{{ item.rank }}
+                  · {{ formatCop(item.total_cop) }}
+                  · {{ item.unidades }} unidades
+                </span>
+              </div>
+            </div>
+
+            <!-- Barra de progreso -->
+            <div class="caf-bar-track">
+              <div
+                class="caf-bar"
+                [style.width.%]="rankingToggle === 'valor' ? item.barWidthPct : item.barWidthPctUnidades"
+              ></div>
+            </div>
+          </div>
+        </div>
+      </ng-container>
+
+    </ng-container>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECCIÓN 04 — Combos en curso
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <div class="fv2-section__header">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">04 /</span>
+          <h2 class="fv2-section__title">Combos en curso</h2>
+        </div>
+        <p class="fv2-section__subtitle">Combos comprados sin completar</p>
+      </div>
+    </div>
+
+    <ng-container *ngIf="state.status === 'loading'">
+      <div class="caf-table-skeleton">
+        <div *ngFor="let _ of [1,2,3]" class="fv2-skeleton fv2-skeleton--line caf-skeleton-row"></div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="state.status === 'loaded'">
+
+      <!-- Empty (éxito) -->
+      <ng-container *ngIf="state.data.combos_activos.length === 0">
+        <div class="caf-empty-success">
+          <span class="caf-empty-success__icon" aria-hidden="true">✓</span>
+          <span class="caf-empty-success__text">Sin combos pendientes de completar</span>
+        </div>
+      </ng-container>
+
+      <!-- Tabla desktop / cards mobile -->
+      <ng-container *ngIf="state.data.combos_activos.length > 0">
+
+        <!-- Tabla (≥ 640px) -->
+        <div class="caf-table-wrap caf-table-wrap--combos">
+          <table class="caf-table">
+            <thead class="caf-table__head">
+              <tr>
+                <th class="caf-table__th">CLIENTE</th>
+                <th class="caf-table__th">COMBO</th>
+                <th class="caf-table__th caf-table__th--num">PROGRESO</th>
+                <th class="caf-table__th">COMPRA</th>
+                <th class="caf-table__th">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let combo of buildCombosActivos(state.data); trackBy: trackByComboId"
+                class="caf-table__row"
+              >
+                <td class="caf-table__td">{{ combo.client_name }}</td>
+                <td class="caf-table__td">
+                  <span class="caf-combo__name">{{ combo.combo_name }}</span>
+                  <span class="caf-combo__product">{{ combo.product_name }}</span>
+                </td>
+                <td class="caf-table__td caf-table__td--num">
+                  <div class="caf-progress">
+                    <span class="caf-progress__label">{{ combo.units_consumed }}/{{ combo.total_units }} unidades</span>
+                    <div class="caf-progress__track">
+                      <div
+                        class="caf-progress__bar"
+                        [style.width.%]="combo.progresoPct"
+                        [style.background]="combo.barColor"
+                      ></div>
+                    </div>
+                    <span class="caf-progress__pct">{{ combo.progresoPct.toFixed(0) }}%</span>
+                  </div>
+                </td>
+                <td class="caf-table__td">{{ formatDateDmy(combo.purchase_date) }}</td>
+                <td class="caf-table__td">
+                  <button
+                    type="button"
+                    class="caf-btn-outline"
+                    (click)="onVerVentas()"
+                  >Registrar consumo</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cards mobile (< 640px) -->
+        <div class="caf-mobile-cards">
+          <div
+            *ngFor="let combo of buildCombosActivos(state.data); trackBy: trackByComboId"
+            class="caf-mobile-card"
+          >
+            <div class="caf-mobile-card__header">
+              <span class="caf-mobile-card__title">{{ combo.client_name }}</span>
+              <span class="caf-mobile-card__subtitle">{{ combo.combo_name }} · {{ combo.product_name }}</span>
+            </div>
+            <div class="caf-progress">
+              <span class="caf-progress__label">{{ combo.units_consumed }}/{{ combo.total_units }} unidades</span>
+              <div class="caf-progress__track">
+                <div
+                  class="caf-progress__bar"
+                  [style.width.%]="combo.progresoPct"
+                  [style.background]="combo.barColor"
+                ></div>
+              </div>
+              <span class="caf-progress__pct">{{ combo.progresoPct.toFixed(0) }}%</span>
+            </div>
+            <div class="caf-mobile-card__footer">
+              <span class="caf-mobile-card__date">{{ formatDateDmy(combo.purchase_date) }}</span>
+              <button type="button" class="caf-btn-outline" (click)="onVerVentas()">
+                Registrar consumo
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </ng-container>
+
+    </ng-container>
+
+  </section>
+
+  <!-- ══════════════════════════════════════════════════════════════════
+       SECCIÓN 05 — Pendientes de cobro
+  ══════════════════════════════════════════════════════════════════════ -->
+  <section class="fv2-section">
+
+    <div class="fv2-section__header fv2-section__header--with-actions">
+      <div class="fv2-section__heading">
+        <div class="fv2-section__title-row">
+          <span class="fv2-section__num">05 /</span>
+          <h2 class="fv2-section__title">Pendientes de cobro</h2>
+        </div>
+        <p class="fv2-section__subtitle">Ventas sin pago completo</p>
+      </div>
+
+      <ng-container *ngIf="state.status === 'loaded' && state.data.ventas_pendientes.length > 0">
+        <span class="caf-counter-badge">{{ state.data.ventas_pendientes.length }}</span>
+      </ng-container>
+    </div>
+
+    <ng-container *ngIf="state.status === 'loading'">
+      <div class="caf-table-skeleton">
+        <div *ngFor="let _ of [1,2,3]" class="fv2-skeleton fv2-skeleton--line caf-skeleton-row"></div>
+      </div>
+    </ng-container>
+
+    <ng-container *ngIf="state.status === 'loaded'">
+
+      <!-- Empty (éxito) -->
+      <ng-container *ngIf="state.data.ventas_pendientes.length === 0">
+        <div class="caf-empty-success">
+          <span class="caf-empty-success__icon" aria-hidden="true">✓</span>
+          <span class="caf-empty-success__text">Sin ventas pendientes</span>
+        </div>
+      </ng-container>
+
+      <!-- Tabla -->
+      <ng-container *ngIf="state.data.ventas_pendientes.length > 0">
+
+        <!-- Tabla (≥ 640px) -->
+        <div class="caf-table-wrap caf-table-wrap--pendientes">
+          <table class="caf-table">
+            <thead class="caf-table__head">
+              <tr>
+                <th class="caf-table__th">COMPRADOR</th>
+                <th class="caf-table__th">PRODUCTO</th>
+                <th class="caf-table__th caf-table__th--num">MONTO PENDIENTE</th>
+                <th class="caf-table__th caf-table__th--num">DÍAS</th>
+                <th class="caf-table__th">ESTADO</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                *ngFor="let v of buildVentasPendientes(state.data); trackBy: trackBySaleId"
+                class="caf-table__row"
+              >
+                <td class="caf-table__td">{{ v.buyer_name }}</td>
+                <td class="caf-table__td">
+                  <span *ngIf="v.sale_type === 'combo'" class="caf-badge caf-badge--indigo caf-badge--sm">Combo</span>
+                  {{ v.product_name }}
+                </td>
+                <td class="caf-table__td caf-table__td--num caf-amount--tabular caf-amount--danger">
+                  {{ formatCop(v.monto_pendiente_cop) }}
+                </td>
+                <td class="caf-table__td caf-table__td--num" [ngClass]="v.diasColorClass">
+                  {{ v.dias_transcurridos }}d
+                </td>
+                <td class="caf-table__td">
+                  <span class="caf-badge caf-badge--neutral">Pendiente</span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Cards mobile (< 640px) -->
+        <div class="caf-mobile-cards">
+          <div
+            *ngFor="let v of buildVentasPendientes(state.data); trackBy: trackBySaleId"
+            class="caf-mobile-card"
+          >
+            <div class="caf-mobile-card__header">
+              <span class="caf-mobile-card__title">{{ v.buyer_name }}</span>
+              <span class="caf-mobile-card__subtitle">
+                <span *ngIf="v.sale_type === 'combo'" class="caf-badge caf-badge--indigo caf-badge--sm">Combo</span>
+                {{ v.product_name }}
+              </span>
+            </div>
+            <div class="caf-mobile-card__amounts">
+              <span class="caf-amount--tabular caf-amount--danger">{{ formatCop(v.monto_pendiente_cop) }}</span>
+              <span [ngClass]="v.diasColorClass">{{ v.dias_transcurridos }}d</span>
+              <span class="caf-badge caf-badge--neutral">Pendiente</span>
+            </div>
+          </div>
+        </div>
+
+      </ng-container>
+
+    </ng-container>
+
+  </section>
+
+</div>
+
+</ng-container>
+</ng-container>
+</ng-container>

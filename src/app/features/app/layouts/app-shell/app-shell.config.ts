@@ -9,7 +9,13 @@ export type NavIconKey =
   | 'briefcase'
   | 'receipt'
   | 'banknote'
-  | 'file-text';
+  | 'file-text'
+  | 'coffee'
+  | 'shopping-cart'
+  | 'book-open'
+  | 'package'
+  | 'archive'
+  | 'bar-chart';
 
 export interface NavMenuItem {
   label: string;
@@ -132,6 +138,50 @@ export const NAV_SECTIONS: NavMenuSection[] = [
         description: 'Movimientos reales de caja por período.',
         iconKey: 'file-text',
         routerLink: '/app/contabilidad/flujo-de-caja'
+      }
+    ]
+  },
+  {
+    id: 'cafeteria',
+    label: 'Cafetería',
+    description: 'Ventas, catálogo, insumos y cierres de cafetería.',
+    triggerIcon: 'coffee',
+    allowedRoles: ['admin'],
+    items: [
+      {
+        label: 'Ventas',
+        description: 'Registro de ventas de cafetería.',
+        iconKey: 'shopping-cart',
+        routerLink: '/app/cafeteria/ventas',
+        allowedRoles: ['admin']
+      },
+      {
+        label: 'Catálogo',
+        description: 'Productos, presentaciones y combos.',
+        iconKey: 'book-open',
+        routerLink: '/app/cafeteria/catalogo',
+        allowedRoles: ['admin']
+      },
+      {
+        label: 'Insumos',
+        description: 'Registro de costos de cafetería.',
+        iconKey: 'package',
+        routerLink: '/app/cafeteria/insumos',
+        allowedRoles: ['admin']
+      },
+      {
+        label: 'Cierres',
+        description: 'Cierres quincenales de cafetería.',
+        iconKey: 'archive',
+        routerLink: '/app/cafeteria/cierres',
+        allowedRoles: ['admin']
+      },
+      {
+        label: 'Dashboard',
+        description: 'Estadísticas de cafetería.',
+        iconKey: 'bar-chart',
+        routerLink: '/app/cafeteria/dashboard',
+        allowedRoles: ['admin']
       }
     ]
   }

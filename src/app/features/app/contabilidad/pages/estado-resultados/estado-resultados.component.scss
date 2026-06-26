@@ -457,10 +457,13 @@
 }
 
 .er-row__label {
-  flex: 0 1 auto;
+  // flex: 1 allows the label to grow and fill available space between itself
+  // and the amount, so the amount stays at the right edge even on mobile
+  // where .er-row__leader is display:none and cannot act as spacer.
+  flex: 1;
+  min-width: 0;
   font-size: 0.9rem;
   color: var(--fv2-text-primary);
-  min-width: 0;
   overflow-wrap: anywhere;
 
   @media (max-width: 480px) {
@@ -506,8 +509,8 @@
   margin: 4px 0 0;
   padding-top: 10px;
 
-  // Sin leader en totales: el monto se empuja al borde derecho directamente.
-  .er-row__amount {
+  // .er-row__right agrupa monto + porcentaje y se empuja al borde derecho.
+  .er-row__right {
     margin-left: auto;
   }
 
@@ -521,6 +524,44 @@
   .er-row__label {
     letter-spacing: 0.04em;
   }
+}
+
+// ─── Contenedor monto + porcentaje (filas de total y bloques de utilidad) ──
+.er-row__right {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  flex: 0 0 auto;
+}
+
+// ─── Porcentaje de participación ──────────────────────────────────────────
+.er-row__pct {
+  font-size: 0.8rem;
+  color: var(--fv2-text-muted);
+  font-weight: 400;
+  min-width: 48px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+
+  // Filas destacadas: tamaño mayor, color semántico heredado vía [ngClass].
+  &--highlight {
+    font-size: 0.9rem;
+    font-weight: 600;
+
+    // Los modificadores de color semántico los aplica utilidadAmountClass()
+    // (er-utilidad__amount--positive/negative/zero). Esas clases ya están
+    // definidas en .er-utilidad__amount y el SCSS de :host las resuelve
+    // correctamente porque comparten el mismo scope de componente.
+    &.er-utilidad__amount--positive { color: var(--fv2-success); }
+    &.er-utilidad__amount--negative { color: var(--fv2-danger); }
+    &.er-utilidad__amount--zero     { color: var(--fv2-text-muted); }
+  }
+}
+
+@media (max-width: 375px) {
+  .er-row__pct { font-size: 0.75rem; }
+  .er-row__pct--highlight { font-size: 0.75rem; }
 }
 
 // ─── Estado vacío ─────────────────────────────────────────────────────────
@@ -565,30 +606,6 @@
   color: var(--fv2-text-secondary);
 }
 
-// ─── Línea especial: Nómina entrenadores (trainer_closures) ──────────────
-.er-row--nomina {
-  .er-row__label {
-    font-weight: 500;
-  }
-}
-
-.er-row__nomina-dot {
-  display: inline-block;
-  margin-right: 6px;
-  font-size: 0.6rem;
-  line-height: 1;
-  vertical-align: middle;
-  color: #6366f1; // --fv2-indigo
-}
-
-.er-row__amount--nomina {
-  font-weight: 500;
-}
-
-.er-row__amount--zero {
-  color: var(--fv2-text-muted);
-}
-
 // ═════════════════════════════════════════════════════════════════════════
 // BLOQUE DE UTILIDAD (bruta y operativa)
 // ═════════════════════════════════════════════════════════════════════════
@@ -613,6 +630,11 @@
 }
 
 .er-utilidad__label {
+  // flex: 1 keeps the label growing so the amount stays at the right edge
+  // in all breakpoints (the parent already has justify-content: space-between,
+  // but flex: 1 + min-width: 0 prevents overflow on long labels in mobile).
+  flex: 1;
+  min-width: 0;
   font-size: 1.05rem;
   font-weight: 800;
   letter-spacing: 0.05em;

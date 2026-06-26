@@ -12,6 +12,11 @@
   --wf-surface-muted: #f7f8fa;
   --wf-ink: #111827;
   --wf-ink-muted: #4b5563;
+
+  /* Tokens amber — usados en módulo cafetería (chips, badges, modales) */
+  --color-amber-bg: rgba(245, 158, 11, 0.08);
+  --color-amber-border: rgba(245, 158, 11, 0.3);
+  --color-amber-text: #92400e;
 }
 
 html,

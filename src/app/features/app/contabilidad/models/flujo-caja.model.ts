@@ -7,6 +7,7 @@ import { PeriodoInfo } from './estado-resultados.model';
 
 export interface FlujoOperativoEntradas {
   mensualidades_cop: number;
+  cafeteria_cop: number;
   total_cop: number;
 }
 
@@ -16,6 +17,7 @@ export interface FlujoOperativoSalidas {
   gastos_operativos_cop: number;
   nomina_entrenadores_cop: number;
   gastos_financieros_cop: number;
+  insumos_cafeteria_cop: number;
   total_cop: number;
 }
 

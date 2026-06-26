@@ -389,6 +389,12 @@ export class FlujoCajaComponent implements OnInit, OnDestroy {
       'Cobros por mensualidades',
       formatCOPForPdf(data.flujo_operativo.entradas.mensualidades_cop)
     );
+    if (data.flujo_operativo.entradas.cafeteria_cop > 0) {
+      drawDetailRow(
+        'Cobros por cafetería',
+        formatCOPForPdf(data.flujo_operativo.entradas.cafeteria_cop)
+      );
+    }
     drawSubtotalRow(
       'Total entradas',
       formatCOPForPdf(data.flujo_operativo.entradas.total_cop)
@@ -413,6 +419,9 @@ export class FlujoCajaComponent implements OnInit, OnDestroy {
     );
     if (sal.gastos_financieros_cop > 0) {
       drawDetailRow('Gastos financieros', formatCOPMinusPrefix(sal.gastos_financieros_cop));
+    }
+    if (sal.insumos_cafeteria_cop > 0) {
+      drawDetailRow('Insumos cafetería', formatCOPMinusPrefix(sal.insumos_cafeteria_cop));
     }
     drawSubtotalRow('Total salidas', formatCOPMinusPrefix(sal.total_cop));
 

@@ -1,0 +1,532 @@
+<div class="cierres-page">
+
+  <!-- ══════════ HEADER ══════════ -->
+  <header class="cierres-page__header">
+    <div class="cierres-page__header-inner">
+      <div class="cierres-page__title-row">
+        <h1 class="cierres-page__title">Cierres de cafetería</h1>
+      </div>
+    </div>
+  </header>
+
+  <!-- ══════════ MAIN ══════════ -->
+  <main class="cierres-page__main">
+
+    <!-- ── Month navigator ── -->
+    <div class="month-nav" role="group" aria-label="Navegación de mes">
+      <button
+        type="button"
+        class="month-nav__btn"
+        (click)="goToPreviousMonth()"
+        aria-label="Mes anterior"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"></polyline>
+        </svg>
+      </button>
+      <span class="month-nav__label">{{ currentMonthLabel }}</span>
+      <button
+        type="button"
+        class="month-nav__btn"
+        [class.month-nav__btn--disabled]="isNextMonthBlocked"
+        [attr.aria-disabled]="isNextMonthBlocked ? 'true' : null"
+        [title]="isNextMonthBlocked ? 'Ya estás en el mes actual' : ''"
+        [disabled]="isNextMonthBlocked"
+        (click)="goToNextMonth()"
+        aria-label="Mes siguiente"
+      >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- ── Quincena cards ── -->
+    <section class="quinc-section">
+      <!-- Skeleton cards while loading -->
+      <ng-container *ngIf="historyLoading && !q1Card">
+        <div class="quinc-grid">
+          <div *ngFor="let i of skeletonRows | slice:0:2; trackBy: trackBySkeletonIndex" class="quinc-card quinc-card--skeleton" aria-hidden="true">
+            <div class="skeleton skeleton--line-lg" style="margin-bottom:12px"></div>
+            <div class="skeleton skeleton--line-sm" style="margin-bottom:6px"></div>
+            <div class="skeleton skeleton--line-sm" style="margin-bottom:6px"></div>
+            <div class="skeleton skeleton--line-md"></div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Real cards -->
+      <div class="quinc-grid" *ngIf="q1Card && q2Card">
+
+        <!-- ── Q1 card ── -->
+        <div class="quinc-card" [class.quinc-card--closed]="q1Card.status === 'closed'" [class.quinc-card--future]="q1Card.status === 'future'">
+          <div class="quinc-card__header">
+            <span class="quinc-card__label">{{ q1Card.label }}</span>
+            <span *ngIf="q1Card.status === 'closed'" class="badge badge--green">CERRADA</span>
+            <span *ngIf="q1Card.status === 'future'" class="badge badge--gray">FUTURA</span>
+          </div>
+
+          <!-- Closed state: show saved values -->
+          <ng-container *ngIf="q1Card.status === 'closed' && q1Card.closed">
+            <div class="quinc-card__amounts">
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Ventas:</span>
+                <span class="quinc-card__amount-value">{{ formatCop(q1Card.closed.total_sales_cop) }}</span>
+              </div>
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Insumos:</span>
+                <span class="quinc-card__amount-value amount--negative">-{{ formatCop(q1Card.closed.total_expenses_cop) }}</span>
+              </div>
+              <div class="quinc-card__divider"></div>
+              <div class="quinc-card__amount-row quinc-card__amount-row--net">
+                <span class="quinc-card__amount-label">Neto:</span>
+                <span class="quinc-card__amount-value quinc-card__amount-value--net" [ngClass]="netColorClass(q1Card.closed.net_cop)">
+                  {{ formatCop(q1Card.closed.net_cop) }}
+                </span>
+              </div>
+            </div>
+            <p class="quinc-card__closed-date">
+              Cerrada el {{ formatDateTime(q1Card.closed.consolidated_at) }}
+            </p>
+            <button
+              type="button"
+              class="quinc-card__detail-link"
+              (click)="openDetailFromCard(q1Card)"
+            >Ver detalle →</button>
+          </ng-container>
+
+          <!-- Open / Future state: preview or dashes -->
+          <ng-container *ngIf="q1Card.status !== 'closed'">
+            <div class="quinc-card__amounts">
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Ventas:</span>
+                <ng-container *ngIf="!q1Card.loadingPreview && q1Card.preview; else dashOrLoad">
+                  <span class="quinc-card__amount-value">{{ formatCop(q1Card.preview.total_sales_cop) }}</span>
+                </ng-container>
+                <ng-template #dashOrLoad>
+                  <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'future'">—</span>
+                  <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'open' && q1Card.loadingPreview">…</span>
+                </ng-template>
+              </div>
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Insumos:</span>
+                <ng-container *ngIf="!q1Card.loadingPreview && q1Card.preview">
+                  <span class="quinc-card__amount-value amount--negative">-{{ formatCop(q1Card.preview.total_expenses_cop) }}</span>
+                </ng-container>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'future'">—</span>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'open' && q1Card.loadingPreview">…</span>
+              </div>
+              <div class="quinc-card__divider"></div>
+              <div class="quinc-card__amount-row quinc-card__amount-row--net">
+                <span class="quinc-card__amount-label">Neto:</span>
+                <ng-container *ngIf="!q1Card.loadingPreview && q1Card.preview">
+                  <span class="quinc-card__amount-value quinc-card__amount-value--net" [ngClass]="netColorClass(q1Card.preview.net_cop)">
+                    {{ formatCop(q1Card.preview.net_cop) }}
+                  </span>
+                </ng-container>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'future'">—</span>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q1Card.status === 'open' && q1Card.loadingPreview">…</span>
+              </div>
+            </div>
+
+            <!-- Counts (open + preview loaded) -->
+            <div class="quinc-card__counts" *ngIf="q1Card.status === 'open' && !q1Card.loadingPreview && q1Card.preview">
+              <span class="quinc-card__count">
+                {{ q1Card.preview.sales_count + q1Card.preview.combo_purchases_count }} ventas
+              </span>
+              <span class="quinc-card__count-sep">·</span>
+              <span class="quinc-card__count">{{ q1Card.preview.expenses_count }} insumos</span>
+            </div>
+
+            <!-- Action button -->
+            <div class="quinc-card__action">
+              <button
+                type="button"
+                class="btn-close-quinc"
+                *ngIf="q1Card.status === 'open'"
+                [disabled]="q1Card.loadingPreview || !hasMovements(q1Card)"
+                [title]="!hasMovements(q1Card) ? 'Sin movimientos en este período.' : ''"
+                (click)="openConfirmCloseModal(q1Card)"
+              >
+                Cerrar quincena
+              </button>
+              <button
+                type="button"
+                class="btn-close-quinc btn-close-quinc--disabled"
+                *ngIf="q1Card.status === 'future'"
+                disabled
+                title="Esta quincena aún no ha comenzado."
+              >
+                Cerrar quincena
+              </button>
+            </div>
+          </ng-container>
+        </div>
+
+        <!-- ── Q2 card ── -->
+        <div class="quinc-card" [class.quinc-card--closed]="q2Card.status === 'closed'" [class.quinc-card--future]="q2Card.status === 'future'">
+          <div class="quinc-card__header">
+            <span class="quinc-card__label">{{ q2Card.label }}</span>
+            <span *ngIf="q2Card.status === 'closed'" class="badge badge--green">CERRADA</span>
+            <span *ngIf="q2Card.status === 'future'" class="badge badge--gray">FUTURA</span>
+          </div>
+
+          <!-- Closed state -->
+          <ng-container *ngIf="q2Card.status === 'closed' && q2Card.closed">
+            <div class="quinc-card__amounts">
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Ventas:</span>
+                <span class="quinc-card__amount-value">{{ formatCop(q2Card.closed.total_sales_cop) }}</span>
+              </div>
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Insumos:</span>
+                <span class="quinc-card__amount-value amount--negative">-{{ formatCop(q2Card.closed.total_expenses_cop) }}</span>
+              </div>
+              <div class="quinc-card__divider"></div>
+              <div class="quinc-card__amount-row quinc-card__amount-row--net">
+                <span class="quinc-card__amount-label">Neto:</span>
+                <span class="quinc-card__amount-value quinc-card__amount-value--net" [ngClass]="netColorClass(q2Card.closed.net_cop)">
+                  {{ formatCop(q2Card.closed.net_cop) }}
+                </span>
+              </div>
+            </div>
+            <p class="quinc-card__closed-date">
+              Cerrada el {{ formatDateTime(q2Card.closed.consolidated_at) }}
+            </p>
+            <button
+              type="button"
+              class="quinc-card__detail-link"
+              (click)="openDetailFromCard(q2Card)"
+            >Ver detalle →</button>
+          </ng-container>
+
+          <!-- Open / Future state -->
+          <ng-container *ngIf="q2Card.status !== 'closed'">
+            <div class="quinc-card__amounts">
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Ventas:</span>
+                <ng-container *ngIf="!q2Card.loadingPreview && q2Card.preview">
+                  <span class="quinc-card__amount-value">{{ formatCop(q2Card.preview.total_sales_cop) }}</span>
+                </ng-container>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'future'">—</span>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'open' && q2Card.loadingPreview">…</span>
+              </div>
+              <div class="quinc-card__amount-row">
+                <span class="quinc-card__amount-label">Insumos:</span>
+                <ng-container *ngIf="!q2Card.loadingPreview && q2Card.preview">
+                  <span class="quinc-card__amount-value amount--negative">-{{ formatCop(q2Card.preview.total_expenses_cop) }}</span>
+                </ng-container>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'future'">—</span>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'open' && q2Card.loadingPreview">…</span>
+              </div>
+              <div class="quinc-card__divider"></div>
+              <div class="quinc-card__amount-row quinc-card__amount-row--net">
+                <span class="quinc-card__amount-label">Neto:</span>
+                <ng-container *ngIf="!q2Card.loadingPreview && q2Card.preview">
+                  <span class="quinc-card__amount-value quinc-card__amount-value--net" [ngClass]="netColorClass(q2Card.preview.net_cop)">
+                    {{ formatCop(q2Card.preview.net_cop) }}
+                  </span>
+                </ng-container>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'future'">—</span>
+                <span class="quinc-card__amount-value amount--muted" *ngIf="q2Card.status === 'open' && q2Card.loadingPreview">…</span>
+              </div>
+            </div>
+
+            <div class="quinc-card__counts" *ngIf="q2Card.status === 'open' && !q2Card.loadingPreview && q2Card.preview">
+              <span class="quinc-card__count">
+                {{ q2Card.preview.sales_count + q2Card.preview.combo_purchases_count }} ventas
+              </span>
+              <span class="quinc-card__count-sep">·</span>
+              <span class="quinc-card__count">{{ q2Card.preview.expenses_count }} insumos</span>
+            </div>
+
+            <div class="quinc-card__action">
+              <button
+                type="button"
+                class="btn-close-quinc"
+                *ngIf="q2Card.status === 'open'"
+                [disabled]="q2Card.loadingPreview || !hasMovements(q2Card)"
+                [title]="!hasMovements(q2Card) ? 'Sin movimientos en este período.' : ''"
+                (click)="openConfirmCloseModal(q2Card)"
+              >
+                Cerrar quincena
+              </button>
+              <button
+                type="button"
+                class="btn-close-quinc btn-close-quinc--disabled"
+                *ngIf="q2Card.status === 'future'"
+                disabled
+                title="Esta quincena aún no ha comenzado."
+              >
+                Cerrar quincena
+              </button>
+            </div>
+          </ng-container>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── History section ── -->
+    <section class="history-section">
+      <h2 class="history-section__title">Historial</h2>
+
+      <!-- Loading skeleton -->
+      <ng-container *ngIf="historyLoading">
+        <div class="history-skeleton">
+          <div *ngFor="let i of skeletonRows; trackBy: trackBySkeletonIndex" class="history-skeleton__row" aria-hidden="true">
+            <div class="skeleton skeleton--line-md"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+            <div class="skeleton skeleton--line-sm"></div>
+          </div>
+        </div>
+      </ng-container>
+
+      <!-- Error -->
+      <div class="history-error" *ngIf="historyError && !historyLoading" role="alert">
+        {{ historyError }}
+      </div>
+
+      <!-- Empty state -->
+      <div
+        class="history-empty"
+        *ngIf="!historyLoading && !historyError && consolidations.length === 0"
+      >
+        No hay cierres registrados aún.
+      </div>
+
+      <!-- Desktop table -->
+      <div class="history-table-wrap" *ngIf="!historyLoading && !historyError && consolidations.length > 0">
+        <table class="history-table" aria-label="Historial de cierres de cafetería">
+          <thead class="history-table__head">
+            <tr>
+              <th class="history-table__th">PERÍODO</th>
+              <th class="history-table__th history-table__th--num">VENTAS</th>
+              <th class="history-table__th history-table__th--num">INSUMOS</th>
+              <th class="history-table__th history-table__th--num">NETO</th>
+              <th class="history-table__th">FECHA CIERRE</th>
+              <th class="history-table__th history-table__th--actions">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr
+              *ngFor="let row of consolidations; trackBy: trackByConsolidationId"
+              class="history-table__row"
+            >
+              <td class="history-table__td">
+                <span class="period-label">{{ periodLabel(row.period_start, row.period_end) }}</span>
+              </td>
+              <td class="history-table__td history-table__td--num">
+                {{ formatCop(row.total_sales_cop) }}
+              </td>
+              <td class="history-table__td history-table__td--num amount--negative">
+                {{ formatCop(row.total_expenses_cop) }}
+              </td>
+              <td class="history-table__td history-table__td--num" [ngClass]="netColorClass(row.net_cop)">
+                {{ formatCop(row.net_cop) }}
+              </td>
+              <td class="history-table__td">
+                {{ formatDateTime(row.consolidated_at) }}
+              </td>
+              <td class="history-table__td history-table__td--actions">
+                <button
+                  type="button"
+                  class="action-link"
+                  (click)="openDetailModal(row)"
+                >
+                  Ver detalle
+                </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Mobile cards -->
+      <div class="history-mobile" *ngIf="!historyLoading && !historyError && consolidations.length > 0">
+        <div
+          class="history-mobile-card"
+          *ngFor="let row of consolidations; trackBy: trackByConsolidationId"
+        >
+          <div class="history-mobile-card__top">
+            <span class="period-label">{{ periodLabel(row.period_start, row.period_end) }}</span>
+            <button
+              type="button"
+              class="action-link"
+              (click)="openDetailModal(row)"
+            >
+              Ver detalle →
+            </button>
+          </div>
+          <div class="history-mobile-card__net" [ngClass]="netColorClass(row.net_cop)">
+            {{ formatCop(row.net_cop) }}
+          </div>
+          <div class="history-mobile-card__meta">
+            <span>Ventas {{ formatCop(row.total_sales_cop) }}</span>
+            <span class="history-mobile-card__sep">·</span>
+            <span class="amount--negative">Insumos {{ formatCop(row.total_expenses_cop) }}</span>
+          </div>
+          <div class="history-mobile-card__date">
+            Cerrado el {{ formatDateTime(row.consolidated_at) }}
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</div>
+
+<!-- ══════════ MODAL CONFIRMAR CIERRE ══════════ -->
+<div
+  *ngIf="activeModal === 'confirm-close' && selectedCard"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  [attr.aria-label]="'Cerrar quincena ' + selectedCard.label"
+  (click)="closeConfirmModal()"
+>
+  <div class="modal-sheet" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeConfirmModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Cerrar {{ selectedCard.quarter }} {{ currentMonthLabel }}</h2>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeConfirmModal()" [disabled]="isClosing" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body" *ngIf="selectedCard.preview as preview">
+      <!-- Period -->
+      <p class="confirm-period">
+        Período: {{ formatDateShort(selectedCard.periodStart) }} — {{ formatDateShort(selectedCard.periodEnd) }}
+      </p>
+
+      <!-- Warnings -->
+      <div
+        class="warning-chip warning-chip--amber"
+        *ngIf="pendingCount(selectedCard) > 0"
+      >
+        {{ pendingCount(selectedCard) }} venta{{ pendingCount(selectedCard) !== 1 ? 's' : '' }} pendiente{{ pendingCount(selectedCard) !== 1 ? 's' : '' }} de cobro no se incluyen en el cierre.
+      </div>
+      <div
+        class="warning-chip warning-chip--red"
+        *ngIf="preview.net_cop < 0"
+      >
+        El neto es negativo — los insumos superan los ingresos del período.
+      </div>
+
+      <!-- Summary -->
+      <div class="confirm-summary">
+        <div class="confirm-summary__row">
+          <div class="confirm-summary__left">
+            <span class="confirm-summary__label">Ventas e ingresos</span>
+            <span class="confirm-summary__sub">({{ preview.sales_count }} ventas + {{ preview.combo_purchases_count }} combos)</span>
+          </div>
+          <span class="confirm-summary__value">{{ formatCop(preview.total_sales_cop) }}</span>
+        </div>
+        <div class="confirm-summary__row">
+          <div class="confirm-summary__left">
+            <span class="confirm-summary__label">Insumos registrados</span>
+            <span class="confirm-summary__sub">({{ preview.expenses_count }} registros)</span>
+          </div>
+          <span class="confirm-summary__value amount--negative">-{{ formatCop(preview.total_expenses_cop) }}</span>
+        </div>
+        <div class="confirm-summary__divider"></div>
+        <div class="confirm-summary__row confirm-summary__row--net">
+          <span class="confirm-summary__label confirm-summary__label--net">NETO A CONSOLIDAR</span>
+          <span class="confirm-summary__value confirm-summary__value--net" [ngClass]="netColorClass(preview.net_cop)">
+            {{ formatCop(preview.net_cop) }}
+          </span>
+        </div>
+      </div>
+
+      <!-- Confirmation text -->
+      <p class="confirm-text">
+        Una vez cerrada, esta quincena es inmutable. ¿Confirmas el cierre?
+      </p>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel" (click)="closeConfirmModal()" [disabled]="isClosing">
+        Cancelar
+      </button>
+      <button type="button" class="modal-footer__primary" (click)="submitClose()" [disabled]="isClosing">
+        <ng-container *ngIf="!isClosing">Confirmar cierre</ng-container>
+        <ng-container *ngIf="isClosing">
+          <svg class="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" stroke-dasharray="31.4 31.4" stroke-linecap="round"/>
+          </svg>
+          Cerrando…
+        </ng-container>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════ MODAL DETALLE HISTÓRICO ══════════ -->
+<div
+  *ngIf="activeModal === 'detail' && selectedDetail"
+  class="modal-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-label="Detalle de cierre"
+  (click)="closeDetailModal()"
+>
+  <div class="modal-sheet modal-sheet--sm" (click)="$event.stopPropagation()" appFocusTrap (appFocusTrapEscape)="closeDetailModal()">
+    <div class="modal-header">
+      <div class="modal-header__info">
+        <h2 class="modal-header__title">Detalle del cierre</h2>
+        <p class="modal-header__sub">{{ periodLabel(selectedDetail.period_start, selectedDetail.period_end) }}</p>
+      </div>
+      <button type="button" class="modal-header__close" (click)="closeDetailModal()" aria-label="Cerrar">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="modal-body">
+      <div class="detail-grid">
+        <div class="detail-row">
+          <span class="detail-row__label">Período</span>
+          <span class="detail-row__value">
+            {{ formatDateShort(selectedDetail.period_start) }} — {{ formatDateShort(selectedDetail.period_end) }}
+          </span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Ventas e ingresos</span>
+          <span class="detail-row__value">{{ formatCop(selectedDetail.total_sales_cop) }}</span>
+        </div>
+        <div class="detail-row">
+          <span class="detail-row__label">Insumos</span>
+          <span class="detail-row__value amount--negative">-{{ formatCop(selectedDetail.total_expenses_cop) }}</span>
+        </div>
+        <div class="detail-divider"></div>
+        <div class="detail-row detail-row--net">
+          <span class="detail-row__label detail-row__label--net">Neto</span>
+          <span class="detail-row__value detail-row__value--net" [ngClass]="netColorClass(selectedDetail.net_cop)">
+            {{ formatCop(selectedDetail.net_cop) }}
+          </span>
+        </div>
+        <div class="detail-divider"></div>
+        <div class="detail-row">
+          <span class="detail-row__label">Cerrado el</span>
+          <span class="detail-row__value">{{ formatDateTime(selectedDetail.consolidated_at) }}</span>
+        </div>
+        <div class="detail-row" *ngIf="selectedDetail.consolidated_by_name">
+          <span class="detail-row__label">Cerrado por</span>
+          <span class="detail-row__value">{{ selectedDetail.consolidated_by_name }}</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button type="button" class="modal-footer__cancel modal-footer__cancel--flex" (click)="closeDetailModal()">
+        Cerrar
+      </button>
+    </div>
+  </div>
+</div>

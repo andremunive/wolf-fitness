@@ -35,6 +35,7 @@ import {
 } from '../../services/finanzas.service';
 import {
   ComposicionCategoriaRow,
+  ComposicionIngresos,
   ComposicionProveedorRow,
   DetalleMetodoPago,
   EgresosPorTipo,
@@ -157,7 +158,7 @@ type ComposicionState =
 
 // ─── Vista (toggle local en sección 05) ──────────────────────────────────────
 
-export type VistaComposicion = 'categoria' | 'proveedor';
+export type VistaComposicion = 'categoria' | 'proveedor' | 'origen_ingresos';
 
 // ─── Filas de listas con barras de progreso (sección 04 y 05) ────────────────
 
@@ -624,11 +625,32 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     return v;
   }
 
-  readonly vistasComposicion: VistaComposicion[] = ['categoria', 'proveedor'];
+  readonly vistasComposicionEgresos: VistaComposicion[] = ['categoria', 'proveedor'];
   readonly vistaComposicionLabels: Record<VistaComposicion, string> = {
     categoria: 'Por categoría',
-    proveedor: 'Por proveedor'
+    proveedor: 'Por proveedor',
+    origen_ingresos: 'Origen ingresos'
   };
+
+  /**
+   * Decide si mostrar el toggle "Origen ingresos".
+   * Solo visible cuando cafetería tiene participación.
+   */
+  shouldShowOrigenIngresos(comp: FinanzasComposicionResponse): boolean {
+    return (comp.composicion_ingresos?.cafeteria_cop ?? 0) > 0;
+  }
+
+  /**
+   * Devuelve las vistas disponibles según los datos del período.
+   * El toggle "Origen ingresos" solo aparece cuando cafetería > 0.
+   */
+  vistasComposicionDisponibles(comp: FinanzasComposicionResponse | null): VistaComposicion[] {
+    if (!comp) return this.vistasComposicionEgresos;
+    if (this.shouldShowOrigenIngresos(comp)) {
+      return [...this.vistasComposicionEgresos, 'origen_ingresos'];
+    }
+    return this.vistasComposicionEgresos;
+  }
 
   // ─── Ventana de tendencia ────────────────────────────────────────────────
 
@@ -778,10 +800,11 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
     const status = this.deriveResumenCardStatus(rs);
     const value = rs?.status === 'loaded' ? rs.data!.ingresos.total_cop : 0;
     const delta = rs?.status === 'loaded' ? rs.data!.ingresos.delta_cop : null;
-    const cantidadPagos = rs?.status === 'loaded' ? rs.data!.ingresos.cantidad_pagos ?? 0 : 0;
     const sparkVals = ts?.status === 'loaded'
       ? ts.data!.map((p) => p.ingresos_cop)
       : [];
+
+    const secondaryText = this.buildIngresosSecondaryText(rs);
 
     return {
       key: 'ingresos',
@@ -791,11 +814,28 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
       value,
       delta,
       deltaInverted: false,
-      secondaryText: `${cantidadPagos} pagos recibidos`,
+      secondaryText,
       caption: null,
       sparkline: this.buildSparkline(sparkVals),
       gradId: 'fv2-card-spark-ingresos'
     };
+  }
+
+  /**
+   * Subtexto de la card de ingresos.
+   * Si cafetería aportó algo, muestra el desglose abreviado.
+   * Si todo es mensualidades, muestra el conteo de pagos clásico.
+   */
+  private buildIngresosSecondaryText(rs: ResumenState | null): string {
+    if (rs?.status !== 'loaded') return '';
+    const { ingresos } = rs.data!;
+    const cafeteriaCop = ingresos.cafeteria_cop ?? 0;
+    if (cafeteriaCop > 0) {
+      const mens = formatAmountShort(ingresos.mensualidades_cop ?? 0);
+      const cafe = formatAmountShort(cafeteriaCop);
+      return `Mensualidades ${mens} · Cafetería ${cafe}`;
+    }
+    return `${ingresos.cantidad_pagos ?? 0} pagos recibidos`;
   }
 
   private makeEgresosCard(
@@ -1524,9 +1564,10 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
   // SECCIÓN 05 — Composición de egresos
   // ═══════════════════════════════════════════════════════════════════════
 
-  /** Filas de composición según la vista activa (categoría o proveedor). */
+  /** Filas de composición según la vista activa (categoría o proveedor). No aplica a origen_ingresos. */
   buildComposicionRows(comp: FinanzasComposicionResponse): ComposicionRow[] {
     if (!comp.tiene_datos) return [];
+    if (this.vistaComposicion === 'origen_ingresos') return [];
 
     const rows = this.vistaComposicion === 'categoria'
       ? comp.por_categoria.map((r, i) => ({
@@ -1578,6 +1619,59 @@ export class FinanzasDashboardComponent implements OnInit, OnDestroy {
           borderColor: '#ffffff'
         }
       ]
+    };
+  }
+
+  // ─── Vista "Origen ingresos" (A.3) ───────────────────────────────────────
+
+  /** Color para la sección Mensualidades en la dona de ingresos. */
+  private readonly COLOR_MENSUALIDADES = '#10b981';
+  /** Color amber para Cafetería en la dona de ingresos. */
+  private readonly COLOR_CAFETERIA_DONA = '#f59e0b';
+
+  buildIngresosRows(ci: ComposicionIngresos): ComposicionRow[] {
+    const rows: ComposicionRow[] = [];
+    if (ci.mensualidades_cop > 0) {
+      rows.push({
+        id: 'mensualidades',
+        nombre: 'Mensualidades',
+        total_cop: ci.mensualidades_cop,
+        porcentaje: ci.mensualidades_pct,
+        cantidad: 0,
+        color: this.COLOR_MENSUALIDADES,
+        widthPct: ci.mensualidades_pct
+      });
+    }
+    if (ci.cafeteria_cop > 0) {
+      rows.push({
+        id: 'cafeteria',
+        nombre: 'Cafetería',
+        total_cop: ci.cafeteria_cop,
+        porcentaje: ci.cafeteria_pct,
+        cantidad: 0,
+        color: this.COLOR_CAFETERIA_DONA,
+        widthPct: ci.cafeteria_pct
+      });
+    }
+    return rows.sort((a, b) => b.total_cop - a.total_cop);
+  }
+
+  buildIngresosChartData(ci: ComposicionIngresos): ChartData<'doughnut'> {
+    const rows = this.buildIngresosRows(ci);
+    if (rows.length === 0) {
+      return {
+        labels: ['Sin datos'],
+        datasets: [{ data: [1], backgroundColor: ['#e5e7eb'], borderWidth: 0 }]
+      };
+    }
+    return {
+      labels: rows.map((r) => r.nombre),
+      datasets: [{
+        data: rows.map((r) => r.total_cop),
+        backgroundColor: rows.map((r) => r.color),
+        borderWidth: 2,
+        borderColor: '#ffffff'
+      }]
     };
   }
 

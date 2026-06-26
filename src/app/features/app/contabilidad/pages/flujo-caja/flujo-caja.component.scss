@@ -21,7 +21,10 @@
   padding: 8px 4px;
 
   &__label {
-    flex: 0 1 auto;
+    // flex: 1 ensures the label grows to fill available space, keeping
+    // the amount pinned to the right edge on mobile (where no leader exists).
+    flex: 1;
+    min-width: 0;
     font-size: 1rem;
     font-weight: 700;
     color: var(--fv2-text-primary);
@@ -107,6 +110,10 @@
 
   // Fila del saldo final — la más prominente del documento.
   &__label-final {
+    // flex: 1 + min-width: 0 keeps the label growing so the amount stays
+    // at the right edge inside the space-between parent on all viewports.
+    flex: 1;
+    min-width: 0;
     font-size: 1.2rem;
     font-weight: 800;
     letter-spacing: 0.05em;
