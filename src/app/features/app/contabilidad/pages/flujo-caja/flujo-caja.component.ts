@@ -541,6 +541,11 @@ export class FlujoCajaComponent implements OnInit, OnDestroy {
     return 'SALDO FINAL';
   }
 
+  formatPct(value: number, base: number): string {
+    if (!base) return '—';
+    return ((value / base) * 100).toFixed(1) + '%';
+  }
+
   /** true cuando el período no registró ningún movimiento. */
   isSinMovimientos(data: FlujoCajaResponse): boolean {
     return (

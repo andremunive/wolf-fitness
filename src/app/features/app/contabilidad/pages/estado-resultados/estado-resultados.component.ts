@@ -324,17 +324,23 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       y += 5;
     };
 
+    // Coordenadas fijas de las 3 columnas (papel carta = 216mm, margen 20mm).
+    // Col 1 nombre: x = xL, maxWidth hasta col 2.
+    // Col 2 monto:  alineado a la derecha en x = 175mm.
+    // Col 3 pct:    alineado a la derecha en x = 196mm (= pageW - M).
+    const xAmount = 175;
+    const xPct    = xR; // 196mm en carta
+
     const drawDetailRow = (name: string, amount: string, prefix?: string): void => {
       checkPageBreak(7);
       doc.setFont('helvetica', 'normal');
       doc.setFontSize(10);
       doc.setTextColor(0, 0, 0);
       const label = prefix ? `${prefix} ${name}` : name;
-      // Truncar nombre largo para no chocar contra el monto.
-      const maxNameW = contentW * 0.7;
+      const maxNameW = xAmount - xL - 4;
       const safeName = fitText(doc, sanitizeForPdf(label), maxNameW);
       doc.text(safeName, xL, y);
-      doc.text(amount, xR, y, { align: 'right' });
+      doc.text(amount, xAmount, y, { align: 'right' });
       y += 6;
     };
 
@@ -347,22 +353,21 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(10.5);
       doc.setTextColor(0, 0, 0);
-      doc.text(name.toUpperCase(), xL, y);
-      doc.text(amount, xR, y, { align: 'right' });
-      // Porcentaje a la izquierda del monto, con color muted.
-      const amountW = doc.getTextWidth(amount);
-      const pctX = xR - amountW - 4;
-      doc.setFont('helvetica', 'normal');
-      doc.setFontSize(9);
-      doc.setTextColor(136, 136, 136);
-      doc.text(pct, pctX, y, { align: 'right' });
-      // Restaurar color para la siguiente llamada.
-      doc.setTextColor(0, 0, 0);
+      const maxNameW = xAmount - xL - 4;
+      const safeName = fitText(doc, sanitizeForPdf(name.toUpperCase()), maxNameW);
+      doc.text(safeName, xL, y);
+      doc.text(amount, xAmount, y, { align: 'right' });
+      if (pct) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(9);
+        doc.setTextColor(136, 136, 136);
+        doc.text(pct, xPct, y, { align: 'right' });
+        doc.setTextColor(0, 0, 0);
+      }
       y += 8;
     };
 
     const drawUtilidad = (label: string, amount: number, pct: string): void => {
-      // El bloque de utilidad operativa NUNCA debe cortarse.
       checkPageBreak(20);
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.8);
@@ -371,15 +376,13 @@ export class EstadoResultadosComponent implements OnInit, OnDestroy {
       doc.setFont('helvetica', 'bold');
       doc.setFontSize(12);
       doc.setTextColor(0, 0, 0);
-      doc.text(label, xL, y);
+      const maxNameW = xAmount - xL - 4;
+      const safeLabel = fitText(doc, sanitizeForPdf(label), maxNameW);
+      doc.text(safeLabel, xL, y);
       const amountStr = formatCOPAccounting(amount);
-      doc.text(amountStr, xR, y, { align: 'right' });
-      // Porcentaje a la izquierda del monto: bold, 10pt, negro.
-      const amountW = doc.getTextWidth(amountStr);
-      const pctX = xR - amountW - 4;
+      doc.text(amountStr, xAmount, y, { align: 'right' });
       doc.setFontSize(10);
-      doc.text(pct, pctX, y, { align: 'right' });
-      // Restaurar para los trazos de línea siguientes.
+      doc.text(pct, xPct, y, { align: 'right' });
       doc.setTextColor(0, 0, 0);
       y += 4;
       doc.line(xL, y, xR, y);

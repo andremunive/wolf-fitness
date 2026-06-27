@@ -228,43 +228,43 @@
           <p class="fc-subheader">Entradas</p>
           <div class="er-section__rows">
             <div class="er-row">
-              <span class="er-row__label">Cobros por mensualidades</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Cobros por mensualidades</span>
               <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.mensualidades_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <div class="er-row" *ngIf="state.data.flujo_operativo.entradas.cafeteria_cop > 0">
-              <span class="er-row__label">Cobros por cafetería</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Cobros por cafetería</span>
               <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.cafeteria_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
           </div>
           <div class="er-row er-row--total fc-row-subtotal">
-            <span class="er-row__label">TOTAL ENTRADAS</span>
+            <span class="er-row__name">TOTAL ENTRADAS</span>
             <span class="er-row__amount">{{ formatCOP(state.data.flujo_operativo.entradas.total_cop) }}</span>
+            <span class="er-row__pct">{{ formatPct(state.data.flujo_operativo.entradas.total_cop, state.data.flujo_operativo.entradas.total_cop) }}</span>
           </div>
 
           <!-- SALIDAS -->
           <p class="fc-subheader fc-subheader--spaced">Salidas</p>
           <div class="er-section__rows">
             <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.costos_directos_cop > 0">
-              <span class="er-row__label">Costos directos</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Costos directos</span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.costos_directos_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_administrativos_cop > 0">
-              <span class="er-row__label">Gastos administrativos</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Gastos administrativos</span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_administrativos_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_operativos_cop > 0">
-              <span class="er-row__label">Gastos operativos</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Gastos operativos</span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_operativos_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <!-- Nómina entrenadores: SIEMPRE visible (aunque $0). -->
             <div class="er-row">
-              <span class="er-row__label">Nómina entrenadores</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Nómina entrenadores</span>
               <span class="er-row__amount">
                 {{
                   state.data.flujo_operativo.salidas.nomina_entrenadores_cop === 0
@@ -272,20 +272,21 @@
                     : formatCOPSigned(-state.data.flujo_operativo.salidas.nomina_entrenadores_cop)
                 }}
               </span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.gastos_financieros_cop > 0">
-              <span class="er-row__label">Gastos financieros</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Gastos financieros</span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.gastos_financieros_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
             <div class="er-row" *ngIf="state.data.flujo_operativo.salidas.insumos_cafeteria_cop > 0">
-              <span class="er-row__label">Insumos cafetería</span>
-              <span class="er-row__leader" aria-hidden="true"></span>
+              <span class="er-row__name">Insumos cafetería</span>
               <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_operativo.salidas.insumos_cafeteria_cop) }}</span>
+              <span class="er-row__pct" aria-hidden="true"></span>
             </div>
           </div>
           <div class="er-row er-row--total fc-row-subtotal">
-            <span class="er-row__label">TOTAL SALIDAS</span>
+            <span class="er-row__name">TOTAL SALIDAS</span>
             <span class="er-row__amount">
               {{
                 state.data.flujo_operativo.salidas.total_cop === 0
@@ -293,6 +294,7 @@
                   : formatCOPSigned(-state.data.flujo_operativo.salidas.total_cop)
               }}
             </span>
+            <span class="er-row__pct">{{ formatPct(state.data.flujo_operativo.salidas.total_cop, state.data.flujo_operativo.entradas.total_cop) }}</span>
           </div>
         </section>
 
@@ -314,6 +316,12 @@
             >
               {{ formatCOPSigned(state.data.flujo_operativo.flujo_neto_cop) }}
             </span>
+            <span
+              class="er-row__pct er-row__pct--highlight"
+              [ngClass]="flujoNetoClass(state.data.flujo_operativo.flujo_neto_cop)"
+            >
+              {{ formatPct(state.data.flujo_operativo.flujo_neto_cop, state.data.flujo_operativo.entradas.total_cop) }}
+            </span>
           </div>
           <p class="er-utilidad__formula">(Entradas − Salidas)</p>
         </div>
@@ -324,9 +332,9 @@
             <h3 class="er-section__title">Flujo de inversión</h3>
             <div class="er-section__rows">
               <div class="er-row">
-                <span class="er-row__label">Inversiones y equipos</span>
-                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__name">Inversiones y equipos</span>
                 <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_inversion.inversiones_cop) }}</span>
+                <span class="er-row__pct" aria-hidden="true"></span>
               </div>
             </div>
           </section>
@@ -348,6 +356,12 @@
               >
                 {{ formatCOPSigned(state.data.flujo_inversion.flujo_neto_cop) }}
               </span>
+              <span
+                class="er-row__pct er-row__pct--highlight"
+                [ngClass]="flujoNetoClass(state.data.flujo_inversion.flujo_neto_cop)"
+              >
+                {{ formatPct(state.data.flujo_inversion.flujo_neto_cop, state.data.flujo_operativo.entradas.total_cop) }}
+              </span>
             </div>
           </div>
         </ng-container>
@@ -358,19 +372,19 @@
             <h3 class="er-section__title">Flujo de financiamiento</h3>
             <div class="er-section__rows">
               <div class="er-row" *ngIf="state.data.flujo_financiamiento.obligaciones_cop > 0">
-                <span class="er-row__label">Obligaciones financieras</span>
-                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__name">Obligaciones financieras</span>
                 <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_financiamiento.obligaciones_cop) }}</span>
+                <span class="er-row__pct" aria-hidden="true"></span>
               </div>
               <div class="er-row" *ngIf="state.data.flujo_financiamiento.prestamos_otorgados_cop > 0">
-                <span class="er-row__label">Préstamos otorgados</span>
-                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__name">Préstamos otorgados</span>
                 <span class="er-row__amount">{{ formatCOPSigned(-state.data.flujo_financiamiento.prestamos_otorgados_cop) }}</span>
+                <span class="er-row__pct" aria-hidden="true"></span>
               </div>
               <div class="er-row" *ngIf="state.data.flujo_financiamiento.abonos_recibidos_cop > 0">
-                <span class="er-row__label">Abonos recibidos</span>
-                <span class="er-row__leader" aria-hidden="true"></span>
+                <span class="er-row__name">Abonos recibidos</span>
                 <span class="er-row__amount">{{ formatCOP(state.data.flujo_financiamiento.abonos_recibidos_cop) }}</span>
+                <span class="er-row__pct" aria-hidden="true"></span>
               </div>
             </div>
           </section>
@@ -391,6 +405,12 @@
                 [ngClass]="flujoNetoClass(state.data.flujo_financiamiento.flujo_neto_cop)"
               >
                 {{ formatCOPSigned(state.data.flujo_financiamiento.flujo_neto_cop) }}
+              </span>
+              <span
+                class="er-row__pct er-row__pct--highlight"
+                [ngClass]="flujoNetoClass(state.data.flujo_financiamiento.flujo_neto_cop)"
+              >
+                {{ formatPct(state.data.flujo_financiamiento.flujo_neto_cop, state.data.flujo_operativo.entradas.total_cop) }}
               </span>
             </div>
           </div>
@@ -413,6 +433,12 @@
               [ngClass]="flujoNetoClass(state.data.variacion_neta_cop)"
             >
               {{ formatCOPSigned(state.data.variacion_neta_cop) }}
+            </span>
+            <span
+              class="er-row__pct er-row__pct--highlight"
+              [ngClass]="flujoNetoClass(state.data.variacion_neta_cop)"
+            >
+              {{ formatPct(state.data.variacion_neta_cop, state.data.flujo_operativo.entradas.total_cop) }}
             </span>
           </div>
           <p class="er-utilidad__formula fc-cierre__formula">
@@ -437,6 +463,12 @@
               [ngClass]="saldoFinalClass(state.data.saldo_final_cop)"
             >
               {{ formatCOPSigned(state.data.saldo_final_cop) }}
+            </span>
+            <span
+              class="er-row__pct er-row__pct--highlight"
+              [ngClass]="saldoFinalClass(state.data.saldo_final_cop)"
+            >
+              {{ formatPct(state.data.saldo_final_cop, state.data.flujo_operativo.entradas.total_cop) }}
             </span>
           </div>
           <p class="er-utilidad__formula fc-cierre__formula">(Saldo inicial + Variación neta)</p>
