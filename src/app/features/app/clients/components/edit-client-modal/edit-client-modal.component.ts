@@ -17,13 +17,14 @@ import {
   ValidationErrors,
   Validators
 } from '@angular/forms';
-import { Observable, Subject } from 'rxjs';
-import { finalize, shareReplay, takeUntil } from 'rxjs/operators';
+import { Observable, Subject, combineLatest } from 'rxjs';
+import { finalize, map, shareReplay, take, takeUntil } from 'rxjs/operators';
 
 import { AuthService } from 'src/app/core/services/auth.service';
 import { LoaderService } from 'src/app/core/services/loader.service';
 import { ClientsService } from '../../services/clients.service';
 import {
+  ActivePaymentSnapshot,
   ClientDetailFull,
   ClientOrigin,
   Plan,
@@ -31,6 +32,7 @@ import {
   UpdateClientPayload
 } from '../../models/client.model';
 import { ClientSearchResult } from '../client-search-input/client-search-input.component';
+import { UpgradePlanConfirmResult } from '../upgrade-plan-confirm-modal/upgrade-plan-confirm-modal.component';
 
 type EditTab = 'identity' | 'origin' | 'plan';
 
@@ -52,6 +54,14 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
   saveError: string | null = null;
   saveSuccess = false;
   isAdmin = false;
+
+  // ─── Estado del modal de confirmación de upgrade ───────────────────────────
+  showUpgradeConfirm = false;
+  upgradeCurrentPlan: Plan | null = null;
+  upgradeNewPlan: Plan | null = null;
+  upgradeActivePayment: ActivePaymentSnapshot | null = null;
+  /** Payload pendiente de enviar, esperando decisión del usuario en el upgrade modal. */
+  private pendingPayload: UpdateClientPayload | null = null;
 
   /** Referidor actualmente seleccionado (puede cambiar durante edición). */
   selectedReferredBy: ClientSearchResult | null = null;
@@ -172,13 +182,69 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
   save(): void {
     if (!this.hasChanges || this.isSaving) return;
 
+    const payload = this.buildPatchPayload();
+
+    if (payload.new_plan_id) {
+      this.buildUpgradeSnapshot$(payload.new_plan_id).pipe(
+        take(1),
+        takeUntil(this.destroy$)
+      ).subscribe({
+        next: (snapshot) => {
+          if (snapshot) {
+            this.pendingPayload = payload;
+            this.upgradeCurrentPlan = snapshot.currentPlan;
+            this.upgradeNewPlan = snapshot.newPlan;
+            this.upgradeActivePayment = snapshot.activePayment;
+            this.showUpgradeConfirm = true;
+          } else {
+            this.dispatchUpdate(payload);
+          }
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          // Si falla la consulta del pago activo, ejecutamos el cambio normal sin modal.
+          this.dispatchUpdate(payload);
+        }
+      });
+      return;
+    }
+
+    this.dispatchUpdate(payload);
+  }
+
+  onUpgradeConfirmed(result: UpgradePlanConfirmResult): void {
+    this.showUpgradeConfirm = false;
+
+    if (!this.pendingPayload) return;
+
+    const payload: UpdateClientPayload = {
+      ...this.pendingPayload,
+      apply_plan_change_to_current_payment: result.applyToCurrent
+    };
+    this.pendingPayload = null;
+    this.upgradeCurrentPlan = null;
+    this.upgradeNewPlan = null;
+    this.upgradeActivePayment = null;
+
+    this.dispatchUpdate(payload);
+    this.cdr.markForCheck();
+  }
+
+  onUpgradeCancelled(): void {
+    this.showUpgradeConfirm = false;
+    this.pendingPayload = null;
+    this.upgradeCurrentPlan = null;
+    this.upgradeNewPlan = null;
+    this.upgradeActivePayment = null;
+    this.cdr.markForCheck();
+  }
+
+  private dispatchUpdate(payload: UpdateClientPayload): void {
     this.isSaving = true;
     this.saveError = null;
     this.saveSuccess = false;
     this.loader.show();
     this.cdr.markForCheck();
-
-    const payload = this.buildPatchPayload();
 
     this.clientsService
       .updateClient(payload)
@@ -201,6 +267,52 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
           this.saveError = this.extractErrorMessage(err);
         }
       });
+  }
+
+  /**
+   * Evalúa de forma reactiva si se cumplen las condiciones para mostrar el modal de upgrade.
+   * Combina plans$ con una consulta real a Supabase para obtener el pago activo con sus
+   * campos exactos (descuento, amount_received), eliminando las estimaciones incorrectas.
+   *
+   * Condiciones para mostrar el modal:
+   * 1. Existe un pago activo vigente (status paid/partial, period_end >= hoy, no anulado).
+   * 2. El nuevo plan es más caro que el plan_total_cop del pago activo.
+   *
+   * Devuelve null si alguna condición no se cumple.
+   */
+  private buildUpgradeSnapshot$(newPlanId: string): Observable<{
+    currentPlan: Plan;
+    newPlan: Plan;
+    activePayment: ActivePaymentSnapshot;
+  } | null> {
+    return combineLatest([
+      this.plans$,
+      this.clientsService.getActivePaymentSnapshot(this.client.id)
+    ]).pipe(
+      map(([plans, activePayment]) => {
+        if (!activePayment) return null;
+
+        const newPlan = plans.find((p) => p.id === newPlanId) ?? null;
+        if (!newPlan) return null;
+
+        const newPlanAmountCop = newPlan.amountCop ?? 0;
+
+        // Solo es upgrade si el nuevo plan es estrictamente más caro que el total actual del pago.
+        if (newPlanAmountCop <= activePayment.planTotalCop) return null;
+
+        // currentPlan se reconstruye desde los datos del pago activo + la lista de planes.
+        // El planId del cliente puede haber cambiado ya en memoria, por eso usamos el
+        // plan_total_cop del pago activo para identificar el plan original por precio.
+        const currentPlan: Plan = {
+          id: this.client.planId,
+          name: this.client.planName,
+          code: '',
+          amountCop: activePayment.planTotalCop
+        };
+
+        return { currentPlan, newPlan, activePayment };
+      })
+    );
   }
 
   closeWithConfirmation(): void {
@@ -350,9 +462,28 @@ export class EditClientModalComponent implements OnInit, OnChanges, OnDestroy {
   private extractErrorMessage(err: unknown): string {
     if (err && typeof err === 'object') {
       const anyErr = err as Record<string, unknown>;
+      const code = typeof anyErr['code'] === 'string' ? anyErr['code'] : null;
+
+      switch (code) {
+        case '42501':
+          return 'No tienes permiso para realizar esta accion.';
+        case 'P0001':
+          return 'Cliente no encontrado. Recarga la pagina.';
+        case 'P0002':
+          return 'El plan seleccionado ya no esta disponible.';
+        case 'P0003':
+          return 'El plan seleccionado no tiene precio configurado.';
+        case 'P0005':
+          return 'Solo se puede aplicar a la mensualidad actual cuando el nuevo plan es mas caro.';
+        case 'P0006':
+          return 'El cliente no tiene una mensualidad activa vigente.';
+        default:
+          break;
+      }
+
       if (typeof anyErr['message'] === 'string') return anyErr['message'];
     }
-    return 'Ocurrió un error al guardar. Intenta de nuevo.';
+    return 'Ocurrio un error al guardar. Intenta de nuevo.';
   }
 
   ngOnDestroy(): void {

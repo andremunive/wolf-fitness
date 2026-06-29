@@ -1,4 +1,4 @@
-export type Json =
+﻿export type Json =
   | string
   | number
   | boolean
@@ -1617,6 +1617,8 @@ export type Database = {
           reception_date: string
           reported_date: string
           status: Database["public"]["Enums"]["payment_status"]
+          updated_at: string | null
+          updated_by: string | null
           voided_at: string | null
           voided_by: string | null
         }
@@ -1646,6 +1648,8 @@ export type Database = {
           reception_date: string
           reported_date: string
           status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string | null
+          updated_by?: string | null
           voided_at?: string | null
           voided_by?: string | null
         }
@@ -1675,6 +1679,8 @@ export type Database = {
           reception_date?: string
           reported_date?: string
           status?: Database["public"]["Enums"]["payment_status"]
+          updated_at?: string | null
+          updated_by?: string | null
           voided_at?: string | null
           voided_by?: string | null
         }
@@ -1712,6 +1718,13 @@ export type Database = {
             columns: ["plan_price_id"]
             isOneToOne: false
             referencedRelation: "plan_prices"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payments_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
           {
@@ -2375,6 +2388,7 @@ export type Database = {
       }
       change_client_plan: {
         Args: {
+          p_apply_to_current_payment?: boolean
           p_changed_by: string
           p_client_id: string
           p_new_plan_id: string
@@ -2384,6 +2398,14 @@ export type Database = {
       }
       claim_receipt_send: {
         Args: { p_force_resend?: boolean; p_payment_id: string }
+        Returns: Json
+      }
+      close_cafeteria_consolidation: {
+        Args: {
+          p_period_end: string
+          p_period_start: string
+          p_user_id: string
+        }
         Returns: Json
       }
       compute_personal_discounts_for_closure: {
@@ -2516,6 +2538,10 @@ export type Database = {
           total: number
         }[]
       }
+      get_cafeteria_dashboard: {
+        Args: { p_fecha_fin: string; p_fecha_inicio: string }
+        Returns: Json
+      }
       get_client_last_field_values: {
         Args: { p_client_id: string }
         Returns: Json
@@ -2593,8 +2619,10 @@ export type Database = {
       stats_finanzas_month_metrics: {
         Args: { p_end_date: string; p_start_date: string }
         Returns: {
+          cafeteria_cop: number
           egresos_operativos_cop: number
           ingresos_cop: number
+          mensualidades_cop: number
           nomina_cop: number
         }[]
       }

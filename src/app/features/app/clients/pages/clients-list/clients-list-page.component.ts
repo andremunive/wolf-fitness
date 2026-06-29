@@ -313,7 +313,9 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
         next: (full) => {
           this.editingClient = full;
         },
-        error: () => {}
+        error: () => {
+          this.cdr.markForCheck();
+        }
       });
   }
 

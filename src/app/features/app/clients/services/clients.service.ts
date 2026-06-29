@@ -5,6 +5,7 @@ import { catchError, map, shareReplay, switchMap } from 'rxjs/operators';
 import { SupabaseService } from 'src/app/core/services/supabase.service';
 import { Database, Gender } from 'src/app/core/types/supabase';
 import {
+  ActivePaymentSnapshot,
   Client,
   ClientDetailFull,
   MembershipStatus,
@@ -395,8 +396,15 @@ export class ClientsService {
   }
 
   updateClient(payload: UpdateClientPayload): Observable<void> {
-    const { client_id, profile, new_plan_id, new_trainer_id, origin, referred_by } =
-      payload;
+    const {
+      client_id,
+      profile,
+      new_plan_id,
+      apply_plan_change_to_current_payment,
+      new_trainer_id,
+      origin,
+      referred_by
+    } = payload;
 
     const steps: Observable<unknown>[] = [];
 
@@ -486,7 +494,8 @@ export class ClientsService {
               this.supabase.client.rpc('change_client_plan', {
                 p_client_id: client_id,
                 p_new_plan_id: new_plan_id,
-                p_changed_by: userId
+                p_changed_by: userId,
+                p_apply_to_current_payment: apply_plan_change_to_current_payment ?? false
               })
             )
           ),
@@ -575,6 +584,57 @@ export class ClientsService {
       }),
       catchError((err) => {
         console.error('[ClientsService] getActiveTrainers error:', err);
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Consulta el pago activo y vigente de un cliente directamente desde la tabla payments.
+   * Devuelve null si no existe un pago con status paid/partial sin anular y con period_end >= hoy.
+   * Se usa para obtener datos reales (descuento, amount_received) antes de mostrar el modal
+   * de confirmación de upgrade de plan.
+   */
+  getActivePaymentSnapshot(clientId: string): Observable<ActivePaymentSnapshot | null> {
+    const today = new Date().toISOString().split('T')[0];
+
+    return from(
+      this.supabase.client
+        .from('payments')
+        .select(
+          'plan_total_cop, amount_received_cop, discount_percentage_applied, discount_amount_cop, status, period_end'
+        )
+        .eq('client_id', clientId)
+        .in('status', ['paid', 'partial'])
+        .is('voided_at', null)
+        .gte('period_end', today)
+        .order('period_end', { ascending: false })
+        .limit(1)
+        .maybeSingle()
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        if (!data) return null;
+
+        const row = data as {
+          plan_total_cop: number;
+          amount_received_cop: number;
+          discount_percentage_applied: number | null;
+          discount_amount_cop: number;
+          status: string;
+          period_end: string;
+        };
+
+        return {
+          planTotalCop: row.plan_total_cop,
+          amountReceivedCop: row.amount_received_cop,
+          discountPercentageApplied: row.discount_percentage_applied,
+          discountAmountCop: row.discount_amount_cop,
+          status: row.status as 'paid' | 'partial'
+        } satisfies ActivePaymentSnapshot;
+      }),
+      catchError((err) => {
+        console.error('[ClientsService] getActivePaymentSnapshot error:', err);
         throw err;
       })
     );

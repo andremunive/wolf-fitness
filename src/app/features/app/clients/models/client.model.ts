@@ -181,8 +181,30 @@ export interface UpdateClientPayload {
   };
   /** Si cambió el plan, usar RPC — no el campo directo. UUID del nuevo plan. */
   new_plan_id?: string;
+  /**
+   * Cuando es true, el RPC recalcula el pago activo vigente al precio del nuevo plan.
+   * Solo válido si new_plan_id está presente y el nuevo plan es más caro.
+   */
+  apply_plan_change_to_current_payment?: boolean;
   /** Si cambió el trainer, usar RPC. UUID del nuevo trainer o null para quitar. */
   new_trainer_id?: string | null;
   origin?: ClientOrigin;
   referred_by?: string | null;
+}
+
+/**
+ * Snapshot del pago activo del cliente consultado directamente desde Supabase.
+ * Contiene los campos reales necesarios para calcular el preview del upgrade.
+ */
+export interface ActivePaymentSnapshot {
+  /** Monto total del plan en el pago activo (antes del upgrade). */
+  planTotalCop: number;
+  /** Porcentaje de descuento aplicado en el pago activo. Null si no aplica. */
+  discountPercentageApplied: number | null;
+  /** Descuento calculado en el pago activo. */
+  discountAmountCop: number;
+  /** Dinero ya recibido del cliente en el pago activo. */
+  amountReceivedCop: number;
+  /** Status del pago activo: 'paid' o 'partial'. */
+  status: 'paid' | 'partial';
 }

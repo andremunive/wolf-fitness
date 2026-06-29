@@ -1,0 +1,118 @@
+<div
+  class="upgrade-backdrop"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="upgrade-modal-title"
+  (click)="cancel()"
+>
+  <div class="upgrade-sheet" (click)="$event.stopPropagation()">
+
+    <!-- ── Header ── -->
+    <div class="upgrade-header">
+      <div class="upgrade-header__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M7.5 14.25v2.25m3-4.5v4.5m3-6.75v6.75m3-9v9M6 20.25h12A2.25 2.25 0 0020.25 18V6A2.25 2.25 0 0018 3.75H6A2.25 2.25 0 003.75 6v12A2.25 2.25 0 006 20.25z"/>
+        </svg>
+      </div>
+      <div class="upgrade-header__text">
+        <h2 id="upgrade-modal-title" class="upgrade-header__title">Cambio de plan con mensualidad activa</h2>
+        <p class="upgrade-header__subtitle">
+          Mensualidad actual: <strong>{{ formatCop(activePayment.planTotalCop) }}</strong>
+          ({{ currentPlan.name }}) &rarr; nuevo plan: <strong>{{ formatCop(newPlanPrice) }}</strong>
+          ({{ newPlan.name }})
+        </p>
+      </div>
+    </div>
+
+    <!-- ── Pregunta principal ── -->
+    <div class="upgrade-body">
+      <p class="upgrade-body__question">¿Cómo quieres aplicar el cambio?</p>
+
+      <!-- Opción A: desde la próxima mensualidad -->
+      <label
+        class="upgrade-option"
+        [class.upgrade-option--selected]="!applyToCurrent"
+        (click)="onOptionChange(false)"
+      >
+        <span class="upgrade-option__radio">
+          <span class="upgrade-option__radio-dot" *ngIf="!applyToCurrent"></span>
+        </span>
+        <span class="upgrade-option__content">
+          <span class="upgrade-option__title">Desde la próxima mensualidad</span>
+          <span class="upgrade-option__desc">
+            La mensualidad actual queda intacta. El nuevo plan
+            ({{ formatCop(newPlanPrice) }}/mes) aplica a partir del próximo pago.
+          </span>
+        </span>
+      </label>
+
+      <!-- Opción B: a la mensualidad actual -->
+      <label
+        class="upgrade-option"
+        [class.upgrade-option--selected]="applyToCurrent"
+        (click)="onOptionChange(true)"
+      >
+        <span class="upgrade-option__radio">
+          <span class="upgrade-option__radio-dot" *ngIf="applyToCurrent"></span>
+        </span>
+        <span class="upgrade-option__content">
+          <span class="upgrade-option__title">A la mensualidad actual</span>
+          <span class="upgrade-option__desc">
+            La mensualidad actual se ajusta al precio del nuevo plan.
+            El cliente queda con saldo pendiente.
+          </span>
+
+          <!-- Preview: solo visible cuando esta opción está seleccionada -->
+          <div class="upgrade-preview" *ngIf="applyToCurrent">
+            <div class="upgrade-preview__row">
+              <span class="upgrade-preview__label">Total nuevo</span>
+              <span class="upgrade-preview__value">{{ formatCop(preview.newTotal) }}</span>
+            </div>
+            <div class="upgrade-preview__row" *ngIf="preview.discountAmount > 0">
+              <span class="upgrade-preview__label">Descuento aplicado</span>
+              <span class="upgrade-preview__value upgrade-preview__value--discount">
+                &minus; {{ formatCop(preview.discountAmount) }}
+              </span>
+            </div>
+            <div class="upgrade-preview__row">
+              <span class="upgrade-preview__label">Ya recibido</span>
+              <span class="upgrade-preview__value upgrade-preview__value--received">
+                &minus; {{ formatCop(preview.amountReceived) }}
+              </span>
+            </div>
+            <div class="upgrade-preview__divider"></div>
+            <div class="upgrade-preview__row upgrade-preview__row--balance">
+              <span class="upgrade-preview__label">Saldo pendiente</span>
+              <span class="upgrade-preview__value upgrade-preview__value--balance">
+                {{ formatCop(preview.newBalance) }}
+              </span>
+            </div>
+            <p class="upgrade-preview__status-note">
+              <ng-container *ngIf="preview.previousStatus === 'paid'">
+                El pago pasara de <strong>PAGADO</strong> a <strong>PARCIAL</strong> con el nuevo saldo.
+              </ng-container>
+              <ng-container *ngIf="preview.previousStatus === 'partial'">
+                El pago permanece en <strong>PARCIAL</strong> con mayor saldo pendiente.
+              </ng-container>
+            </p>
+          </div>
+        </span>
+      </label>
+    </div>
+
+    <!-- ── Footer ── -->
+    <div class="upgrade-footer">
+      <button
+        type="button"
+        class="upgrade-footer__cancel"
+        (click)="cancel()"
+      >Cancelar</button>
+      <button
+        type="button"
+        class="upgrade-footer__confirm"
+        (click)="confirm()"
+      >Confirmar cambio</button>
+    </div>
+
+  </div>
+</div>
