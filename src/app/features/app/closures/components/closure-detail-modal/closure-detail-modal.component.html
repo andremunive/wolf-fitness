@@ -107,7 +107,7 @@
       <!-- Mobile: lista compacta -->
       <div class="entries-list md:hidden">
         <div
-          *ngFor="let entry of closure.entries; let i = index"
+          *ngFor="let entry of closure.entries; let i = index; trackBy: trackByEntryPaymentId"
           class="entry-row"
         >
           <span class="entry-row__order">{{ entry.payment_order }}</span>
@@ -143,7 +143,7 @@
             </tr>
           </thead>
           <tbody>
-            <tr *ngFor="let entry of closure.entries">
+            <tr *ngFor="let entry of closure.entries; trackBy: trackByEntryPaymentId">
               <td>{{ entry.payment_order }}</td>
               <td class="entries-table__name">{{ entry.client_name }}</td>
               <td>{{ formatDate(entry.reception_date) }}</td>
@@ -292,7 +292,7 @@
           <label class="adj-form__label" for="mp-method">Método de pago</label>
           <select id="mp-method" class="adj-form__input" [(ngModel)]="markPaidMethod">
             <option value="" disabled>Selecciona…</option>
-            <option *ngFor="let m of paymentMethods" [value]="m.value">{{ m.label }}</option>
+            <option *ngFor="let m of paymentMethods; trackBy: trackByMethodValue" [value]="m.value">{{ m.label }}</option>
           </select>
         </div>
 

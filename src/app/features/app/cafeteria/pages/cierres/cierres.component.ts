@@ -9,7 +9,7 @@ import { BehaviorSubject, forkJoin, Subject } from 'rxjs';
 import { catchError, finalize, of, startWith, switchMap, takeUntil } from 'rxjs';
 
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { CafeteriaService } from '../../services/cafeteria.service';
+import { CafeteriaCierresService } from '../../services/cafeteria-cierres.service';
 import {
   CafeteriaConsolidation,
   CafeteriaConsolidationPreview,
@@ -88,7 +88,7 @@ export class CierresComponent implements OnInit, OnDestroy {
   isClosing = false;
 
   constructor(
-    private readonly cafeteriaService: CafeteriaService,
+    private readonly cierresService: CafeteriaCierresService,
     private readonly toastService: ToastService,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -102,7 +102,7 @@ export class CierresComponent implements OnInit, OnDestroy {
           this.q1Card = null;
           this.q2Card = null;
           this.cdr.markForCheck();
-          return this.cafeteriaService.getConsolidationsWithUser().pipe(
+          return this.cierresService.getConsolidationsWithUser().pipe(
             catchError((err) => {
               this.historyError = err?.message ?? 'Error al cargar el historial.';
               return of([] as CafeteriaConsolidationWithUser[]);
@@ -238,7 +238,7 @@ export class CierresComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     openCards.forEach((card) => {
-      this.cafeteriaService
+      this.cierresService
         .getConsolidationPreview(card.periodStart, card.periodEnd)
         .pipe(takeUntil(this.destroy$))
         .subscribe({
@@ -297,7 +297,7 @@ export class CierresComponent implements OnInit, OnDestroy {
     this.isClosing = true;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.cierresService
       .closeConsolidation(card.periodStart, card.periodEnd)
       .pipe(
         finalize(() => {

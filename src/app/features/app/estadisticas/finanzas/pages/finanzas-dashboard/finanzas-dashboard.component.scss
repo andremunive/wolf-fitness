@@ -22,7 +22,6 @@
   display: block;
   background: var(--fv2-bg);
   color: var(--fv2-text-primary);
-  font-family: 'Inter', system-ui, -apple-system, sans-serif;
 
   // En desktop el app-shell aplica height: 100vh + overflow: hidden,
   // así que el host debe ser el scroll container — ocupa todo el ancho

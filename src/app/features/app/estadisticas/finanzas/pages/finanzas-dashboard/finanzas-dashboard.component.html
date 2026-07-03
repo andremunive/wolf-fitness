@@ -14,7 +14,7 @@
         <span class="fv2-breadcrumb__sep">—</span>
         <span>FINANZAS</span>
         <span class="fv2-breadcrumb__sep">—</span>
-        <span class="fv2-breadcrumb__current">{{ periodoLabel | uppercase }}</span>
+        <span class="fv2-breadcrumb__current">{{ (periodoLabel$ | async) | uppercase }}</span>
 
         <ng-container *ngIf="resumenState$ | async as rs">
           <span
@@ -62,18 +62,17 @@
               class="fv2-hero__number"
               [class.fv2-hero__number--positive]="rs.data!.utilidad.es_positiva"
               [class.fv2-hero__number--negative]="!rs.data!.utilidad.es_positiva">
-              {{ formatVisible(rs.data!.utilidad.total_cop, m.v) }}
+              {{ rs.data!.utilidad.total_cop | visibleCop:m.v }}
             </span>
 
-            <span [ngClass]="deltaPillClass(rs.data!.utilidad.delta_cop)">
-              {{ deltaPillArrow(rs.data!.utilidad.delta_cop) }}
+            <span [ngClass]="rs.data!.utilidad.delta_cop | deltaClass">
+              {{ rs.data!.utilidad.delta_cop | deltaArrow }}
               <ng-container *ngIf="rs.data!.utilidad.delta_cop !== 0">
-                {{ formatVisibleShort(
-                    rs.data!.utilidad.delta_cop < 0
+                {{ (rs.data!.utilidad.delta_cop < 0
                       ? -rs.data!.utilidad.delta_cop
-                      : rs.data!.utilidad.delta_cop, m.v) }}
+                      : rs.data!.utilidad.delta_cop) | visibleCop:m.v:true }}
               </ng-container>
-              <span class="fv2-pill__label">vs {{ prevMonthLabel(periodo) }}</span>
+              <span class="fv2-pill__label">vs {{ prevMonthLabel$ | async }}</span>
             </span>
           </div>
 
@@ -81,7 +80,7 @@
           <p class="fv2-hero__meta">
             {{ rs.data!.ingresos.cantidad_pagos ?? 0 }} pagos
             <span class="fv2-faint">·</span>
-            {{ formatVisible(rs.data!.ingresos.total_cop, m.v) }}
+            {{ rs.data!.ingresos.total_cop | visibleCop:m.v }}
           </p>
 
           <!-- Fórmula P&L -->
@@ -90,47 +89,41 @@
           </p>
 
           <!-- Sparkline de utilidad -->
-          <ng-container *ngIf="tendenciaState$ | async as ts">
-            <div *ngIf="ts.status === 'loading'" class="fv2-spark-skeleton"></div>
-
-            <ng-container *ngIf="ts.status === 'loaded'">
-              <ng-container *ngIf="buildHeroSparkline(ts.data!) as g">
-                <div class="fv2-spark">
-                  <svg
-                    [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
-                    preserveAspectRatio="none"
-                    class="fv2-spark__svg"
-                    aria-hidden="true">
-                    <defs>
-                      <linearGradient
-                        id="fv2SparkGrad"
-                        x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="0%" stop-color="#10b981" stop-opacity="0.18" />
-                        <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
-                      </linearGradient>
-                    </defs>
-                    <path
-                      [attr.d]="g.areaPath"
-                      fill="url(#fv2SparkGrad)"
-                      stroke="none" />
-                    <path
-                      [attr.d]="g.linePath"
-                      fill="none"
-                      stroke="#10b981"
-                      stroke-width="2"
-                      stroke-linecap="round"
-                      stroke-linejoin="round" />
-                    <circle
-                      [attr.cx]="g.lastX"
-                      [attr.cy]="g.lastY"
-                      r="3.5"
-                      fill="#10b981"
-                      stroke="#ffffff"
-                      stroke-width="2" />
-                  </svg>
-                </div>
-              </ng-container>
-            </ng-container>
+          <ng-container *ngIf="heroSparkline$ | async as g">
+            <div class="fv2-spark">
+              <svg
+                [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
+                preserveAspectRatio="none"
+                class="fv2-spark__svg"
+                aria-hidden="true">
+                <defs>
+                  <linearGradient
+                    id="fv2SparkGrad"
+                    x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stop-color="#10b981" stop-opacity="0.18" />
+                    <stop offset="100%" stop-color="#10b981" stop-opacity="0" />
+                  </linearGradient>
+                </defs>
+                <path
+                  [attr.d]="g.areaPath"
+                  fill="url(#fv2SparkGrad)"
+                  stroke="none" />
+                <path
+                  [attr.d]="g.linePath"
+                  fill="none"
+                  stroke="#10b981"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round" />
+                <circle
+                  [attr.cx]="g.lastX"
+                  [attr.cy]="g.lastY"
+                  r="3.5"
+                  fill="#10b981"
+                  stroke="#ffffff"
+                  stroke-width="2" />
+              </svg>
+            </div>
           </ng-container>
 
         </ng-container>
@@ -172,7 +165,7 @@
             <!-- Columna izquierda: gauge -->
             <div class="fv2-gauge-col">
               <ng-container *ngIf="rs.status === 'loaded'; else preAppGauge">
-                <ng-container *ngIf="buildGauge(rs.data!) as gg">
+                <ng-container *ngIf="gaugeVM$ | async as gg">
                   <div class="fv2-gauge"
                     [attr.style]="'--fv2-gauge-color: ' + gg.color">
                     <svg
@@ -219,7 +212,7 @@
               <h3 class="fv2-context__title">Margen utilidad / ingresos</h3>
 
               <ng-container *ngIf="rs.status === 'loaded'; else preAppContext">
-                <ng-container *ngIf="buildGauge(rs.data!) as gg">
+                <ng-container *ngIf="gaugeVM$ | async as gg">
                   <p class="fv2-context__desc">{{ gg.description }}</p>
                 </ng-container>
               </ng-container>
@@ -237,59 +230,66 @@
           <div class="fv2-card__sep"></div>
 
           <!-- Footer: nav de mes + toggle -->
-          <div class="fv2-card__footer">
+          <ng-container *ngIf="{
+            p: periodo$ | async,
+            atCurrent: isAtCurrentMonth$ | async,
+            atStart: isAtAppStartMonth$ | async,
+            lbl: periodoLabel$ | async
+          } as nav">
+            <div class="fv2-card__footer">
 
-            <!-- Nav de mes compacto -->
-            <div class="fv2-month-nav fv2-month-nav--compact">
+              <!-- Nav de mes compacto -->
+              <div class="fv2-month-nav fv2-month-nav--compact">
+                <button
+                  type="button"
+                  class="fv2-month-nav__btn"
+                  [disabled]="nav.atStart"
+                  (click)="onPrevMonth(nav.p!, !!nav.atStart)"
+                  aria-label="Mes anterior">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="15 18 9 12 15 6"></polyline>
+                  </svg>
+                </button>
+                <span class="fv2-month-nav__label">{{ nav.lbl }}</span>
+                <button
+                  type="button"
+                  class="fv2-month-nav__btn"
+                  [disabled]="nav.atCurrent"
+                  (click)="onNextMonth(nav.p!, !!nav.atCurrent)"
+                  aria-label="Mes siguiente">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="9 18 15 12 9 6"></polyline>
+                  </svg>
+                </button>
+              </div>
+
+              <!-- Toggle visibilidad -->
               <button
                 type="button"
-                class="fv2-month-nav__btn"
-                [disabled]="isAtAppStartMonth"
-                (click)="onPrevMonth()"
-                aria-label="Mes anterior">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="15 18 9 12 15 6"></polyline>
+                class="fv2-toggle-btn"
+                (click)="onToggleMontos()"
+                [attr.aria-pressed]="!(montosVisibles$ | async)">
+                <svg
+                  *ngIf="(montosVisibles$ | async)"
+                  width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                  <circle cx="12" cy="12" r="3"></circle>
                 </svg>
-              </button>
-              <span class="fv2-month-nav__label">{{ periodoLabel }}</span>
-              <button
-                type="button"
-                class="fv2-month-nav__btn"
-                [disabled]="isAtCurrentMonth"
-                (click)="onNextMonth()"
-                aria-label="Mes siguiente">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                  <polyline points="9 18 15 12 9 6"></polyline>
+                <svg
+                  *ngIf="!(montosVisibles$ | async)"
+                  width="16" height="16" viewBox="0 0 24 24" fill="none"
+                  stroke="currentColor" stroke-width="2"
+                  stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
+                  <line x1="1" y1="1" x2="23" y2="23"></line>
                 </svg>
+                <span>{{ (montosVisibles$ | async) ? 'Ocultar montos' : 'Mostrar montos' }}</span>
               </button>
+
             </div>
-
-            <!-- Toggle visibilidad -->
-            <button
-              type="button"
-              class="fv2-toggle-btn"
-              (click)="onToggleMontos()"
-              [attr.aria-pressed]="!(montosVisibles$ | async)">
-              <svg
-                *ngIf="(montosVisibles$ | async)"
-                width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                <circle cx="12" cy="12" r="3"></circle>
-              </svg>
-              <svg
-                *ngIf="!(montosVisibles$ | async)"
-                width="16" height="16" viewBox="0 0 24 24" fill="none"
-                stroke="currentColor" stroke-width="2"
-                stroke-linecap="round" stroke-linejoin="round">
-                <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path>
-                <line x1="1" y1="1" x2="23" y2="23"></line>
-              </svg>
-              <span>{{ (montosVisibles$ | async) ? 'Ocultar montos' : 'Mostrar montos' }}</span>
-            </button>
-
-          </div>
+          </ng-container>
         </div>
 
       </ng-container>
@@ -308,20 +308,19 @@
         <h2 class="fv2-section__title">Indicadores del período</h2>
       </div>
       <p class="fv2-section__subtitle">
-        Movimientos del mes en curso comparados con {{ prevMonthLabel(periodo) }}
+        Movimientos del mes en curso comparados con {{ prevMonthLabel$ | async }}
       </p>
     </header>
 
     <ng-container *ngIf="{
-      rs: resumenState$ | async,
-      ts: tendenciaState$ | async,
-      cs: cajaState$ | async,
+      cards: cardsVM$ | async,
+      desglose: egresosDesglose$ | async,
       v: montosVisibles$ | async
     } as state">
 
       <div class="fv2-cards-grid">
         <article
-          *ngFor="let card of buildCards(state.rs, state.ts, state.cs); trackBy: trackByCardKey"
+          *ngFor="let card of state.cards; trackBy: trackByCardKey"
           class="fv2-card fv2-card--metric"
           [class.fv2-card--metric-open]="openCardKey === card.key"
           [class.fv2-card--metric-clickable]="card.key === 'egresos' && card.status === 'loaded'"
@@ -395,20 +394,18 @@
 
             <!-- Valor principal -->
             <div class="fv2-card-metric__value">
-              {{ formatVisible(card.value, state.v) }}
+              {{ card.value | visibleCop:state.v }}
             </div>
 
             <!-- Delta chip o caption -->
             <div class="fv2-card-metric__meta">
               <ng-container *ngIf="card.delta !== null && card.status === 'loaded'; else cardCaption">
-                <span [ngClass]="card.deltaInverted
-                    ? deltaPillClass(-card.delta)
-                    : deltaPillClass(card.delta)">
-                  {{ deltaPillArrow(card.delta) }}
+                <span [ngClass]="(card.deltaInverted ? -card.delta : card.delta) | deltaClass">
+                  {{ card.delta | deltaArrow }}
                   <ng-container *ngIf="card.delta !== 0">
-                    {{ formatVisibleShort(card.delta < 0 ? -card.delta : card.delta, state.v) }}
+                    {{ (card.delta < 0 ? -card.delta : card.delta) | visibleCop:state.v:true }}
                   </ng-container>
-                  <span class="fv2-pill__label">vs {{ prevMonthLabel(periodo) }}</span>
+                  <span class="fv2-pill__label">vs {{ prevMonthLabel$ | async }}</span>
                 </span>
               </ng-container>
 
@@ -443,7 +440,7 @@
           </ng-container>
 
           <!-- ── Panel flotante de desglose — solo card egresos ──── -->
-          <ng-container *ngIf="card.key === 'egresos' && openCardKey === 'egresos' && state.rs && state.rs.status === 'loaded'">
+          <ng-container *ngIf="card.key === 'egresos' && openCardKey === 'egresos'">
             <div
               class="fv2-egresos-panel"
               role="dialog"
@@ -471,7 +468,7 @@
 
               <ul class="fv2-egresos-panel__list">
                 <li
-                  *ngFor="let row of buildEgresosDesglose(state.rs.data!.egresos_por_tipo); trackBy: trackByExpenseType"
+                  *ngFor="let row of state.desglose; trackBy: trackByExpenseType"
                   class="fv2-egresos-panel__item">
                   <div class="fv2-egresos-panel__item-head">
                     <span
@@ -481,7 +478,7 @@
                       {{ row.label }}
                     </span>
                     <span class="fv2-egresos-panel__amount">
-                      {{ formatVisible(row.total_cop, state.v) }}
+                      {{ row.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                   <div class="fv2-egresos-panel__bar-track">
@@ -496,19 +493,22 @@
 
               <!-- Empty state si todos son 0 -->
               <p
-                *ngIf="buildEgresosDesglose(state.rs.data!.egresos_por_tipo).length === 0"
+                *ngIf="!state.desglose || state.desglose.length === 0"
                 class="fv2-egresos-panel__empty">
                 Sin egresos registrados en este período.
               </p>
 
-              <div class="fv2-egresos-panel__sep"></div>
-
-              <div class="fv2-egresos-panel__total-row">
-                <span class="fv2-egresos-panel__total-label">Total</span>
-                <span class="fv2-egresos-panel__total-amount">
-                  {{ formatVisible(state.rs.data!.egresos_por_tipo.total_cop, state.v) }}
-                </span>
-              </div>
+              <ng-container *ngIf="resumenState$ | async as rs">
+                <ng-container *ngIf="rs.status === 'loaded'">
+                  <div class="fv2-egresos-panel__sep"></div>
+                  <div class="fv2-egresos-panel__total-row">
+                    <span class="fv2-egresos-panel__total-label">Total</span>
+                    <span class="fv2-egresos-panel__total-amount">
+                      {{ rs.data!.egresos_por_tipo.total_cop | visibleCop:state.v }}
+                    </span>
+                  </div>
+                </ng-container>
+              </ng-container>
 
             </div>
           </ng-container>
@@ -552,7 +552,9 @@
 
     <ng-container *ngIf="{
       ts: tendenciaState$ | async,
-      ventana: ventanaTendencia$ | async,
+      variacion: variacion$ | async,
+      legend: seriesLegend$ | async,
+      chartData: tendenciaChartData$ | async,
       v: montosVisibles$ | async
     } as state">
 
@@ -576,85 +578,81 @@
 
         <!-- Loaded -->
         <ng-container *ngIf="state.ts && state.ts.status === 'loaded'">
-          <ng-container *ngIf="windowedPuntos(state.ts.data!, state.ventana) as puntos">
+          <div class="fv2-tendencia__body">
 
-            <div class="fv2-tendencia__body">
+            <!-- ─── Zona izquierda: Variación + leyenda ───────────── -->
+            <div class="fv2-tendencia__left">
+              <span class="fv2-tendencia__label">VARIACIÓN</span>
 
-              <!-- ─── Zona izquierda: Variación + leyenda ───────────── -->
-              <div class="fv2-tendencia__left">
-                <span class="fv2-tendencia__label">VARIACIÓN</span>
+              <ng-container *ngIf="state.variacion as varia">
+                <div class="fv2-var" [ngClass]="varia.cssClass">
+                  {{ varia.display }}
+                </div>
+                <p
+                  *ngIf="varia.mesInicialLabel"
+                  class="fv2-tendencia__sub">
+                  en utilidad vs {{ varia.mesInicialLabel }}
+                </p>
+              </ng-container>
 
-                <ng-container *ngIf="buildVariacion(puntos) as varia">
-                  <div class="fv2-var" [ngClass]="varia.cssClass">
-                    {{ varia.display }}
+              <div class="fv2-tendencia__divider"></div>
+
+              <!-- Mini leyenda con barras min→max -->
+              <ul class="fv2-legend">
+                <li
+                  *ngFor="let row of state.legend; trackBy: trackByIndex"
+                  class="fv2-legend__row">
+                  <div class="fv2-legend__head">
+                    <span
+                      class="fv2-legend__dot"
+                      [style.background]="row.color"></span>
+                    <span class="fv2-legend__label">{{ row.label }}</span>
+                    <span class="fv2-legend__range">
+                      {{ state.v ? row.minLabel : '••' }}
+                      <span class="fv2-legend__arrow">→</span>
+                      {{ state.v ? row.maxLabel : '••' }}
+                    </span>
                   </div>
-                  <p
-                    *ngIf="varia.mesInicialLabel"
-                    class="fv2-tendencia__sub">
-                    en utilidad vs {{ varia.mesInicialLabel }}
-                  </p>
-                </ng-container>
-
-                <div class="fv2-tendencia__divider"></div>
-
-                <!-- Mini leyenda con barras min→max -->
-                <ul class="fv2-legend">
-                  <li
-                    *ngFor="let row of buildSeriesLegend(puntos); trackBy: trackByIndex"
-                    class="fv2-legend__row">
-                    <div class="fv2-legend__head">
-                      <span
-                        class="fv2-legend__dot"
-                        [style.background]="row.color"></span>
-                      <span class="fv2-legend__label">{{ row.label }}</span>
-                      <span class="fv2-legend__range">
-                        {{ state.v ? row.minLabel : '••' }}
-                        <span class="fv2-legend__arrow">→</span>
-                        {{ state.v ? row.maxLabel : '••' }}
-                      </span>
+                  <div class="fv2-legend__bar-track">
+                    <div
+                      class="fv2-legend__bar"
+                      [style.width.%]="row.widthPct"
+                      [style.background]="row.color">
                     </div>
-                    <div class="fv2-legend__bar-track">
-                      <div
-                        class="fv2-legend__bar"
-                        [style.width.%]="row.widthPct"
-                        [style.background]="row.color">
-                      </div>
-                    </div>
-                  </li>
-                </ul>
-              </div>
-
-              <!-- ─── Zona derecha: Chart.js ───────────────────────── -->
-              <div class="fv2-tendencia__right">
-                <div class="fv2-chart-canvas-wrap">
-                  <canvas
-                    baseChart
-                    [type]="'bar'"
-                    [data]="buildChartData(puntos)"
-                    [options]="chartOptions"
-                    aria-label="Gráfica de tendencia mensual"
-                    role="img"></canvas>
-                </div>
-
-                <div class="fv2-chart-legend">
-                  <span class="fv2-chart-legend__item">
-                    <span class="fv2-chart-legend__sw" style="background:#10b981"></span>
-                    Ingresos
-                  </span>
-                  <span class="fv2-chart-legend__item">
-                    <span class="fv2-chart-legend__sw" style="background:#dc2626"></span>
-                    Egresos totales
-                  </span>
-                  <span class="fv2-chart-legend__item">
-                    <span class="fv2-chart-legend__sw" style="background:#228d9f"></span>
-                    Utilidad
-                  </span>
-                </div>
-              </div>
-
+                  </div>
+                </li>
+              </ul>
             </div>
 
-          </ng-container>
+            <!-- ─── Zona derecha: Chart.js ───────────────────────── -->
+            <div class="fv2-tendencia__right">
+              <div class="fv2-chart-canvas-wrap">
+                <canvas
+                  baseChart
+                  [type]="'bar'"
+                  [data]="state.chartData ?? undefined"
+                  [options]="chartOptions"
+                  aria-label="Gráfica de tendencia mensual"
+                  role="img"></canvas>
+              </div>
+
+              <div class="fv2-chart-legend">
+                <span class="fv2-chart-legend__item">
+                  <span class="fv2-chart-legend__sw" style="background:#10b981"></span>
+                  Ingresos
+                </span>
+                <span class="fv2-chart-legend__item">
+                  <span class="fv2-chart-legend__sw" style="background:#dc2626"></span>
+                  Egresos totales
+                </span>
+                <span class="fv2-chart-legend__item">
+                  <span class="fv2-chart-legend__sw" style="background:#228d9f"></span>
+                  Utilidad
+                </span>
+              </div>
+            </div>
+
+          </div>
         </ng-container>
 
       </div>
@@ -679,7 +677,6 @@
 
     <ng-container *ngIf="{
       cs: cajaState$ | async,
-      ts: tendenciaState$ | async,
       v: montosVisibles$ | async
     } as state">
 
@@ -715,10 +712,10 @@
               <div>
                 <span class="fv2-caja-card__label">CAJA CONSOLIDADA</span>
                 <div class="fv2-caja-card__value">
-                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.saldo_cop | visibleCop:state.v }}
                 </div>
                 <p class="fv2-caja-card__since">
-                  Desde {{ formatDateDmy(state.cs.data!.caja_consolidada.semilla_fecha) }}
+                  Desde {{ state.cs.data!.caja_consolidada.semilla_fecha | localDate }}
                 </p>
               </div>
 
@@ -734,7 +731,7 @@
                   CONSOLIDADO
                 </span>
                 <div class="fv2-caja-stat__value">
-                  {{ formatVisible(state.cs.data!.caja_consolidada.ingresos_consolidados_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.ingresos_consolidados_cop | visibleCop:state.v }}
                 </div>
               </div>
               <div class="fv2-caja-stat">
@@ -743,7 +740,7 @@
                   OPERATIVOS
                 </span>
                 <div class="fv2-caja-stat__value">
-                  {{ formatVisible(state.cs.data!.caja_consolidada.egresos_operativos_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.egresos_operativos_cop | visibleCop:state.v }}
                 </div>
               </div>
               <div class="fv2-caja-stat">
@@ -752,7 +749,7 @@
                   NÓMINA
                 </span>
                 <div class="fv2-caja-stat__value">
-                  {{ formatVisible(state.cs.data!.caja_consolidada.nomina_pagada_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.nomina_pagada_cop | visibleCop:state.v }}
                 </div>
               </div>
               <div class="fv2-caja-stat">
@@ -764,11 +761,11 @@
                   class="fv2-caja-stat__value"
                   [class.fv2-caja-stat__value--amber]="state.cs.data!.caja_consolidada.saldo_prestamos_cop < 0"
                 >
-                  {{ formatVisible(state.cs.data!.caja_consolidada.saldo_prestamos_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.saldo_prestamos_cop | visibleCop:state.v }}
                 </div>
                 <div class="fv2-caja-stat__sublabel">
-                  Otorgados: {{ formatVisible(state.cs.data!.caja_consolidada.prestamos_otorgados_cop, state.v) }}
-                  · Recup.: {{ formatVisible(state.cs.data!.caja_consolidada.abonos_recibidos_cop, state.v) }}
+                  Otorgados: {{ state.cs.data!.caja_consolidada.prestamos_otorgados_cop | visibleCop:state.v }}
+                  · Recup.: {{ state.cs.data!.caja_consolidada.abonos_recibidos_cop | visibleCop:state.v }}
                 </div>
               </div>
 
@@ -784,7 +781,7 @@
                   [class.fv2-caja-stat__value--cafeteria-neg]="state.cs.data!.caja_consolidada.cafeteria_neto_cop < 0"
                   [class.fv2-caja-stat__value--amber]="state.cs.data!.caja_consolidada.cafeteria_neto_cop === 0"
                 >
-                  {{ formatVisible(state.cs.data!.caja_consolidada.cafeteria_neto_cop, state.v) }}
+                  {{ state.cs.data!.caja_consolidada.cafeteria_neto_cop | visibleCop:state.v }}
                 </div>
                 <div class="fv2-caja-stat__sublabel">
                   Neto desde inicio de caja
@@ -824,7 +821,7 @@
             </div>
 
             <div class="fv2-caja-card__value fv2-caja-card__value--light">
-              {{ formatVisible(state.cs.data!.caja_menor.total_cop, state.v) }}
+              {{ state.cs.data!.caja_menor.total_cop | visibleCop:state.v }}
             </div>
 
             <p class="fv2-caja-card__pagos">
@@ -877,6 +874,11 @@
 
     <ng-container *ngIf="{
       ds: detalleState$ | async,
+      rows: metodoRows$ | async,
+      chartData: metodoChartData$ | async,
+      total: totalPagos$ | async,
+      qRows: quincenaRows$ | async,
+      insight: quincenaInsight$ | async,
       v: montosVisibles$ | async
     } as state">
 
@@ -916,9 +918,9 @@
             <header class="fv2-detalle-card__header">
               <h3 class="fv2-detalle-card__title">Ingresos por método de pago</h3>
               <span class="fv2-detalle-card__meta">
-                {{ totalPagos(state.ds.data!) }} pagos
+                {{ state.total }} pagos
                 <span class="fv2-faint">·</span>
-                {{ formatVisible(state.ds.data!.total_ingresos_cop, state.v) }}
+                {{ state.ds.data!.total_ingresos_cop | visibleCop:state.v }}
               </span>
             </header>
 
@@ -929,7 +931,7 @@
                   <canvas
                     baseChart
                     [type]="'doughnut'"
-                    [data]="buildMetodoChartData(state.ds.data!)"
+                    [data]="state.chartData ?? undefined"
                     [options]="metodoChartOptions"
                     aria-label="Distribución de ingresos por método de pago"
                     role="img"></canvas>
@@ -937,7 +939,7 @@
                 <div class="fv2-donut-center">
                   <span class="fv2-donut-center__label">TOTAL</span>
                   <span class="fv2-donut-center__value">
-                    {{ state.v ? formatShort(state.ds.data!.total_ingresos_cop) : '$••••' }}
+                    {{ state.ds.data!.total_ingresos_cop | visibleCop:state.v:true }}
                   </span>
                 </div>
               </div>
@@ -945,7 +947,7 @@
               <!-- Lista -->
               <ul class="fv2-row-list">
                 <li
-                  *ngFor="let r of buildMetodoRows(state.ds.data!); trackBy: trackByMetodo"
+                  *ngFor="let r of state.rows; trackBy: trackByMetodo"
                   class="fv2-row">
                   <div class="fv2-row__top">
                     <span class="fv2-row__name">
@@ -954,7 +956,7 @@
                     </span>
                     <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
                     <span class="fv2-row__amount">
-                      {{ formatVisible(r.total_cop, state.v) }}
+                      {{ r.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                   <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
@@ -967,19 +969,19 @@
 
                 <!-- Total destacado -->
                 <li
-                  *ngIf="buildMetodoRows(state.ds.data!).length > 0"
+                  *ngIf="state.rows && state.rows.length > 0"
                   class="fv2-row fv2-row--total">
                   <div class="fv2-row__top">
                     <span class="fv2-row__name fv2-row__name--total">Total</span>
                     <span class="fv2-row__amount fv2-row__amount--total">
-                      {{ formatVisible(state.ds.data!.total_ingresos_cop, state.v) }}
+                      {{ state.ds.data!.total_ingresos_cop | visibleCop:state.v }}
                     </span>
                   </div>
                 </li>
 
                 <!-- Empty inline -->
                 <li
-                  *ngIf="buildMetodoRows(state.ds.data!).length === 0"
+                  *ngIf="!state.rows || state.rows.length === 0"
                   class="fv2-row-empty">
                   <p class="fv2-muted">Sin pagos registrados en este período.</p>
                 </li>
@@ -1020,7 +1022,7 @@
 
             <ul class="fv2-quincenas">
               <li
-                *ngFor="let q of buildQuincenaRows(state.ds.data!); trackBy: trackByQuincenaKey"
+                *ngFor="let q of state.qRows; trackBy: trackByQuincenaKey"
                 class="fv2-quincena">
                 <div class="fv2-quincena__head">
                   <span class="fv2-quincena__label">{{ q.label }}</span>
@@ -1032,7 +1034,7 @@
                     {{ q.estadoLabel }}
                   </span>
                   <span class="fv2-quincena__amount">
-                    {{ formatVisible(q.total_cop, state.v) }}
+                    {{ q.total_cop | visibleCop:state.v }}
                   </span>
                 </div>
                 <div class="fv2-quincena__bar-track">
@@ -1047,7 +1049,7 @@
 
             <!-- Insight -->
             <div class="fv2-insight">
-              {{ buildQuincenaInsight(state.ds.data!) }}
+              {{ state.insight }}
             </div>
           </ng-container>
         </article>
@@ -1073,15 +1075,18 @@
         </p>
       </div>
 
-      <ng-container *ngIf="composicionState$ | async as cs">
+      <ng-container *ngIf="{
+        vistas: vistasComposicionDisponibles$ | async,
+        vc: vistaComposicion$ | async
+      } as vCtx">
         <div class="fv2-pills" role="tablist" aria-label="Vista de composición">
           <button
-            *ngFor="let v of vistasComposicionDisponibles(cs.status === 'loaded' ? cs.data : null); trackBy: trackByVistaComposicion"
+            *ngFor="let v of vCtx.vistas; trackBy: trackByVistaComposicion"
             type="button"
             role="tab"
             class="fv2-pill-tab"
-            [class.fv2-pill-tab--active]="vistaComposicion === v"
-            [attr.aria-selected]="vistaComposicion === v"
+            [class.fv2-pill-tab--active]="vCtx.vc === v"
+            [attr.aria-selected]="vCtx.vc === v"
             (click)="onVistaComposicionChange(v)">
             {{ vistaComposicionLabels[v] }}
           </button>
@@ -1091,6 +1096,12 @@
 
     <ng-container *ngIf="{
       cs: composicionState$ | async,
+      vc: vistaComposicion$ | async,
+      rows: composicionRows$ | async,
+      chartData: composicionChartData$ | async,
+      ingRows: ingresosRows$ | async,
+      ingChart: ingresosChartData$ | async,
+      lbl: periodoLabel$ | async,
       v: montosVisibles$ | async
     } as state">
 
@@ -1136,7 +1147,7 @@
               <circle cx="40" cy="40" r="14" fill="#dceff1" />
             </svg>
             <h3 class="fv2-empty-state__title">
-              Sin egresos registrados en {{ periodoLabel }}
+              Sin egresos registrados en {{ state.lbl }}
             </h3>
             <p class="fv2-empty-state__subtitle">
               Los datos aparecerán cuando registres gastos o se paguen quincenas de entrenadores.
@@ -1151,7 +1162,7 @@
         <ng-container *ngIf="state.cs && state.cs.status === 'loaded' && state.cs.data!.tiene_datos">
 
           <!-- ── Vista Origen ingresos ───────────────────────────── -->
-          <ng-container *ngIf="vistaComposicion === 'origen_ingresos'">
+          <ng-container *ngIf="state.vc === 'origen_ingresos'">
             <div class="fv2-composicion-body">
               <!-- Dona -->
               <div class="fv2-donut-wrap fv2-donut-wrap--lg">
@@ -1159,7 +1170,7 @@
                   <canvas
                     baseChart
                     [type]="'doughnut'"
-                    [data]="buildIngresosChartData(state.cs.data!.composicion_ingresos)"
+                    [data]="state.ingChart ?? undefined"
                     [options]="composicionChartOptions"
                     aria-label="Composición de ingresos por origen"
                     role="img"></canvas>
@@ -1167,7 +1178,7 @@
                 <div class="fv2-donut-center fv2-donut-center--lg">
                   <span class="fv2-donut-center__label">TOTAL</span>
                   <span class="fv2-donut-center__value fv2-donut-center__value--lg">
-                    {{ state.v ? formatShort(state.cs.data!.composicion_ingresos.total_cop) : '$••••' }}
+                    {{ state.cs.data!.composicion_ingresos.total_cop | visibleCop:state.v:true }}
                   </span>
                 </div>
               </div>
@@ -1175,7 +1186,7 @@
               <!-- Lista -->
               <ul class="fv2-row-list fv2-row-list--lg">
                 <li
-                  *ngFor="let r of buildIngresosRows(state.cs.data!.composicion_ingresos); trackBy: trackByComposicionId"
+                  *ngFor="let r of state.ingRows; trackBy: trackByComposicionId"
                   class="fv2-row">
                   <div class="fv2-row__top">
                     <span class="fv2-row__name">
@@ -1184,7 +1195,7 @@
                     </span>
                     <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
                     <span class="fv2-row__amount">
-                      {{ formatVisible(r.total_cop, state.v) }}
+                      {{ r.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                   <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
@@ -1199,7 +1210,7 @@
                   <div class="fv2-row__top">
                     <span class="fv2-row__name fv2-row__name--total">Total ingresos</span>
                     <span class="fv2-row__amount fv2-row__amount--total">
-                      {{ formatVisible(state.cs.data!.composicion_ingresos.total_cop, state.v) }}
+                      {{ state.cs.data!.composicion_ingresos.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                 </li>
@@ -1208,7 +1219,7 @@
           </ng-container>
 
           <!-- ── Vista Egresos (Por categoría / Por proveedor) ──── -->
-          <ng-container *ngIf="vistaComposicion !== 'origen_ingresos'">
+          <ng-container *ngIf="state.vc !== 'origen_ingresos'">
             <div class="fv2-composicion-body">
 
               <!-- Dona grande -->
@@ -1217,7 +1228,7 @@
                   <canvas
                     baseChart
                     [type]="'doughnut'"
-                    [data]="buildComposicionChartData(state.cs.data!)"
+                    [data]="state.chartData ?? undefined"
                     [options]="composicionChartOptions"
                     aria-label="Composición de egresos"
                     role="img"></canvas>
@@ -1225,7 +1236,7 @@
                 <div class="fv2-donut-center fv2-donut-center--lg">
                   <span class="fv2-donut-center__label">TOTAL</span>
                   <span class="fv2-donut-center__value fv2-donut-center__value--lg">
-                    {{ state.v ? formatShort(state.cs.data!.total_egresos_cop) : '$••••' }}
+                    {{ state.cs.data!.total_egresos_cop | visibleCop:state.v:true }}
                   </span>
                 </div>
               </div>
@@ -1233,7 +1244,7 @@
               <!-- Lista -->
               <ul class="fv2-row-list fv2-row-list--lg">
                 <li
-                  *ngFor="let r of buildComposicionRows(state.cs.data!); trackBy: trackByComposicionId"
+                  *ngFor="let r of state.rows; trackBy: trackByComposicionId"
                   class="fv2-row">
                   <div class="fv2-row__top">
                     <span class="fv2-row__name">
@@ -1242,7 +1253,7 @@
                     </span>
                     <span class="fv2-row__pct">{{ r.porcentaje | number:'1.0-1' }}%</span>
                     <span class="fv2-row__amount">
-                      {{ formatVisible(r.total_cop, state.v) }}
+                      {{ r.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                   <div class="fv2-row__bar-track" [style.background]="r.color + '33'">
@@ -1257,7 +1268,7 @@
                   <div class="fv2-row__top">
                     <span class="fv2-row__name fv2-row__name--total">Total egresos</span>
                     <span class="fv2-row__amount fv2-row__amount--total">
-                      {{ formatVisible(state.cs.data!.total_egresos_cop, state.v) }}
+                      {{ state.cs.data!.total_egresos_cop | visibleCop:state.v }}
                     </span>
                   </div>
                 </li>

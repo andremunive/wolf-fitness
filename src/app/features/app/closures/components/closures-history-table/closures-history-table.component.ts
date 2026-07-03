@@ -159,6 +159,10 @@ export class ClosuresHistoryTableComponent implements OnChanges {
     return row.closureId;
   }
 
+  trackByYear = (_: number, y: number): number => y;
+  trackByTrainerId = (_: number, t: { id: string }): string => t.id;
+  trackByPage = (_: number, p: number): number => p;
+
   get pagesArray(): number[] {
     return Array.from({ length: this.totalPages }, (_, i) => i + 1);
   }

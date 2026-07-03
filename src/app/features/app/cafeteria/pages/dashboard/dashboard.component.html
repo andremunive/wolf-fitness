@@ -223,7 +223,7 @@
     <ng-container *ngIf="state.status === 'loaded'">
       <div class="fv2-cards-grid">
         <div
-          *ngFor="let card of buildCards(state.data)"
+          *ngFor="let card of buildCards(state.data); trackBy: trackByCardLabel"
           class="fv2-card--metric"
         >
           <div class="fv2-card-metric__top">

@@ -26,7 +26,7 @@ import {
   formatAmountCop,
   formatAmountShort
 } from 'src/app/features/app/expense-records/models/expense-record.model';
-import { CafeteriaService } from '../../services/cafeteria.service';
+import { CafeteriaDashboardService } from '../../services/cafeteria-dashboard.service';
 import { CafeteriaDashboardData } from '../../models/cafeteria.model';
 
 // ─── Estado de carga ──────────────────────────────────────────────────────────
@@ -192,7 +192,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.periodoSeleccionado$
   ]).pipe(
     switchMap(([_modo, periodo]) =>
-      this.cafeteriaService
+      this.dashboardService
         .getDashboard(this.toIsoDate(periodo.inicio), this.toIsoDate(periodo.fin))
         .pipe(
           map((data): DashboardState => ({ status: 'loaded', data, error: null })),
@@ -213,7 +213,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
   isAtCurrentPeriod = true;
 
   constructor(
-    private readonly cafeteriaService: CafeteriaService,
+    private readonly dashboardService: CafeteriaDashboardService,
     private readonly router: Router,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -704,6 +704,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
   trackByModo(_i: number, m: PeriodoModo): PeriodoModo {
     return m;
   }
+
+  trackByCardLabel = (_: number, c: CafeteriaCardVM): string => c.label;
 
   readonly modos: PeriodoModo[] = ['mensual', 'trimestral'];
   readonly modoLabels: Record<PeriodoModo, string> = {

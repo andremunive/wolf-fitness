@@ -19,7 +19,7 @@ import {
 } from 'rxjs';
 
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { CafeteriaService } from '../../services/cafeteria.service';
+import { CafeteriaCatalogService } from '../../services/cafeteria-catalog.service';
 import {
   CafeteriaComboWithProduct,
   CafeteriaProduct,
@@ -65,7 +65,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   readonly viewState$: Observable<PageViewState> = this.refresh$.pipe(
     switchMap(() =>
-      this.cafeteriaService.getProducts().pipe(
+      this.catalogService.getProducts().pipe(
         map((products) => ({ loading: false, error: null, products })),
         catchError((err) => {
           const msg: string = err?.message ?? 'Error al cargar los productos.';
@@ -81,7 +81,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
 
   readonly combosState$: Observable<CombosViewState> = this.refreshCombos$.pipe(
     switchMap(() =>
-      this.cafeteriaService.getCombos().pipe(
+      this.catalogService.getCombos().pipe(
         map((combos) => ({ loading: false, error: null, combos })),
         catchError((err) => {
           const msg: string = err?.message ?? 'Error al cargar los combos.';
@@ -165,7 +165,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
   skeletonRows = [1, 2, 3, 4];
 
   constructor(
-    private readonly cafeteriaService: CafeteriaService,
+    private readonly catalogService: CafeteriaCatalogService,
     private readonly toastService: ToastService,
     private readonly fb: FormBuilder,
     private readonly cdr: ChangeDetectorRef
@@ -218,7 +218,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .createProduct({ name: name.trim(), size_label: size_label.trim(), price_cop })
       .pipe(
         finalize(() => {
@@ -272,7 +272,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .updateProduct(this.selectedProduct.id, { name: name.trim(), size_label: size_label.trim() })
       .pipe(
         finalize(() => {
@@ -306,7 +306,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.activeModal = 'update-price';
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .getPriceHistory(product.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -347,7 +347,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .updatePrice(this.selectedProduct.id, newPrice)
       .pipe(
         finalize(() => {
@@ -379,7 +379,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.activeModal = 'price-history';
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .getPriceHistory(product.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -435,7 +435,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .createCombo({ name: name.trim(), product_id, quantity, price_cop })
       .pipe(
         finalize(() => {
@@ -495,7 +495,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .updateCombo(this.selectedCombo.id, {
         name: name.trim(),
         product_id,
@@ -530,7 +530,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.togglingIds.add(product.id);
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .toggleProduct(product.id, !product.is_active)
       .pipe(
         finalize(() => {
@@ -559,7 +559,7 @@ export class CatalogoComponent implements OnInit, OnDestroy {
     this.togglingComboIds.add(combo.id);
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.catalogService
       .toggleCombo(combo.id, !combo.is_active)
       .pipe(
         finalize(() => {

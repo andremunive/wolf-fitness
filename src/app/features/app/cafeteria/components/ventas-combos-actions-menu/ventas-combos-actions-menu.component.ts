@@ -9,7 +9,7 @@ import {
   Output
 } from '@angular/core';
 
-import { CafeteriaComboPurchaseWithDetails } from '../../models/cafeteria.model';
+import { CafeteriaComboPurchaseView } from '../../models/cafeteria-view.models';
 
 @Component({
   selector: 'app-ventas-combos-actions-menu',
@@ -18,11 +18,11 @@ import { CafeteriaComboPurchaseWithDetails } from '../../models/cafeteria.model'
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VentasCombosActionsMenuComponent {
-  @Input() purchase!: CafeteriaComboPurchaseWithDetails;
+  @Input() purchase!: CafeteriaComboPurchaseView;
 
-  @Output() detailRequested = new EventEmitter<CafeteriaComboPurchaseWithDetails>();
-  @Output() consumptionRequested = new EventEmitter<CafeteriaComboPurchaseWithDetails>();
-  @Output() installmentRequested = new EventEmitter<CafeteriaComboPurchaseWithDetails>();
+  @Output() detailRequested = new EventEmitter<CafeteriaComboPurchaseView>();
+  @Output() consumptionRequested = new EventEmitter<CafeteriaComboPurchaseView>();
+  @Output() installmentRequested = new EventEmitter<CafeteriaComboPurchaseView>();
 
   isOpen = false;
   dropdownStyle: Record<string, string> = {};

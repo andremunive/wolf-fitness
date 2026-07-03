@@ -11,7 +11,7 @@
         [(ngModel)]="filterYear"
         (ngModelChange)="onFilterChange()"
       >
-        <option *ngFor="let y of availableYears" [value]="y">{{ y }}</option>
+        <option *ngFor="let y of availableYears; trackBy: trackByYear" [value]="y">{{ y }}</option>
       </select>
     </div>
 
@@ -24,7 +24,7 @@
         (ngModelChange)="onFilterChange()"
       >
         <option value="">Todos</option>
-        <option *ngFor="let t of trainerOptions" [value]="t.id">{{ t.name }}</option>
+        <option *ngFor="let t of trainerOptions; trackBy: trackByTrainerId" [value]="t.id">{{ t.name }}</option>
       </select>
     </div>
 
@@ -160,7 +160,7 @@
       </button>
 
       <button
-        *ngFor="let p of pagesArray"
+        *ngFor="let p of pagesArray; trackBy: trackByPage"
         type="button"
         class="page-btn"
         [class.page-btn--active]="p === currentPage"

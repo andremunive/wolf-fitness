@@ -6,7 +6,7 @@ import {
   OnInit
 } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { BehaviorSubject, Subject } from 'rxjs';
+import { BehaviorSubject, combineLatest, Subject } from 'rxjs';
 import {
   catchError,
   debounceTime,
@@ -21,18 +21,26 @@ import {
 } from 'rxjs';
 
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { CafeteriaService } from '../../services/cafeteria.service';
+import { localDateString } from 'src/app/shared/utils/date.utils';
+import { parsePriceInput, formatPriceDisplay } from 'src/app/shared/utils/currency.utils';
+import { extractErrorMessage } from 'src/app/shared/utils/error.utils';
+import { CafeteriaCatalogService } from '../../services/cafeteria-catalog.service';
+import { CafeteriaVentasService } from '../../services/cafeteria-ventas.service';
 import {
   ActiveClient,
   CafeteriaComboWithProduct,
   CafeteriaInstallment,
   CafeteriaProduct,
   CafeteriaComboPurchase,
-  CafeteriaComboPurchaseWithDetails,
-  CafeteriaSaleWithDetails,
   ClientActiveCombo,
   TrainerOption
 } from '../../models/cafeteria.model';
+import {
+  CafeteriaComboPurchaseView,
+  CafeteriaCombosResult,
+  CafeteriaSalesResult,
+  CafeteriaSaleView
+} from '../../models/cafeteria-view.models';
 
 export type VentasModal =
   | 'new-sale'
@@ -46,16 +54,30 @@ export type BuyerType = 'client' | 'trainer';
 export type SaleType = 'individual' | 'combo';
 export type TableView = 'individual' | 'combos';
 
+interface SalesSummary {
+  total_ingresos_cop: number;
+  count: number;
+  saldo_pendiente_cop: number;
+}
+
+interface CombosSummary {
+  total_ingresos_cop: number;
+  count: number;
+  saldo_pendiente_cop: number;
+}
+
 interface VentasSalesState {
   loading: boolean;
   error: string | null;
-  sales: CafeteriaSaleWithDetails[];
+  sales: CafeteriaSaleView[];
+  summary: SalesSummary;
 }
 
 interface VentasCombosState {
   loading: boolean;
   error: string | null;
-  purchases: CafeteriaComboPurchaseWithDetails[];
+  purchases: CafeteriaComboPurchaseView[];
+  summary: CombosSummary;
 }
 
 type ComboConsumptionItem = {
@@ -65,8 +87,11 @@ type ComboConsumptionItem = {
   registered_by_name: string | null;
 };
 
-const LOADING_SALES_STATE: VentasSalesState = { loading: true, error: null, sales: [] };
-const LOADING_COMBOS_STATE: VentasCombosState = { loading: true, error: null, purchases: [] };
+const EMPTY_SALES_SUMMARY: SalesSummary = { total_ingresos_cop: 0, count: 0, saldo_pendiente_cop: 0 };
+const EMPTY_COMBOS_SUMMARY: CombosSummary = { total_ingresos_cop: 0, count: 0, saldo_pendiente_cop: 0 };
+
+const LOADING_SALES_STATE: VentasSalesState = { loading: true, error: null, sales: [], summary: EMPTY_SALES_SUMMARY };
+const LOADING_COMBOS_STATE: VentasCombosState = { loading: true, error: null, purchases: [], summary: EMPTY_COMBOS_SUMMARY };
 
 const MONTH_NAMES = [
   'Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
@@ -94,11 +119,16 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   readonly salesState$ = this.refresh$.pipe(
     switchMap(({ year, month }) =>
-      this.cafeteriaService.getSales(year, month).pipe(
-        map((sales) => ({ loading: false, error: null, sales } as VentasSalesState)),
+      this.ventasService.getSales(year, month).pipe(
+        map((result: CafeteriaSalesResult) => ({
+          loading: false,
+          error: null,
+          sales: result.sales,
+          summary: result.summary
+        } as VentasSalesState)),
         catchError((err) => {
           const msg: string = err?.message ?? 'Error al cargar las ventas.';
-          return of({ loading: false, error: msg, sales: [] } as VentasSalesState);
+          return of({ loading: false, error: msg, sales: [], summary: EMPTY_SALES_SUMMARY } as VentasSalesState);
         }),
         startWith(LOADING_SALES_STATE)
       )
@@ -110,11 +140,16 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   readonly combosState$ = this.refresh$.pipe(
     switchMap(({ year, month }) =>
-      this.cafeteriaService.getComboPurchases(year, month).pipe(
-        map((purchases) => ({ loading: false, error: null, purchases } as VentasCombosState)),
+      this.ventasService.getComboPurchases(year, month).pipe(
+        map((result: CafeteriaCombosResult) => ({
+          loading: false,
+          error: null,
+          purchases: result.purchases,
+          summary: result.summary
+        } as VentasCombosState)),
         catchError((err) => {
           const msg: string = err?.message ?? 'Error al cargar los combos.';
-          return of({ loading: false, error: msg, purchases: [] } as VentasCombosState);
+          return of({ loading: false, error: msg, purchases: [], summary: EMPTY_COMBOS_SUMMARY } as VentasCombosState);
         }),
         startWith(LOADING_COMBOS_STATE)
       )
@@ -129,13 +164,39 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   // ─── Status filter ────────────────────────────────────────────────────────────
 
-  statusFilter: StatusFilter = 'all';
+  /** Shared filter for both individual sales and combos. */
+  readonly statusFilter$ = new BehaviorSubject<StatusFilter>('all');
+
+  // Expose current value as plain property so filter pills can read [class.active].
+  get statusFilter(): StatusFilter {
+    return this.statusFilter$.getValue();
+  }
+
+  // ─── Filtered lists (derived Observables — no method calls in template) ───────
+
+  readonly filteredSales$ = combineLatest([
+    this.salesState$.pipe(map(state => state.sales ?? [])),
+    this.statusFilter$
+  ]).pipe(
+    map(([sales, filter]) =>
+      filter === 'all' ? sales : sales.filter(s => s.status === filter)
+    )
+  );
+
+  readonly filteredPurchases$ = combineLatest([
+    this.combosState$.pipe(map(state => state.purchases ?? [])),
+    this.statusFilter$
+  ]).pipe(
+    map(([purchases, filter]) =>
+      filter === 'all' ? purchases : purchases.filter(p => p.status === filter)
+    )
+  );
 
   // ─── Modal state ──────────────────────────────────────────────────────────────
 
   activeModal: VentasModal = null;
-  selectedSale: CafeteriaSaleWithDetails | null = null;
-  selectedPurchase: CafeteriaComboPurchaseWithDetails | null = null;
+  selectedSale: CafeteriaSaleView | null = null;
+  selectedPurchase: CafeteriaComboPurchaseView | null = null;
 
   // ─── Individual sale detail data ──────────────────────────────────────────────
 
@@ -158,10 +219,24 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   saleType: SaleType = 'individual';
   buyerType: BuyerType = 'client';
-  activeProducts: CafeteriaProduct[] = [];
-  activeCombos: CafeteriaComboWithProduct[] = [];
-  activeClients: ActiveClient[] = [];
-  trainers: TrainerOption[] = [];
+
+  /**
+   * WHY BehaviorSubject: `selectedProduct$`, `selectedCombo$`, `formTotal$`,
+   * `filteredClients$`, etc. all need to react when these lists are populated
+   * asynchronously in openNewSaleModal(). A plain array would be snapshot-only
+   * at pipe creation time; BehaviorSubjects stay live.
+   */
+  private readonly activeProducts$ = new BehaviorSubject<CafeteriaProduct[]>([]);
+  private readonly activeCombos$ = new BehaviorSubject<CafeteriaComboWithProduct[]>([]);
+  private readonly activeClients$ = new BehaviorSubject<ActiveClient[]>([]);
+  private readonly trainers$ = new BehaviorSubject<TrainerOption[]>([]);
+
+  // Kept as plain arrays for submit handlers that read them synchronously.
+  get activeProducts(): CafeteriaProduct[] { return this.activeProducts$.getValue(); }
+  get activeCombos(): CafeteriaComboWithProduct[] { return this.activeCombos$.getValue(); }
+  get activeClients(): ActiveClient[] { return this.activeClients$.getValue(); }
+  get trainers(): TrainerOption[] { return this.trainers$.getValue(); }
+
   isLoadingFormData = false;
 
   clientQuery = '';
@@ -171,7 +246,7 @@ export class VentasComponent implements OnInit, OnDestroy {
   readonly newSaleForm: FormGroup = this.fb.group({
     product_id: [null, [Validators.required]],
     quantity: [1, [Validators.required, Validators.min(1)]],
-    sale_date: [this.localDateString(new Date()), [Validators.required]],
+    sale_date: [localDateString(new Date()), [Validators.required]],
     amount_received_cop: [0],
     payment_method: [null],
     notes: ['', [Validators.maxLength(300)]]
@@ -179,7 +254,7 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   readonly newComboForm: FormGroup = this.fb.group({
     combo_id: [null, [Validators.required]],
-    purchase_date: [this.localDateString(new Date()), [Validators.required]],
+    purchase_date: [localDateString(new Date()), [Validators.required]],
     amount_received_cop: [0],
     payment_method: [null]
   });
@@ -199,11 +274,134 @@ export class VentasComponent implements OnInit, OnDestroy {
   comboDuplicateWarning: string | null = null;
   isCheckingComboConflict = false;
 
+  // ─── Form-derived Observables (individual) ────────────────────────────────────
+
+  /** Emits the currently selected product, or null. */
+  readonly selectedProduct$ = combineLatest([
+    this.newSaleForm.get('product_id')!.valueChanges.pipe(
+      startWith(this.newSaleForm.get('product_id')!.value as string | null)
+    ),
+    this.activeProducts$
+  ]).pipe(
+    map(([id, products]) => (id ? products.find(p => p.id === id) ?? null : null)),
+    distinctUntilChanged((a, b) => a?.id === b?.id)
+  );
+
+  /** Emits the current form total (product price × quantity). */
+  readonly formTotal$ = combineLatest([
+    this.newSaleForm.valueChanges.pipe(startWith(this.newSaleForm.value)),
+    this.activeProducts$
+  ]).pipe(
+    map(([v, products]) => {
+      const product = products.find(p => p.id === v['product_id']);
+      const qty: number = (v['quantity'] as number) ?? 1;
+      return product && qty >= 1 ? product.price_cop * qty : 0;
+    })
+  );
+
+  /** Emits 'zero' | 'partial' | 'exact' | 'over' based on received vs total. */
+  readonly amountHint$ = combineLatest([
+    this.newSaleForm.get('amount_received_cop')!.valueChanges.pipe(
+      startWith(this.newSaleForm.get('amount_received_cop')!.value as number)
+    ),
+    this.formTotal$
+  ]).pipe(
+    map(([received, total]) => {
+      const r: number = (received as number) ?? 0;
+      if (r === 0 || total === 0) return 'zero' as const;
+      if (r > total) return 'over' as const;
+      if (r === total) return 'exact' as const;
+      return 'partial' as const;
+    })
+  );
+
+  /** True when the payment method field must be shown. */
+  readonly isPaymentMethodRequired$ = this.newSaleForm.get('amount_received_cop')!.valueChanges.pipe(
+    startWith(this.newSaleForm.get('amount_received_cop')!.value as number),
+    map(received => ((received as number) ?? 0) > 0)
+  );
+
+  // ─── Form-derived Observables (combo) ────────────────────────────────────────
+
+  /** Emits the currently selected combo, or null. */
+  readonly selectedCombo$ = combineLatest([
+    this.newComboForm.get('combo_id')!.valueChanges.pipe(
+      startWith(this.newComboForm.get('combo_id')!.value as string | null)
+    ),
+    this.activeCombos$
+  ]).pipe(
+    map(([id, combos]) => (id ? combos.find(c => c.id === id) ?? null : null)),
+    distinctUntilChanged((a, b) => a?.id === b?.id)
+  );
+
+  /** Emits 'zero' | 'partial' | 'exact' | 'over' for the combo form. */
+  readonly comboAmountHint$ = combineLatest([
+    this.newComboForm.get('amount_received_cop')!.valueChanges.pipe(
+      startWith(this.newComboForm.get('amount_received_cop')!.value as number)
+    ),
+    this.selectedCombo$
+  ]).pipe(
+    map(([received, combo]) => {
+      const r: number = (received as number) ?? 0;
+      const total: number = combo?.price_cop ?? 0;
+      if (r === 0 || total === 0) return 'zero' as const;
+      if (r > total) return 'over' as const;
+      if (r === total) return 'exact' as const;
+      return 'partial' as const;
+    })
+  );
+
+  /** True when the combo payment method field must be shown. */
+  readonly isComboPaymentMethodRequired$ = this.newComboForm.get('amount_received_cop')!.valueChanges.pipe(
+    startWith(this.newComboForm.get('amount_received_cop')!.value as number),
+    map(received => ((received as number) ?? 0) > 0)
+  );
+
+  // ─── Autocomplete Observables ─────────────────────────────────────────────────
+
+  private readonly clientQuery$ = new BehaviorSubject<string>('');
+  private readonly trainerQuery$ = new BehaviorSubject<string>('');
+  private readonly comboClientQuery$ = new BehaviorSubject<string>('');
+
+  readonly filteredClients$ = combineLatest([
+    this.clientQuery$.pipe(debounceTime(100), distinctUntilChanged()),
+    this.activeClients$
+  ]).pipe(
+    map(([query, clients]) => {
+      if (!query.trim()) return clients.slice(0, 8);
+      const q = query.toLowerCase();
+      return clients.filter(c => c.full_name.toLowerCase().includes(q)).slice(0, 8);
+    })
+  );
+
+  readonly filteredTrainers$ = combineLatest([
+    this.trainerQuery$.pipe(debounceTime(100), distinctUntilChanged()),
+    this.trainers$
+  ]).pipe(
+    map(([query, trainers]) => {
+      if (!query.trim()) return trainers;
+      const q = query.toLowerCase();
+      return trainers.filter(t => t.full_name.toLowerCase().includes(q));
+    })
+  );
+
+  readonly filteredComboClients$ = combineLatest([
+    this.comboClientQuery$.pipe(debounceTime(100), distinctUntilChanged()),
+    this.activeClients$
+  ]).pipe(
+    map(([query, clients]) => {
+      if (!query.trim()) return clients.slice(0, 8);
+      const q = query.toLowerCase();
+      return clients.filter(c => c.full_name.toLowerCase().includes(q)).slice(0, 8);
+    })
+  );
+
   // ─── Installment modal (individual) ──────────────────────────────────────────
+  // Declared before installmentNewBalance$ so the property initializer can reference this.installmentForm.
 
   readonly installmentForm: FormGroup = this.fb.group({
     amount_cop: [null, [Validators.required, Validators.min(1)]],
-    payment_date: [this.localDateString(new Date()), [Validators.required]],
+    payment_date: [localDateString(new Date()), [Validators.required]],
     payment_method: ['', [Validators.required]],
     notes: ['', [Validators.maxLength(300)]]
   });
@@ -211,15 +409,41 @@ export class VentasComponent implements OnInit, OnDestroy {
   installmentAmountRaw = '';
 
   // ─── Installment modal (combo) ────────────────────────────────────────────────
+  // Declared before comboInstallmentNewBalance$ for the same reason.
 
   readonly comboInstallmentForm: FormGroup = this.fb.group({
     amount_cop: [null, [Validators.required, Validators.min(1)]],
-    payment_date: [this.localDateString(new Date()), [Validators.required]],
+    payment_date: [localDateString(new Date()), [Validators.required]],
     payment_method: ['', [Validators.required]],
     notes: ['', [Validators.maxLength(300)]]
   });
 
   comboInstallmentAmountRaw = '';
+
+  // ─── Installment balance preview Observables ──────────────────────────────────
+
+  /**
+   * Emits the projected balance after applying the entered installment amount.
+   * Reads selectedSale imperatively — acceptable because the installment modal
+   * is only open while selectedSale is non-null and does not change mid-open.
+   */
+  readonly installmentNewBalance$ = this.installmentForm.get('amount_cop')!.valueChanges.pipe(
+    startWith(this.installmentForm.get('amount_cop')!.value as number | null),
+    map(amount => {
+      if (!this.selectedSale) return 0;
+      const a: number = (amount as number) ?? 0;
+      return Math.max(0, (this.selectedSale.balance_cop ?? 0) - a);
+    })
+  );
+
+  readonly comboInstallmentNewBalance$ = this.comboInstallmentForm.get('amount_cop')!.valueChanges.pipe(
+    startWith(this.comboInstallmentForm.get('amount_cop')!.value as number | null),
+    map(amount => {
+      if (!this.selectedPurchase) return 0;
+      const a: number = (amount as number) ?? 0;
+      return Math.max(0, (this.selectedPurchase.balance_cop ?? 0) - a);
+    })
+  );
 
   // ─── Saving flags ─────────────────────────────────────────────────────────────
 
@@ -228,10 +452,11 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   skeletonRows = [1, 2, 3, 4, 5];
 
-  readonly today = this.localDateString(new Date());
+  readonly today = localDateString(new Date());
 
   constructor(
-    private readonly cafeteriaService: CafeteriaService,
+    private readonly ventasService: CafeteriaVentasService,
+    private readonly catalogService: CafeteriaCatalogService,
     private readonly toastService: ToastService,
     private readonly fb: FormBuilder,
     private readonly cdr: ChangeDetectorRef
@@ -248,7 +473,7 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   setTableView(view: TableView): void {
     this.tableView = view;
-    this.statusFilter = 'all';
+    this.statusFilter$.next('all');
     this.cdr.markForCheck();
   }
 
@@ -289,104 +514,8 @@ export class VentasComponent implements OnInit, OnDestroy {
   // ─── Status filter ────────────────────────────────────────────────────────────
 
   setFilter(filter: StatusFilter): void {
-    this.statusFilter = filter;
+    this.statusFilter$.next(filter);
     this.cdr.markForCheck();
-  }
-
-  filterSales(sales: CafeteriaSaleWithDetails[]): CafeteriaSaleWithDetails[] {
-    if (this.statusFilter === 'all') return sales;
-    return sales.filter((s) => s.status === this.statusFilter);
-  }
-
-  filterPurchases(purchases: CafeteriaComboPurchaseWithDetails[]): CafeteriaComboPurchaseWithDetails[] {
-    if (this.statusFilter === 'all') return purchases;
-    return purchases.filter((p) => p.status === this.statusFilter);
-  }
-
-  // ─── Summary calculations (individual) ───────────────────────────────────────
-
-  totalIngresos(sales: CafeteriaSaleWithDetails[]): number {
-    return sales.reduce((acc, s) => acc + s.amount_received_cop, 0);
-  }
-
-  totalRegistradas(sales: CafeteriaSaleWithDetails[]): number {
-    return sales.length;
-  }
-
-  saldoPendiente(sales: CafeteriaSaleWithDetails[]): number {
-    return sales
-      .filter((s) => s.status === 'pending' || s.status === 'partial')
-      .reduce((acc, s) => acc + (s.balance_cop ?? 0), 0);
-  }
-
-  // ─── Summary calculations (combos) ───────────────────────────────────────────
-
-  totalIngresosCombo(purchases: CafeteriaComboPurchaseWithDetails[]): number {
-    return purchases.reduce((acc, p) => acc + (p.amount_received_cop ?? 0), 0);
-  }
-
-  totalCombosVendidos(purchases: CafeteriaComboPurchaseWithDetails[]): number {
-    return purchases.length;
-  }
-
-  saldoPendienteCombo(purchases: CafeteriaComboPurchaseWithDetails[]): number {
-    return purchases
-      .filter((p) => p.status === 'pending' || p.status === 'partial')
-      .reduce((acc, p) => acc + (p.balance_cop ?? 0), 0);
-  }
-
-  // ─── Sale computations ────────────────────────────────────────────────────────
-
-  getSaleTotal(sale: CafeteriaSaleWithDetails): number {
-    return (sale.product_price_snapshot_cop ?? 0) * (sale.quantity ?? 1);
-  }
-
-  getProgressPercent(sale: CafeteriaSaleWithDetails): number {
-    const total = this.getSaleTotal(sale);
-    if (total === 0) return 0;
-    return Math.min(100, Math.round(((sale.amount_received_cop ?? 0) / total) * 100));
-  }
-
-  isFullyPaid(sale: CafeteriaSaleWithDetails): boolean {
-    return (sale.amount_received_cop ?? 0) >= this.getSaleTotal(sale);
-  }
-
-  // ─── Combo purchase computations ──────────────────────────────────────────────
-
-  getComboPaymentProgressPercent(purchase: CafeteriaComboPurchaseWithDetails): number {
-    const price = purchase.combo_price_snapshot_cop ?? 0;
-    if (price === 0) return 0;
-    return Math.min(100, Math.round(((purchase.amount_received_cop ?? 0) / price) * 100));
-  }
-
-  getComboConsumptionPercent(purchase: CafeteriaComboPurchaseWithDetails): number {
-    const total = purchase.total_units ?? 0;
-    if (total === 0) return 0;
-    return Math.min(100, Math.round(((purchase.units_consumed ?? 0) / total) * 100));
-  }
-
-  // ─── Date helpers ─────────────────────────────────────────────────────────────
-
-  hasDifferentRegistrationDate(sale: CafeteriaSaleWithDetails): boolean {
-    if (!sale.reported_date || !sale.sale_date) return false;
-    return sale.sale_date !== sale.reported_date;
-  }
-
-  formatDateShort(dateStr: string | null | undefined): string {
-    if (!dateStr) return '—';
-    const [y, m, d] = dateStr.split('-').map(Number);
-    return `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
-  }
-
-  formatDateTime(isoStr: string | null | undefined): string {
-    if (!isoStr) return '—';
-    const d = new Date(isoStr);
-    const day = String(d.getDate()).padStart(2, '0');
-    const month = String(d.getMonth() + 1).padStart(2, '0');
-    const year = d.getFullYear();
-    const hours = String(d.getHours()).padStart(2, '0');
-    const mins = String(d.getMinutes()).padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${mins}`;
   }
 
   // ─── Modal: New sale (opener) ─────────────────────────────────────────────────
@@ -397,6 +526,9 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.clientQuery = '';
     this.trainerQuery = '';
     this.comboClientQuery = '';
+    this.clientQuery$.next('');
+    this.trainerQuery$.next('');
+    this.comboClientQuery$.next('');
     this.amountReceivedRaw = '0';
     this.comboAmountReceivedRaw = '0';
     this.saveError = null;
@@ -408,14 +540,14 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.newSaleForm.reset({
       product_id: null,
       quantity: 1,
-      sale_date: this.localDateString(new Date()),
+      sale_date: localDateString(new Date()),
       amount_received_cop: 0,
       payment_method: null,
       notes: ''
     });
     this.newComboForm.reset({
       combo_id: null,
-      purchase_date: this.localDateString(new Date()),
+      purchase_date: localDateString(new Date()),
       amount_received_cop: 0,
       payment_method: null
     });
@@ -423,12 +555,12 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
 
     this.isLoadingFormData = true;
-    this.cafeteriaService
+    this.catalogService
       .getProducts()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (products) => {
-          this.activeProducts = products.filter((p) => p.is_active);
+          this.activeProducts$.next(products.filter((p) => p.is_active));
           this.isLoadingFormData = false;
           this.cdr.markForCheck();
         },
@@ -438,12 +570,12 @@ export class VentasComponent implements OnInit, OnDestroy {
         }
       });
 
-    this.cafeteriaService
+    this.catalogService
       .getCombos()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (combos) => {
-          this.activeCombos = combos.filter((c) => c.is_active);
+          this.activeCombos$.next(combos.filter((c) => c.is_active));
           this.cdr.markForCheck();
         },
         error: () => {
@@ -451,12 +583,12 @@ export class VentasComponent implements OnInit, OnDestroy {
         }
       });
 
-    this.cafeteriaService
+    this.ventasService
       .getActiveClients()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (clients) => {
-          this.activeClients = clients;
+          this.activeClients$.next(clients);
           this.cdr.markForCheck();
         },
         error: () => {
@@ -464,12 +596,12 @@ export class VentasComponent implements OnInit, OnDestroy {
         }
       });
 
-    this.cafeteriaService
+    this.ventasService
       .getTrainers()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
         next: (trainers) => {
-          this.trainers = trainers;
+          this.trainers$.next(trainers);
           this.cdr.markForCheck();
         },
         error: () => {
@@ -493,6 +625,8 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.buyerType = type;
     this.clientQuery = '';
     this.trainerQuery = '';
+    this.clientQuery$.next('');
+    this.trainerQuery$.next('');
     this.selectedClientId = null;
     this.selectedTrainerId = null;
     this.clientActiveCombos = [];
@@ -501,20 +635,10 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   // ─── Buyer autocomplete (individual) ─────────────────────────────────────────
 
-  get filteredClients(): ActiveClient[] {
-    if (!this.clientQuery.trim()) return this.activeClients.slice(0, 8);
-    const q = this.clientQuery.toLowerCase();
-    return this.activeClients.filter((c) => c.full_name.toLowerCase().includes(q)).slice(0, 8);
-  }
-
-  get filteredTrainers(): TrainerOption[] {
-    if (!this.trainerQuery.trim()) return this.trainers;
-    const q = this.trainerQuery.toLowerCase();
-    return this.trainers.filter((t) => t.full_name.toLowerCase().includes(q));
-  }
-
   onClientQueryInput(event: Event): void {
-    this.clientQuery = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement).value;
+    this.clientQuery = value;
+    this.clientQuery$.next(value);
     this.selectedClientId = null;
     this.clientActiveCombos = [];
     this.showClientDropdown = true;
@@ -524,6 +648,7 @@ export class VentasComponent implements OnInit, OnDestroy {
   selectClient(client: ActiveClient): void {
     this.selectedClientId = client.id;
     this.clientQuery = client.full_name;
+    this.clientQuery$.next(client.full_name);
     this.showClientDropdown = false;
     this.clientActiveCombos = [];
     this.cdr.markForCheck();
@@ -538,7 +663,9 @@ export class VentasComponent implements OnInit, OnDestroy {
   }
 
   onTrainerQueryInput(event: Event): void {
-    this.trainerQuery = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement).value;
+    this.trainerQuery = value;
+    this.trainerQuery$.next(value);
     this.selectedTrainerId = null;
     this.showTrainerDropdown = true;
     this.cdr.markForCheck();
@@ -547,6 +674,7 @@ export class VentasComponent implements OnInit, OnDestroy {
   selectTrainer(trainer: TrainerOption): void {
     this.selectedTrainerId = trainer.id;
     this.trainerQuery = trainer.full_name;
+    this.trainerQuery$.next(trainer.full_name);
     this.showTrainerDropdown = false;
     this.cdr.markForCheck();
   }
@@ -560,7 +688,7 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   private loadClientActiveCombos(clientId: string): void {
     this.isLoadingActiveCombos = true;
-    this.cafeteriaService
+    this.ventasService
       .getClientActiveCombos(clientId)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -578,14 +706,10 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   // ─── Combo buyer autocomplete ─────────────────────────────────────────────────
 
-  get filteredComboClients(): ActiveClient[] {
-    if (!this.comboClientQuery.trim()) return this.activeClients.slice(0, 8);
-    const q = this.comboClientQuery.toLowerCase();
-    return this.activeClients.filter((c) => c.full_name.toLowerCase().includes(q)).slice(0, 8);
-  }
-
   onComboClientQueryInput(event: Event): void {
-    this.comboClientQuery = (event.target as HTMLInputElement).value;
+    const value = (event.target as HTMLInputElement).value;
+    this.comboClientQuery = value;
+    this.comboClientQuery$.next(value);
     this.comboSelectedClientId = null;
     this.comboDuplicateWarning = null;
     this.showComboClientDropdown = true;
@@ -595,6 +719,7 @@ export class VentasComponent implements OnInit, OnDestroy {
   selectComboClient(client: ActiveClient): void {
     this.comboSelectedClientId = client.id;
     this.comboClientQuery = client.full_name;
+    this.comboClientQuery$.next(client.full_name);
     this.showComboClientDropdown = false;
     this.comboDuplicateWarning = null;
     this.cdr.markForCheck();
@@ -627,7 +752,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.isCheckingComboConflict = true;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.ventasService
       .getActiveComboByClient(clientId, selectedCombo.product_id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -655,16 +780,16 @@ export class VentasComponent implements OnInit, OnDestroy {
   onAmountReceivedInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
     this.amountReceivedRaw = raw;
-    const parsed = this.parsePriceInput(raw);
+    const parsed = parsePriceInput(raw);
     this.newSaleForm.get('amount_received_cop')?.setValue(parsed ?? 0);
     this.cdr.markForCheck();
   }
 
   onAmountReceivedBlur(): void {
-    const parsed = this.parsePriceInput(this.amountReceivedRaw);
+    const parsed = parsePriceInput(this.amountReceivedRaw);
     const val = parsed ?? 0;
     this.newSaleForm.get('amount_received_cop')?.setValue(val);
-    this.amountReceivedRaw = val > 0 ? this.formatPriceDisplay(val) : '0';
+    this.amountReceivedRaw = val > 0 ? formatPriceDisplay(val) : '0';
     this.cdr.markForCheck();
   }
 
@@ -673,70 +798,20 @@ export class VentasComponent implements OnInit, OnDestroy {
   onComboAmountReceivedInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
     this.comboAmountReceivedRaw = raw;
-    const parsed = this.parsePriceInput(raw);
+    const parsed = parsePriceInput(raw);
     this.newComboForm.get('amount_received_cop')?.setValue(parsed ?? 0);
     this.cdr.markForCheck();
   }
 
   onComboAmountReceivedBlur(): void {
-    const parsed = this.parsePriceInput(this.comboAmountReceivedRaw);
+    const parsed = parsePriceInput(this.comboAmountReceivedRaw);
     const val = parsed ?? 0;
     this.newComboForm.get('amount_received_cop')?.setValue(val);
-    this.comboAmountReceivedRaw = val > 0 ? this.formatPriceDisplay(val) : '0';
+    this.comboAmountReceivedRaw = val > 0 ? formatPriceDisplay(val) : '0';
     this.cdr.markForCheck();
   }
 
-  // ─── Form computed values (individual) ───────────────────────────────────────
-
-  getSelectedProduct(): CafeteriaProduct | null {
-    const id = this.newSaleForm.get('product_id')?.value as string | null;
-    if (!id) return null;
-    return this.activeProducts.find((p) => p.id === id) ?? null;
-  }
-
-  getFormTotal(): number {
-    const product = this.getSelectedProduct();
-    const qty = (this.newSaleForm.get('quantity')?.value as number) ?? 1;
-    if (!product || qty < 1) return 0;
-    return product.price_cop * qty;
-  }
-
-  getAmountHint(): 'none' | 'partial' | 'exact' | 'over' | 'zero' {
-    const received = (this.newSaleForm.get('amount_received_cop')?.value as number) ?? 0;
-    const total = this.getFormTotal();
-    if (received === 0 || total === 0) return 'zero';
-    if (received > total) return 'over';
-    if (received === total) return 'exact';
-    return 'partial';
-  }
-
-  isPaymentMethodRequired(): boolean {
-    const received = (this.newSaleForm.get('amount_received_cop')?.value as number) ?? 0;
-    return received > 0;
-  }
-
-  // ─── Form computed values (combo) ────────────────────────────────────────────
-
-  getSelectedCombo(): CafeteriaComboWithProduct | null {
-    const id = this.newComboForm.get('combo_id')?.value as string | null;
-    if (!id) return null;
-    return this.activeCombos.find((c) => c.id === id) ?? null;
-  }
-
-  getComboAmountHint(): 'none' | 'partial' | 'exact' | 'over' | 'zero' {
-    const received = (this.newComboForm.get('amount_received_cop')?.value as number) ?? 0;
-    const combo = this.getSelectedCombo();
-    const total = combo?.price_cop ?? 0;
-    if (received === 0 || total === 0) return 'zero';
-    if (received > total) return 'over';
-    if (received === total) return 'exact';
-    return 'partial';
-  }
-
-  isComboPaymentMethodRequired(): boolean {
-    const received = (this.newComboForm.get('amount_received_cop')?.value as number) ?? 0;
-    return received > 0;
-  }
+  // ─── isComboFormBlocked getter (reads 2 booleans — no costly computation) ────
 
   get isComboFormBlocked(): boolean {
     return !!this.comboDuplicateWarning || this.isCheckingComboConflict;
@@ -747,7 +822,9 @@ export class VentasComponent implements OnInit, OnDestroy {
   submitNewSale(): void {
     this.newSaleForm.markAllAsTouched();
 
-    const product = this.getSelectedProduct();
+    const product = this.activeProducts.find(
+      p => p.id === (this.newSaleForm.get('product_id')?.value as string | null)
+    );
     if (!product) return;
 
     const buyerId = this.buyerType === 'client' ? this.selectedClientId : this.selectedTrainerId;
@@ -778,7 +855,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.ventasService
       .createSale({
         sale_date,
         product_id: product.id,
@@ -804,7 +881,7 @@ export class VentasComponent implements OnInit, OnDestroy {
           this.refreshCurrentMonth();
         },
         error: (err) => {
-          this.saveError = this.extractErrorMessage(err);
+          this.saveError = extractErrorMessage(err);
         }
       });
   }
@@ -839,7 +916,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.ventasService
       .createComboPurchase({
         purchase_date,
         combo_id,
@@ -863,21 +940,21 @@ export class VentasComponent implements OnInit, OnDestroy {
           this.refreshCurrentMonth();
         },
         error: (err) => {
-          this.saveError = this.extractErrorMessage(err);
+          this.saveError = extractErrorMessage(err);
         }
       });
   }
 
   // ─── Modal: Individual sale detail ────────────────────────────────────────────
 
-  openDetailModal(sale: CafeteriaSaleWithDetails): void {
+  openDetailModal(sale: CafeteriaSaleView): void {
     this.selectedSale = sale;
     this.installments = [];
     this.isLoadingInstallments = true;
     this.activeModal = 'detail';
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.ventasService
       .getSaleInstallments(sale.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -907,13 +984,13 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   // ─── Modal: Individual installment ────────────────────────────────────────────
 
-  openInstallmentModal(sale: CafeteriaSaleWithDetails): void {
+  openInstallmentModal(sale: CafeteriaSaleView): void {
     this.selectedSale = sale;
     this.installmentAmountRaw = '';
     this.saveError = null;
     this.installmentForm.reset({
       amount_cop: null,
-      payment_date: this.localDateString(new Date()),
+      payment_date: localDateString(new Date()),
       payment_method: '',
       notes: ''
     });
@@ -927,7 +1004,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.installmentForm.reset({
       amount_cop: null,
-      payment_date: this.localDateString(new Date()),
+      payment_date: localDateString(new Date()),
       payment_method: '',
       notes: ''
     });
@@ -944,27 +1021,21 @@ export class VentasComponent implements OnInit, OnDestroy {
   onInstallmentAmountInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
     this.installmentAmountRaw = raw;
-    const parsed = this.parsePriceInput(raw);
+    const parsed = parsePriceInput(raw);
     this.installmentForm.get('amount_cop')?.setValue(parsed ?? null);
     this.cdr.markForCheck();
   }
 
   onInstallmentAmountBlur(): void {
-    const parsed = this.parsePriceInput(this.installmentAmountRaw);
+    const parsed = parsePriceInput(this.installmentAmountRaw);
     if (parsed !== null && parsed > 0) {
       this.installmentForm.get('amount_cop')?.setValue(parsed);
-      this.installmentAmountRaw = this.formatPriceDisplay(parsed);
+      this.installmentAmountRaw = formatPriceDisplay(parsed);
     } else {
       this.installmentForm.get('amount_cop')?.setValue(null);
       this.installmentAmountRaw = '';
     }
     this.cdr.markForCheck();
-  }
-
-  getInstallmentNewBalance(): number {
-    if (!this.selectedSale) return 0;
-    const amount = (this.installmentForm.get('amount_cop')?.value as number) ?? 0;
-    return Math.max(0, (this.selectedSale.balance_cop ?? 0) - amount);
   }
 
   submitInstallment(): void {
@@ -984,7 +1055,7 @@ export class VentasComponent implements OnInit, OnDestroy {
 
     const saleId = this.selectedSale.id;
 
-    this.cafeteriaService
+    this.ventasService
       .createInstallment(saleId, {
         amount_cop,
         payment_date,
@@ -1014,14 +1085,14 @@ export class VentasComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: (err) => {
-          this.saveError = this.extractErrorMessage(err);
+          this.saveError = extractErrorMessage(err);
         }
       });
   }
 
   // ─── Modal: Combo detail ──────────────────────────────────────────────────────
 
-  openComboDetailModal(purchase: CafeteriaComboPurchaseWithDetails): void {
+  openComboDetailModal(purchase: CafeteriaComboPurchaseView): void {
     this.selectedPurchase = purchase;
     this.comboConsumptions = [];
     this.comboInstallments = [];
@@ -1029,7 +1100,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.activeModal = 'combo-detail';
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.ventasService
       .getComboConsumptions(purchase.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -1045,7 +1116,7 @@ export class VentasComponent implements OnInit, OnDestroy {
         }
       });
 
-    this.cafeteriaService
+    this.ventasService
       .getComboPurchaseInstallments(purchase.id)
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -1080,9 +1151,15 @@ export class VentasComponent implements OnInit, OnDestroy {
 
     const purchaseId = this.selectedPurchase.id;
 
-    this.cafeteriaService
+    // Replaced nested subscribe anti-pattern with switchMap.
+    this.ventasService
       .registerComboConsumption(purchaseId)
       .pipe(
+        switchMap(updatedPurchase =>
+          this.ventasService.getComboConsumptions(purchaseId).pipe(
+            map(consumptions => ({ updatedPurchase, consumptions }))
+          )
+        ),
         finalize(() => {
           this.isRegisteringConsumption = false;
           this.cdr.markForCheck();
@@ -1090,38 +1167,28 @@ export class VentasComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy$)
       )
       .subscribe({
-        next: (updatedPurchase) => {
+        next: ({ updatedPurchase, consumptions }) => {
           const wasCompleted = !this.selectedPurchase?.is_completed && updatedPurchase.is_completed;
           this.selectedPurchase = {
             ...this.selectedPurchase!,
             units_consumed: updatedPurchase.units_consumed,
             is_completed: updatedPurchase.is_completed
           };
-          this.cafeteriaService
-            .getComboConsumptions(purchaseId)
-            .pipe(takeUntil(this.destroy$))
-            .subscribe({
-              next: (items) => {
-                this.comboConsumptions = items;
-                this.cdr.markForCheck();
-              },
-              error: () => {
-                this.cdr.markForCheck();
-              }
-            });
+          this.comboConsumptions = consumptions;
           this.toastService.success('Consumo registrado.');
           if (wasCompleted) {
             this.toastService.success('¡Combo completado!');
           }
           this.refreshCurrentMonth();
+          this.cdr.markForCheck();
         },
         error: (err) => {
-          this.toastService.error(this.extractErrorMessage(err));
+          this.toastService.error(extractErrorMessage(err));
         }
       });
   }
 
-  openConsumptionFromMenu(purchase: CafeteriaComboPurchaseWithDetails): void {
+  openConsumptionFromMenu(purchase: CafeteriaComboPurchaseView): void {
     this.openComboDetailModal(purchase);
   }
 
@@ -1133,7 +1200,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.comboInstallmentForm.reset({
       amount_cop: null,
-      payment_date: this.localDateString(new Date()),
+      payment_date: localDateString(new Date()),
       payment_method: '',
       notes: ''
     });
@@ -1141,13 +1208,13 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.cdr.markForCheck();
   }
 
-  openComboInstallmentFromMenu(purchase: CafeteriaComboPurchaseWithDetails): void {
+  openComboInstallmentFromMenu(purchase: CafeteriaComboPurchaseView): void {
     this.selectedPurchase = purchase;
     this.comboInstallmentAmountRaw = '';
     this.saveError = null;
     this.comboInstallmentForm.reset({
       amount_cop: null,
-      payment_date: this.localDateString(new Date()),
+      payment_date: localDateString(new Date()),
       payment_method: '',
       notes: ''
     });
@@ -1168,27 +1235,21 @@ export class VentasComponent implements OnInit, OnDestroy {
   onComboInstallmentAmountInput(event: Event): void {
     const raw = (event.target as HTMLInputElement).value;
     this.comboInstallmentAmountRaw = raw;
-    const parsed = this.parsePriceInput(raw);
+    const parsed = parsePriceInput(raw);
     this.comboInstallmentForm.get('amount_cop')?.setValue(parsed ?? null);
     this.cdr.markForCheck();
   }
 
   onComboInstallmentAmountBlur(): void {
-    const parsed = this.parsePriceInput(this.comboInstallmentAmountRaw);
+    const parsed = parsePriceInput(this.comboInstallmentAmountRaw);
     if (parsed !== null && parsed > 0) {
       this.comboInstallmentForm.get('amount_cop')?.setValue(parsed);
-      this.comboInstallmentAmountRaw = this.formatPriceDisplay(parsed);
+      this.comboInstallmentAmountRaw = formatPriceDisplay(parsed);
     } else {
       this.comboInstallmentForm.get('amount_cop')?.setValue(null);
       this.comboInstallmentAmountRaw = '';
     }
     this.cdr.markForCheck();
-  }
-
-  getComboInstallmentNewBalance(): number {
-    if (!this.selectedPurchase) return 0;
-    const amount = (this.comboInstallmentForm.get('amount_cop')?.value as number) ?? 0;
-    return Math.max(0, (this.selectedPurchase.balance_cop ?? 0) - amount);
   }
 
   submitComboInstallment(): void {
@@ -1208,7 +1269,7 @@ export class VentasComponent implements OnInit, OnDestroy {
 
     const purchaseId = this.selectedPurchase.id;
 
-    this.cafeteriaService
+    this.ventasService
       .createComboPurchaseInstallment(purchaseId, {
         amount_cop,
         payment_date,
@@ -1238,7 +1299,7 @@ export class VentasComponent implements OnInit, OnDestroy {
           this.cdr.markForCheck();
         },
         error: (err) => {
-          this.saveError = this.extractErrorMessage(err);
+          this.saveError = extractErrorMessage(err);
         }
       });
   }
@@ -1249,12 +1310,30 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.activeModal = null;
     this.cdr.markForCheck();
 
-    const partialPurchase: CafeteriaComboPurchaseWithDetails = {
+    const baseClient = this.selectedClientId
+      ? { id: this.selectedClientId, full_name: this.clientQuery }
+      : null;
+    const partialPurchase: CafeteriaComboPurchaseView = {
       ...activeCombo,
-      client: this.selectedClientId
-        ? { id: this.selectedClientId, full_name: this.clientQuery }
-        : null,
-      trainer: null
+      client: baseClient,
+      trainer: null,
+      buyer_name: baseClient?.full_name ?? '—',
+      consumption_percent:
+        (activeCombo.total_units ?? 0) > 0
+          ? Math.min(
+              100,
+              Math.round(((activeCombo.units_consumed ?? 0) / (activeCombo.total_units ?? 1)) * 100)
+            )
+          : 0,
+      payment_percent:
+        (activeCombo.combo_price_snapshot_cop ?? 0) > 0
+          ? Math.min(
+              100,
+              Math.round(
+                ((activeCombo.amount_received_cop ?? 0) / (activeCombo.combo_price_snapshot_cop ?? 1)) * 100
+              )
+            )
+          : 0
     };
 
     setTimeout(() => {
@@ -1262,47 +1341,13 @@ export class VentasComponent implements OnInit, OnDestroy {
     }, 50);
   }
 
-  // ─── Display helpers ──────────────────────────────────────────────────────────
-
-  formatCop(amount: number | null | undefined): string {
-    if (amount === null || amount === undefined) return '—';
-    return '$' + amount.toLocaleString('es-CO');
-  }
-
-  getBuyerName(sale: CafeteriaSaleWithDetails): string {
-    return sale.client?.full_name ?? sale.trainer?.full_name ?? '—';
-  }
-
-  getBuyerType(sale: CafeteriaSaleWithDetails): 'client' | 'trainer' {
-    return sale.buyer_type as 'client' | 'trainer';
-  }
-
-  getComboBuyerName(purchase: CafeteriaComboPurchaseWithDetails): string {
-    return purchase.client?.full_name ?? purchase.trainer?.full_name ?? '—';
-  }
-
-  getStatusLabel(status: string): string {
-    const map: Record<string, string> = { paid: 'Pagado', partial: 'Parcial', pending: 'Pendiente' };
-    return map[status] ?? status;
-  }
-
-  getMethodLabel(method: string | null): string {
-    const map: Record<string, string> = {
-      cash: 'Efectivo',
-      transfer: 'Transferencia',
-      nequi: 'Nequi',
-      other: 'Otro'
-    };
-    return method ? (map[method] ?? method) : '—';
-  }
-
   // ─── Track by functions ───────────────────────────────────────────────────────
 
-  trackBySaleId(_index: number, sale: CafeteriaSaleWithDetails): string {
+  trackBySaleId(_index: number, sale: CafeteriaSaleView): string {
     return sale.id;
   }
 
-  trackByPurchaseId(_index: number, p: CafeteriaComboPurchaseWithDetails): string {
+  trackByPurchaseId(_index: number, p: CafeteriaComboPurchaseView): string {
     return p.id;
   }
 
@@ -1338,31 +1383,5 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   private refreshCurrentMonth(): void {
     this.refresh$.next({ year: this.currentYear, month: this.currentMonth });
-  }
-
-  private parsePriceInput(value: string): number | null {
-    const cleaned = value.replace(/[^0-9]/g, '');
-    if (!cleaned) return null;
-    const num = parseInt(cleaned, 10);
-    return isNaN(num) ? null : num;
-  }
-
-  private formatPriceDisplay(amount: number): string {
-    return '$' + amount.toLocaleString('es-CO');
-  }
-
-  private localDateString(d: Date): string {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, '0');
-    const day = String(d.getDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-  }
-
-  private extractErrorMessage(err: unknown): string {
-    if (err && typeof err === 'object') {
-      const anyErr = err as Record<string, unknown>;
-      if (typeof anyErr['message'] === 'string') return anyErr['message'];
-    }
-    return 'Ocurrió un error. Intenta de nuevo.';
   }
 }

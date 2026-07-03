@@ -108,6 +108,14 @@ export class EstadisticasService {
   }
 
   /**
+   * Snapshot sincrónico del entrenador seleccionado. Evita subscribe().unsubscribe().
+   * Útil en métodos de retry donde solo se necesita el valor actual una vez.
+   */
+  get currentEntrenador(): EntrenadorFilter {
+    return this._selectedEntrenador$.getValue();
+  }
+
+  /**
    * Observable de la ventana temporal activa para la gráfica de tendencia.
    * Solo emite cuando el valor cambia realmente.
    */

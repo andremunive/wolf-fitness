@@ -9,7 +9,7 @@ import {
   Output
 } from '@angular/core';
 
-import { CafeteriaSaleWithDetails } from '../../models/cafeteria.model';
+import { CafeteriaSaleView } from '../../models/cafeteria-view.models';
 
 @Component({
   selector: 'app-ventas-actions-menu',
@@ -18,10 +18,10 @@ import { CafeteriaSaleWithDetails } from '../../models/cafeteria.model';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class VentasActionsMenuComponent {
-  @Input() sale!: CafeteriaSaleWithDetails;
+  @Input() sale!: CafeteriaSaleView;
 
-  @Output() detailRequested = new EventEmitter<CafeteriaSaleWithDetails>();
-  @Output() installmentRequested = new EventEmitter<CafeteriaSaleWithDetails>();
+  @Output() detailRequested = new EventEmitter<CafeteriaSaleView>();
+  @Output() installmentRequested = new EventEmitter<CafeteriaSaleView>();
 
   isOpen = false;
   dropdownStyle: Record<string, string> = {};

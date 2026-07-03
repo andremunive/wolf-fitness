@@ -45,3 +45,21 @@ export function formatDateOnly(dateStr: string | null | undefined): string {
   if (!dateStr) return '—';
   return parseDateOnly(dateStr).toLocaleDateString(DATE_LOCALE, DATE_FORMAT_OPTIONS);
 }
+
+/**
+ * Converts a Date to a 'YYYY-MM-DD' string using the LOCAL timezone.
+ *
+ * WHY not toISOString(): toISOString() serializes in UTC, which in COT
+ * (UTC-5) shifts dates back one day whenever the local time is before midnight
+ * UTC (i.e. before 19:00 COT). This function reads the local year/month/day
+ * directly from the Date object, avoiding that offset entirely.
+ *
+ * @example
+ * localDateString(new Date(2026, 3, 26)) // → '2026-04-26'
+ */
+export function localDateString(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}

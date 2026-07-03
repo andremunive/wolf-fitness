@@ -1,8 +1,8 @@
 // El componente reutiliza la mayoría de tokens y clases del documento
-// del Estado de Resultados. Reusa el SCSS del P&G y agrega clases fc-*
-// específicas de Flujo de Caja.
+// del Estado de Resultados. Las clases compartidas viven en el partial
+// _contabilidad-shared, y aquí se agregan clases fc-* específicas.
 
-@import '../estado-resultados/estado-resultados.component.scss';
+@import '../contabilidad-shared';
 
 // ─── Aviso sutil cuando no hay movimientos ─────────────────────────────────
 .fc-no-data-hint {

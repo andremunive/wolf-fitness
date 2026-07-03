@@ -26,7 +26,22 @@
       "mcp__claude_ai_Supabase__list_projects",
       "mcp__claude_ai_Supabase__list_tables",
       "mcp__claude_ai_Supabase__get_logs",
-      "Bash(Select-String \"cafeteria\")"
+      "Bash(Select-String \"cafeteria\")",
+      "Bash(wc -l \"c:/Users/USUARIO/.claude/projects/c--Users-USUARIO-Documents-Projects-WF-wolf-fitness-gym/e02c0093-fcbe-4615-9d58-c831be98a914/tool-results/toolu_01HYY9e4nhfY1vqM4xM88F7i.txt\")",
+      "Read(//c/Users/USUARIO/.claude/projects/c--Users-USUARIO-Documents-Projects-WF-wolf-fitness-gym/e02c0093-fcbe-4615-9d58-c831be98a914/tool-results/**)",
+      "Bash(xargs wc -l)",
+      "Bash(Get-Item audit/codebase-inventory.md)",
+      "Bash(Select-Object FullName, Length, LastWriteTime)",
+      "Bash(ls \"c:\\\\Users\\\\USUARIO\\\\Documents\\\\Projects\\\\WF\\\\wolf-fitness-gym\\\\audit\" 2>&1 || mkdir -p \"c:\\\\Users\\\\USUARIO\\\\Documents\\\\Projects\\\\WF\\\\wolf-fitness-gym\\\\audit\")",
+      "Bash(npx tsc *)",
+      "Bash(findstr /i \"cafeteria\\\\|ventas\\\\|view.models\\\\|date.utils\")",
+      "Bash(Select-String -Pattern \"cafeteria|ventas|view.models|date.utils\")",
+      "Bash(ng build *)",
+      "Bash(Remove-Item \"c:\\\\Users\\\\USUARIO\\\\Documents\\\\Projects\\\\WF\\\\wolf-fitness-gym\\\\src\\\\app\\\\features\\\\app\\\\cafeteria\\\\services\\\\cafeteria.service.ts\")",
+      "Bash(grep -v \"^$\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\USUARIO\\Documents\\Projects\\WF\\wolf-fitness-gym\\audit"
     ]
   }
 }

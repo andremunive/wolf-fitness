@@ -17,7 +17,7 @@ import {
 } from 'rxjs';
 
 import { ToastService } from 'src/app/shared/services/toast.service';
-import { CafeteriaService } from '../../services/cafeteria.service';
+import { CafeteriaInsumosService } from '../../services/cafeteria-insumos.service';
 import {
   CafeteriaExpenseCategory,
   CafeteriaExpenseWithDetails
@@ -73,7 +73,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
 
   readonly expensesState$ = this.refresh$.pipe(
     switchMap(({ year, month }) =>
-      this.cafeteriaService.getExpenses(year, month).pipe(
+      this.insumosService.getExpenses(year, month).pipe(
         switchMap((expenses) => of({ loading: false, error: null, expenses } as InsumosState)),
         catchError((err) => {
           const msg: string = err?.message ?? 'Error al cargar los insumos.';
@@ -156,7 +156,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
   readonly skeletonRows = [1, 2, 3, 4, 5];
 
   constructor(
-    private readonly cafeteriaService: CafeteriaService,
+    private readonly insumosService: CafeteriaInsumosService,
     private readonly toastService: ToastService,
     private readonly cdr: ChangeDetectorRef
   ) {}
@@ -470,7 +470,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.newCategoryError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .createExpenseCategory({ name, description })
       .pipe(
         finalize(() => {
@@ -543,7 +543,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .createExpense({
         expense_date: expense_date!,
         category_id: this.selectedCategoryObj.id,
@@ -585,7 +585,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.saveError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .updateExpense(this.selectedExpense.id, {
         expense_date: expense_date!,
         category_id: this.selectedCategoryObj.id,
@@ -622,7 +622,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.isVoiding = true;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .voidExpense(this.selectedExpense.id)
       .pipe(
         finalize(() => {
@@ -652,7 +652,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.togglingCategoryId = category.id;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .toggleExpenseCategory(category.id, !category.is_active)
       .pipe(
         finalize(() => {
@@ -702,7 +702,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.manageCategoryError = null;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .createExpenseCategory({ name, description })
       .pipe(
         finalize(() => {
@@ -753,7 +753,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.isLoadingCategories = true;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .getExpenseCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({
@@ -773,7 +773,7 @@ export class InsumosComponent implements OnInit, OnDestroy {
     this.isLoadingAllCategories = true;
     this.cdr.markForCheck();
 
-    this.cafeteriaService
+    this.insumosService
       .getAllExpenseCategories()
       .pipe(takeUntil(this.destroy$))
       .subscribe({

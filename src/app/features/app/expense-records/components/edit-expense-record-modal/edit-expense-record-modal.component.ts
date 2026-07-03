@@ -401,6 +401,8 @@ export class EditExpenseRecordModalComponent implements OnInit, OnDestroy {
     return index;
   }
 
+  trackByMethodValue = (_: number, m: { value: string }): string => m.value;
+
   // ─── Save ──────────────────────────────────────────────────────────────────
 
   save(): void {

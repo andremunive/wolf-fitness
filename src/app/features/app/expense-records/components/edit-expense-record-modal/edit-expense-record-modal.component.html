@@ -81,7 +81,7 @@
             class="form-field__select"
             formControlName="payment_method"
           >
-            <option *ngFor="let method of paymentMethods" [value]="method.value">
+            <option *ngFor="let method of paymentMethods; trackBy: trackByMethodValue" [value]="method.value">
               {{ method.label }}
             </option>
           </select>

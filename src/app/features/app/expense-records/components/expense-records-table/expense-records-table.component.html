@@ -11,7 +11,7 @@
         (change)="onCategoryFilterChange($event)"
       >
         <option value="">Todas</option>
-        <option *ngFor="let cat of categories" [value]="cat.id">
+        <option *ngFor="let cat of categories; trackBy: trackByCategoryId" [value]="cat.id">
           {{ cat.name }}
         </option>
       </select>
@@ -143,7 +143,7 @@
       </svg>
     </button>
 
-    <ng-container *ngFor="let page of pageNumbers">
+    <ng-container *ngFor="let page of pageNumbers; trackBy: trackByPage">
       <button
         *ngIf="totalPages <= 7 || page === 1 || page === totalPages || (page >= currentPage - 2 && page <= currentPage + 2)"
         type="button"

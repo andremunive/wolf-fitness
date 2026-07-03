@@ -59,6 +59,8 @@ export class ExpensesSummaryChartComponent implements OnChanges {
     return bar.categoryId;
   }
 
+  trackByPeriodKey = (_: number, f: PeriodFilter): number => f.key;
+
   private buildBars(): void {
     if (!this.summaryData || this.summaryData.length === 0) {
       this.bars = [];

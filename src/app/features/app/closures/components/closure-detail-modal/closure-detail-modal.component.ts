@@ -306,6 +306,9 @@ export class ClosureDetailModalComponent implements OnChanges, OnDestroy {
     return adj.id;
   }
 
+  trackByEntryPaymentId = (_: number, e: { payment_id: string }): string => e.payment_id;
+  trackByMethodValue = (_: number, m: { value: string }): string => m.value;
+
   private resolveStatusLabel(status: string): string {
     switch (status) {
       case 'open':   return 'Abierta';

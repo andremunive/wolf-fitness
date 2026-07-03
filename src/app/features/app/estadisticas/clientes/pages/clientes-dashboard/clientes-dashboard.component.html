@@ -52,8 +52,8 @@
               {{ c.total_activos_hoy.total }}
             </span>
 
-            <span [ngClass]="deltaPillClass(c.total_activos_hoy.delta)">
-              {{ deltaPillArrow(c.total_activos_hoy.delta) }}
+            <span [ngClass]="c.total_activos_hoy.delta | deltaClass:'cv2-pill'">
+              {{ c.total_activos_hoy.delta | deltaArrow }}
               <ng-container *ngIf="c.total_activos_hoy.delta !== 0">
                 {{ c.total_activos_hoy.delta < 0
                     ? -c.total_activos_hoy.delta
@@ -97,7 +97,7 @@
             </div>
 
             <ng-container *ngIf="ss.status === 'loaded' && ss.data as puntos">
-              <ng-container *ngIf="buildHeroSparkline(puntos) as g">
+              <ng-container *ngIf="heroSparkline$ | async as g">
                 <div class="cv2-spark">
                   <svg
                     [attr.viewBox]="'0 0 ' + g.width + ' ' + g.height"
@@ -135,8 +135,8 @@
 
                 <!-- Labels primer / último mes -->
                 <div class="cv2-spark__labels" *ngIf="puntos.length >= 2">
-                  <span>{{ shortMonthLabel(puntos[0].mes) }}</span>
-                  <span>{{ shortMonthLabel(puntos[puntos.length - 1].mes) }}</span>
+                  <span>{{ puntos[0].mes | shortMonth }}</span>
+                  <span>{{ puntos[puntos.length - 1].mes | shortMonth }}</span>
                 </div>
               </ng-container>
             </ng-container>
@@ -170,89 +170,88 @@
           </button>
         </div>
 
-        <!-- Loaded -->
-        <div *ngIf="cs.status === 'loaded' && cs.data as c"
-             class="cv2-card cv2-card--floating">
+        <!-- Loaded — suscripción única al gauge -->
+        <ng-container *ngIf="cs.status === 'loaded'">
+          <ng-container *ngIf="gaugeVM$ | async as gg">
+            <div class="cv2-card cv2-card--floating">
 
-          <!-- Body: gauge + contexto -->
-          <div class="cv2-card__body">
+              <!-- Body: gauge + contexto -->
+              <div class="cv2-card__body">
 
-            <!-- Columna izquierda: gauge -->
-            <div class="cv2-gauge-col">
-              <ng-container *ngIf="buildGauge(c) as gg">
-                <div class="cv2-gauge"
-                     [attr.style]="'--cv2-gauge-color: ' + gg.color">
-                  <svg
-                    [attr.viewBox]="gg.viewBox"
-                    [attr.width]="gg.width"
-                    [attr.height]="gg.height"
-                    class="cv2-gauge__svg"
-                    aria-hidden="true">
-                    <path
-                      [attr.d]="gg.trackD"
-                      stroke="#e5e7eb"
-                      stroke-width="12"
-                      stroke-linecap="round"
-                      fill="none" />
-                    <path
-                      [attr.d]="gg.barD"
-                      [attr.stroke]="gg.color"
-                      stroke-width="12"
-                      stroke-linecap="round"
-                      fill="none"
-                      class="cv2-gauge__bar" />
-                  </svg>
-                  <div class="cv2-gauge__center">
-                    <span class="cv2-gauge__pct">{{ gg.pctLabel }}<span class="cv2-gauge__suffix">%</span></span>
-                    <span class="cv2-gauge__grade" [style.color]="gg.color">{{ gg.grade }}</span>
+                <!-- Columna izquierda: gauge -->
+                <div class="cv2-gauge-col">
+                  <div class="cv2-gauge"
+                       [attr.style]="'--cv2-gauge-color: ' + gg.color">
+                    <svg
+                      [attr.viewBox]="gg.viewBox"
+                      [attr.width]="gg.width"
+                      [attr.height]="gg.height"
+                      class="cv2-gauge__svg"
+                      aria-hidden="true">
+                      <path
+                        [attr.d]="gg.trackD"
+                        stroke="#e5e7eb"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        fill="none" />
+                      <path
+                        [attr.d]="gg.barD"
+                        [attr.stroke]="gg.color"
+                        stroke-width="12"
+                        stroke-linecap="round"
+                        fill="none"
+                        class="cv2-gauge__bar" />
+                    </svg>
+                    <div class="cv2-gauge__center">
+                      <span class="cv2-gauge__pct">{{ gg.pctLabel }}<span class="cv2-gauge__suffix">%</span></span>
+                      <span class="cv2-gauge__grade" [style.color]="gg.color">{{ gg.grade }}</span>
+                    </div>
                   </div>
                 </div>
-              </ng-container>
+
+                <!-- Columna derecha: contexto -->
+                <div class="cv2-context-col">
+                  <span class="cv2-context__label">SALUD DE CARTERA</span>
+                  <h3 class="cv2-context__title">Activos al día / total</h3>
+                  <p class="cv2-context__desc">{{ gg.description }}</p>
+                </div>
+
+              </div>
+
+              <!-- Separador -->
+              <div class="cv2-card__sep"></div>
+
+              <!-- Footer: badge período + filtro entrenador -->
+              <div class="cv2-card__footer">
+
+                <!-- Badge de período (sin navegación: dashboard de clientes es siempre "hoy") -->
+                <span class="cv2-period-badge">
+                  <span class="cv2-period-badge__dot"></span>
+                  {{ periodoLabel }}
+                </span>
+
+                <!-- Filtro entrenador compacto sincronizado -->
+                <div class="cv2-trainer-select cv2-trainer-select--compact">
+                  <label for="cv2-entrenador-footer" class="cv2-trainer-select__label">
+                    ENTRENADOR
+                  </label>
+                  <select
+                    id="cv2-entrenador-footer"
+                    class="cv2-trainer-select__input"
+                    [value]="(selectedEntrenador$ | async) ?? 'todos'"
+                    (change)="onEntrenadorChange($any($event.target).value)">
+                    <option value="todos">Todos</option>
+                    <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById"
+                            [value]="t.id">
+                      {{ t.fullName }}
+                    </option>
+                  </select>
+                </div>
+
+              </div>
             </div>
-
-            <!-- Columna derecha: contexto -->
-            <div class="cv2-context-col">
-              <span class="cv2-context__label">SALUD DE CARTERA</span>
-              <h3 class="cv2-context__title">Activos al día / total</h3>
-              <ng-container *ngIf="buildGauge(c) as gg">
-                <p class="cv2-context__desc">{{ gg.description }}</p>
-              </ng-container>
-            </div>
-
-          </div>
-
-          <!-- Separador -->
-          <div class="cv2-card__sep"></div>
-
-          <!-- Footer: badge período + filtro entrenador -->
-          <div class="cv2-card__footer">
-
-            <!-- Badge de período (sin navegación: dashboard de clientes es siempre "hoy") -->
-            <span class="cv2-period-badge">
-              <span class="cv2-period-badge__dot"></span>
-              {{ periodoLabel }}
-            </span>
-
-            <!-- Filtro entrenador compacto sincronizado -->
-            <div class="cv2-trainer-select cv2-trainer-select--compact">
-              <label for="cv2-entrenador-footer" class="cv2-trainer-select__label">
-                ENTRENADOR
-              </label>
-              <select
-                id="cv2-entrenador-footer"
-                class="cv2-trainer-select__input"
-                [value]="(selectedEntrenador$ | async) ?? 'todos'"
-                (change)="onEntrenadorChange($any($event.target).value)">
-                <option value="todos">Todos</option>
-                <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById"
-                        [value]="t.id">
-                  {{ t.fullName }}
-                </option>
-              </select>
-            </div>
-
-          </div>
-        </div>
+          </ng-container>
+        </ng-container>
 
       </ng-container>
     </div>
@@ -274,14 +273,11 @@
       </div>
     </header>
 
-    <ng-container *ngIf="{
-      cs: (cardsState$ | async),
-      ds: (detalleState$ | async)
-    } as st">
-
+    <!-- nuevosOrigenes$ se suscribe aquí para que el panel flotante lo use -->
+    <ng-container *ngIf="nuevosOrigenes$ | async as origenes">
       <div class="cv2-cards-grid">
 
-        <ng-container *ngFor="let card of buildCards(st.cs, st.ds); trackBy: trackByCardKey">
+        <ng-container *ngFor="let card of (cardsVM$ | async) ?? []; trackBy: trackByCardKey">
           <article
             class="cv2-card cv2-card--metric"
             [class.cv2-card--metric-open]="openCardKey === card.key"
@@ -330,8 +326,8 @@
               <!-- 3. CHIP delta — solo si delta !== null -->
               <div class="cv2-card-metric__delta-row">
                 <ng-container *ngIf="card.delta !== null">
-                  <span [ngClass]="deltaPillClass(card.delta)">
-                    {{ deltaPillArrow(card.delta) }}
+                  <span [ngClass]="card.delta | deltaClass:'cv2-pill'">
+                    {{ card.delta | deltaArrow }}
                     <ng-container *ngIf="card.delta !== 0">
                       {{ card.delta < 0 ? -card.delta : card.delta }}
                     </ng-container>
@@ -399,7 +395,7 @@
 
                 <ul class="cv2-nuevos-panel__list">
                   <li class="cv2-nuevos-panel__item"
-                      *ngFor="let row of buildNuevosOrigenes(st.ds); trackBy: trackByIndex">
+                      *ngFor="let row of origenes; trackBy: trackByIndex">
                     <div class="cv2-nuevos-panel__row">
                       <span class="cv2-nuevos-panel__badge"
                             [style.background]="row.color + '22'"
@@ -421,7 +417,6 @@
         </ng-container>
 
       </div>
-
     </ng-container>
 
   </section>
@@ -468,9 +463,9 @@
       </div>
 
       <!-- Loaded: dos cards Q1 / Q2 -->
-      <div *ngIf="qs.status === 'loaded' && qs.data as data"
+      <div *ngIf="qs.status === 'loaded'"
            class="cv2-quincenas-grid">
-        <ng-container *ngFor="let q of buildQuincenaCards(data); trackBy: trackByQuincenaKey">
+        <ng-container *ngFor="let q of (quincenaCardsVM$ | async) ?? []; trackBy: trackByQuincenaKey">
 
           <article class="cv2-card cv2-quincena-card"
                    [class.cv2-quincena-card--empty]="q.estado === 'no_iniciada'">
@@ -519,8 +514,8 @@
               <div class="cv2-quincena-card__meta">
                 <span
                   *ngIf="q.delta !== null"
-                  [ngClass]="deltaPillClass(q.delta)">
-                  {{ deltaPillArrow(q.delta) }}
+                  [ngClass]="q.delta | deltaClass:'cv2-pill'">
+                  {{ q.delta | deltaArrow }}
                   <ng-container *ngIf="q.delta !== 0">
                     {{ q.delta < 0 ? -q.delta : q.delta }}
                   </ng-container>
@@ -624,8 +619,8 @@
             </button>
           </article>
 
-          <ng-container *ngIf="qs.status === 'loaded' && qs.data as qd">
-            <ng-container *ngIf="buildPendientesVM(qd) as p">
+          <ng-container *ngIf="qs.status === 'loaded'">
+            <ng-container *ngIf="pendientesVM$ | async as p">
               <article class="cv2-card cv2-cartera-card cv2-cartera-card--pendientes">
                 <div class="cv2-cartera-card__head">
                   <span class="cv2-cartera-card__dot" style="background: #f59e0b"></span>
@@ -666,8 +661,8 @@
             </button>
           </article>
 
-          <ng-container *ngIf="qs2.status === 'loaded' && qs2.data as qd2">
-            <ng-container *ngIf="buildPerdidosVM(qd2) as pe">
+          <ng-container *ngIf="qs2.status === 'loaded'">
+            <ng-container *ngIf="perdidosVM$ | async as pe">
               <article class="cv2-card cv2-cartera-card cv2-cartera-card--perdidos">
                 <div class="cv2-cartera-card__head">
                   <span class="cv2-cartera-card__dot" style="background: var(--fv2-danger)"></span>
@@ -730,8 +725,8 @@
           </article>
 
           <!-- Loaded -->
-          <ng-container *ngIf="ds.status === 'loaded' && ds.data as dd">
-            <ng-container *ngIf="buildRetencionFromData(dd) as r">
+          <ng-container *ngIf="ds.status === 'loaded'">
+            <ng-container *ngIf="retencionVM$ | async as r">
 
               <article class="cv2-retencion-card">
 
@@ -837,7 +832,7 @@
             <div class="cv2-tendencia__left">
               <span class="cv2-tendencia__label">VARIACIÓN</span>
 
-              <ng-container *ngIf="buildVariacion(puntos) as varia">
+              <ng-container *ngIf="variacion$ | async as varia">
                 <div class="cv2-var" [ngClass]="varia.cssClass">
                   {{ varia.display }}
                 </div>
@@ -858,7 +853,7 @@
               <!-- Mini leyenda con barras min→max -->
               <ul class="cv2-legend">
                 <li
-                  *ngFor="let row of buildSeriesLegend(puntos); trackBy: trackByIndex"
+                  *ngFor="let row of (seriesLegend$ | async) ?? []; trackBy: trackByIndex"
                   class="cv2-legend__row">
                   <div class="cv2-legend__head">
                     <span
@@ -882,7 +877,7 @@
               </ul>
 
               <p
-                *ngIf="ultimoEsMesActual(puntos)"
+                *ngIf="ultimoEsMesActual$ | async"
                 class="cv2-tendencia__footnote">
                 * Mes en curso — corte al día de hoy
               </p>
@@ -895,7 +890,7 @@
                 <canvas
                   baseChart
                   [type]="'bar'"
-                  [data]="buildTendenciaChartData(puntos)"
+                  [data]="(tendenciaChartData$ | async) ?? { labels: [], datasets: [] }"
                   [options]="tendenciaChartOptions"
                   [plugins]="tendenciaPlugins"
                   aria-label="Gráfica de tendencia mensual de clientes"
@@ -945,15 +940,15 @@
       </div>
 
       <div class="cv2-section__actions">
-        <!-- Plan filter (local) -->
+        <!-- Plan filter (local, reactivo vía planFilter$) -->
         <div class="cv2-pills" role="tablist" aria-label="Filtro de plan">
           <button
             *ngFor="let p of planes; trackBy: trackByPlan"
             type="button"
             role="tab"
             class="cv2-pill-tab"
-            [class.cv2-pill-tab--active]="planFilter === p"
-            [attr.aria-selected]="planFilter === p"
+            [class.cv2-pill-tab--active]="(planFilter$ | async) === p"
+            [attr.aria-selected]="(planFilter$ | async) === p"
             (click)="onPlanFilterChange(p)">
             {{ planLabels[p] }}
           </button>
@@ -993,13 +988,13 @@
         </div>
 
         <!-- Loaded -->
-        <ng-container *ngIf="qt.status === 'loaded' && qt.data as puntos">
+        <ng-container *ngIf="qt.status === 'loaded'">
 
           <div class="cv2-chart-canvas-wrap cv2-chart-canvas-wrap--tall">
             <canvas
               baseChart
               [type]="'bar'"
-              [data]="buildDistribucionChartData(puntos, planFilter)"
+              [data]="(distribucionChartData$ | async) ?? { labels: [], datasets: [] }"
               [options]="distribucionChartOptions"
               aria-label="Gráfica de distribución por quincena"
               role="img"></canvas>
@@ -1018,7 +1013,7 @@
           </div>
 
           <p
-            *ngIf="distribucionTieneEnCurso(puntos)"
+            *ngIf="distribucionTieneEnCurso$ | async"
             class="cv2-tendencia__footnote">
             * Quincena en curso — corte al día de hoy
           </p>
@@ -1106,7 +1101,7 @@
 
           <!-- Filas (desktop) / Cards (mobile) -->
           <ng-container
-            *ngFor="let r of buildRiesgoVMs(dd.en_riesgo); trackBy: trackByRiesgo">
+            *ngFor="let r of (riesgoVMs$ | async) ?? []; trackBy: trackByRiesgo">
 
             <div class="cv2-riesgo-row">
 

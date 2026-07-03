@@ -22,13 +22,15 @@ const routes: Routes = [
         path: 'clientes',
         loadChildren: () =>
           import('./clients/clients.module').then((m) => m.ClientsModule),
-        canActivate: [roleGuard(['admin', 'trainer'])]
+        canActivate: [roleGuard(['admin', 'trainer'])],
+        canLoad: [roleGuard(['admin', 'trainer'])]
       },
       {
         path: 'entrenadores',
         loadChildren: () =>
           import('./trainers/trainers.module').then((m) => m.TrainersModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'proveedores',
@@ -36,49 +38,57 @@ const routes: Routes = [
           import('./service-providers/service-providers.module').then(
             (m) => m.ServiceProvidersModule
           ),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'cierres',
         loadChildren: () =>
           import('./closures/closures.module').then((m) => m.ClosuresModule),
-        canActivate: [roleGuard(['admin', 'trainer'])]
+        canActivate: [roleGuard(['admin', 'trainer'])],
+        canLoad: [roleGuard(['admin', 'trainer'])]
       },
       {
         path: 'registro',
         loadChildren: () =>
           import('./expense-records/expense-records.module').then((m) => m.ExpenseRecordsModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'prestamos',
         loadChildren: () =>
           import('./prestamos/prestamos.module').then((m) => m.PrestamosModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'descuentos',
         loadChildren: () =>
           import('./discounts/discounts.module').then((m) => m.DiscountsModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'estadisticas',
         loadChildren: () =>
           import('./estadisticas/estadisticas.module').then((m) => m.EstadisticasModule),
-        canActivate: [roleGuard(['admin', 'trainer'])]
+        canActivate: [roleGuard(['admin', 'trainer'])],
+        canLoad: [roleGuard(['admin', 'trainer'])]
       },
       {
         path: 'contabilidad',
         loadChildren: () =>
           import('./contabilidad/contabilidad.module').then((m) => m.ContabilidadModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       },
       {
         path: 'cafeteria',
         loadChildren: () =>
           import('./cafeteria/cafeteria.module').then((m) => m.CafeteriaModule),
-        canActivate: [roleGuard(['admin'])]
+        canActivate: [roleGuard(['admin'])],
+        canLoad: [roleGuard(['admin'])]
       }
     ]
   }

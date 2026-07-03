@@ -58,15 +58,15 @@
       <div class="summary-cards" *ngIf="!salesState.loading">
         <div class="summary-card">
           <span class="summary-card__label">Total ingresos</span>
-          <span class="summary-card__value">{{ formatCop(totalIngresos(salesState.sales)) }}</span>
+          <span class="summary-card__value">{{ salesState.summary.total_ingresos_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">Ventas registradas</span>
-          <span class="summary-card__value">{{ totalRegistradas(salesState.sales) }}</span>
+          <span class="summary-card__value">{{ salesState.summary.count }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">Saldo pendiente</span>
-          <span class="summary-card__value summary-card__value--danger">{{ formatCop(saldoPendiente(salesState.sales)) }}</span>
+          <span class="summary-card__value summary-card__value--danger">{{ salesState.summary.saldo_pendiente_cop | copCurrency }}</span>
         </div>
       </div>
       <div class="summary-cards" *ngIf="salesState.loading" aria-hidden="true">
@@ -81,15 +81,15 @@
       <div class="summary-cards" *ngIf="!combosState.loading">
         <div class="summary-card">
           <span class="summary-card__label">Total ingresos</span>
-          <span class="summary-card__value">{{ formatCop(totalIngresosCombo(combosState.purchases)) }}</span>
+          <span class="summary-card__value">{{ combosState.summary.total_ingresos_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">Combos vendidos</span>
-          <span class="summary-card__value">{{ totalCombosVendidos(combosState.purchases) }}</span>
+          <span class="summary-card__value">{{ combosState.summary.count }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">Saldo pendiente</span>
-          <span class="summary-card__value summary-card__value--danger">{{ formatCop(saldoPendienteCombo(combosState.purchases)) }}</span>
+          <span class="summary-card__value summary-card__value--danger">{{ combosState.summary.saldo_pendiente_cop | copCurrency }}</span>
         </div>
       </div>
       <div class="summary-cards" *ngIf="combosState.loading" aria-hidden="true">
@@ -182,7 +182,7 @@
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="!salesState.loading && !salesState.error && filterSales(salesState.sales).length === 0" class="ventas-empty">
+      <div *ngIf="!salesState.loading && !salesState.error && ((filteredSales$ | async)?.length ?? 0) === 0" class="ventas-empty">
         <div class="ventas-empty__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -200,7 +200,7 @@
       </div>
 
       <!-- Table (tablet/desktop) -->
-      <ng-container *ngIf="!salesState.loading && !salesState.error && filterSales(salesState.sales).length > 0">
+      <ng-container *ngIf="!salesState.loading && !salesState.error && ((filteredSales$ | async)?.length ?? 0) > 0">
         <div class="ventas-table-shell">
           <div class="ventas-table-wrapper" role="region" aria-label="Tabla de ventas">
             <table class="ventas-table">
@@ -218,15 +218,15 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let sale of filterSales(salesState.sales); trackBy: trackBySaleId"
+                  *ngFor="let sale of filteredSales$ | async; trackBy: trackBySaleId"
                   class="ventas-table__row"
                 >
                   <td class="ventas-table__cell ventas-table__cell--date">
-                    <span>{{ formatDateShort(sale.sale_date) }}</span>
+                    <span>{{ sale.sale_date | localDate }}</span>
                     <span
-                      *ngIf="hasDifferentRegistrationDate(sale)"
+                      *ngIf="sale.has_different_reg_date"
                       class="date-info-icon"
-                      [title]="'Registrado el ' + formatDateShort(sale.reported_date)"
+                      [title]="'Registrado el ' + (sale.reported_date | localDate)"
                       aria-label="Fecha de registro diferente"
                     >
                       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
@@ -243,34 +243,34 @@
                   </td>
                   <td class="ventas-table__cell">
                     <div class="buyer-cell">
-                      <span class="buyer-name">{{ getBuyerName(sale) }}</span>
+                      <span class="buyer-name">{{ sale.buyer_name }}</span>
                       <span
                         class="buyer-badge"
-                        [class.buyer-badge--client]="getBuyerType(sale) === 'client'"
-                        [class.buyer-badge--trainer]="getBuyerType(sale) === 'trainer'"
+                        [class.buyer-badge--client]="sale.buyer_type === 'client'"
+                        [class.buyer-badge--trainer]="sale.buyer_type === 'trainer'"
                       >
-                        <ng-container *ngIf="getBuyerType(sale) === 'client'">Cliente</ng-container>
-                        <ng-container *ngIf="getBuyerType(sale) === 'trainer'">Entrenador</ng-container>
+                        <ng-container *ngIf="sale.buyer_type === 'client'">Cliente</ng-container>
+                        <ng-container *ngIf="sale.buyer_type === 'trainer'">Entrenador</ng-container>
                       </span>
                     </div>
                   </td>
                   <td class="ventas-table__cell ventas-table__cell--amount">
-                    {{ formatCop(getSaleTotal(sale)) }}
+                    {{ sale.total_cop | copCurrency }}
                   </td>
                   <td class="ventas-table__cell ventas-table__cell--received">
-                    <span class="received-amount">{{ formatCop(sale.amount_received_cop) }}</span>
+                    <span class="received-amount">{{ sale.amount_received_cop | copCurrency }}</span>
                     <div class="progress-bar">
                       <div
                         class="progress-bar__fill"
-                        [class.progress-bar__fill--full]="isFullyPaid(sale)"
-                        [style.width.%]="getProgressPercent(sale)"
+                        [class.progress-bar__fill--full]="sale.is_fully_paid"
+                        [style.width.%]="sale.progress_percent"
                       ></div>
                     </div>
                   </td>
                   <td class="ventas-table__cell ventas-table__cell--balance"
                       [class.ventas-table__cell--balance-danger]="sale.balance_cop > 0"
                       [class.ventas-table__cell--balance-muted]="sale.balance_cop === 0">
-                    {{ sale.balance_cop === 0 ? '$0' : formatCop(sale.balance_cop) }}
+                    {{ sale.balance_cop === 0 ? '$0' : (sale.balance_cop | copCurrency) }}
                   </td>
                   <td class="ventas-table__cell">
                     <span
@@ -280,7 +280,7 @@
                       [class.status-badge--pending]="sale.status === 'pending'"
                     >
                       <span class="status-badge__dot" aria-hidden="true"></span>
-                      {{ getStatusLabel(sale.status) }}
+                      {{ sale.status | statusLabel }}
                     </span>
                   </td>
                   <td class="ventas-table__cell ventas-table__cell--actions">
@@ -299,7 +299,7 @@
         <!-- Cards (mobile) -->
         <div class="ventas-cards">
           <div
-            *ngFor="let sale of filterSales(salesState.sales); trackBy: trackBySaleId"
+            *ngFor="let sale of filteredSales$ | async; trackBy: trackBySaleId"
             class="ventas-card"
           >
             <div class="ventas-card__top">
@@ -311,14 +311,14 @@
                   <span *ngIf="sale.product?.size_label" class="size-badge">{{ sale.product!.size_label }}</span>
                 </div>
                 <div class="ventas-card__buyer-row">
-                  <span class="buyer-name">{{ getBuyerName(sale) }}</span>
+                  <span class="buyer-name">{{ sale.buyer_name }}</span>
                   <span
                     class="buyer-badge"
-                    [class.buyer-badge--client]="getBuyerType(sale) === 'client'"
-                    [class.buyer-badge--trainer]="getBuyerType(sale) === 'trainer'"
+                    [class.buyer-badge--client]="sale.buyer_type === 'client'"
+                    [class.buyer-badge--trainer]="sale.buyer_type === 'trainer'"
                   >
-                    <ng-container *ngIf="getBuyerType(sale) === 'client'">Cliente</ng-container>
-                    <ng-container *ngIf="getBuyerType(sale) === 'trainer'">Entrenador</ng-container>
+                    <ng-container *ngIf="sale.buyer_type === 'client'">Cliente</ng-container>
+                    <ng-container *ngIf="sale.buyer_type === 'trainer'">Entrenador</ng-container>
                   </span>
                 </div>
               </div>
@@ -330,7 +330,7 @@
                   [class.status-badge--pending]="sale.status === 'pending'"
                 >
                   <span class="status-badge__dot" aria-hidden="true"></span>
-                  {{ getStatusLabel(sale.status) }}
+                  {{ sale.status | statusLabel }}
                 </span>
                 <app-ventas-actions-menu
                   [sale]="sale"
@@ -342,11 +342,11 @@
             <div class="ventas-card__amounts">
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Total</span>
-                <span class="ventas-card__amount-value">{{ formatCop(getSaleTotal(sale)) }}</span>
+                <span class="ventas-card__amount-value">{{ sale.total_cop | copCurrency }}</span>
               </div>
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Recibido</span>
-                <span class="ventas-card__amount-value">{{ formatCop(sale.amount_received_cop) }}</span>
+                <span class="ventas-card__amount-value">{{ sale.amount_received_cop | copCurrency }}</span>
               </div>
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Saldo</span>
@@ -355,7 +355,7 @@
                   [class.ventas-card__amount-value--danger]="sale.balance_cop > 0"
                   [class.ventas-card__amount-value--muted]="sale.balance_cop === 0"
                 >
-                  {{ sale.balance_cop === 0 ? '$0' : formatCop(sale.balance_cop) }}
+                  {{ sale.balance_cop === 0 ? '$0' : (sale.balance_cop | copCurrency) }}
                 </span>
               </div>
             </div>
@@ -363,17 +363,17 @@
               <div class="progress-bar">
                 <div
                   class="progress-bar__fill"
-                  [class.progress-bar__fill--full]="isFullyPaid(sale)"
-                  [style.width.%]="getProgressPercent(sale)"
+                  [class.progress-bar__fill--full]="sale.is_fully_paid"
+                  [style.width.%]="sale.progress_percent"
                 ></div>
               </div>
             </div>
             <div class="ventas-card__date">
-              {{ formatDateShort(sale.sale_date) }}
+              {{ sale.sale_date | localDate }}
               <span
-                *ngIf="hasDifferentRegistrationDate(sale)"
+                *ngIf="sale.has_different_reg_date"
                 class="date-info-icon"
-                [title]="'Registrado el ' + formatDateShort(sale.reported_date)"
+                [title]="'Registrado el ' + (sale.reported_date | localDate)"
               >
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
                   <circle cx="12" cy="12" r="10"/>
@@ -446,7 +446,7 @@
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="!combosState.loading && !combosState.error && filterPurchases(combosState.purchases).length === 0" class="ventas-empty">
+      <div *ngIf="!combosState.loading && !combosState.error && ((filteredPurchases$ | async)?.length ?? 0) === 0" class="ventas-empty">
         <div class="ventas-empty__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round"
@@ -464,7 +464,7 @@
       </div>
 
       <!-- Table (tablet/desktop) -->
-      <ng-container *ngIf="!combosState.loading && !combosState.error && filterPurchases(combosState.purchases).length > 0">
+      <ng-container *ngIf="!combosState.loading && !combosState.error && ((filteredPurchases$ | async)?.length ?? 0) > 0">
         <div class="ventas-table-shell">
           <div class="ventas-table-wrapper" role="region" aria-label="Tabla de combos">
             <table class="ventas-table">
@@ -483,11 +483,11 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let p of filterPurchases(combosState.purchases); trackBy: trackByPurchaseId"
+                  *ngFor="let p of filteredPurchases$ | async; trackBy: trackByPurchaseId"
                   class="ventas-table__row"
                 >
                   <!-- FECHA -->
-                  <td class="ventas-table__cell ventas-table__cell--date">{{ formatDateShort(p.purchase_date) }}</td>
+                  <td class="ventas-table__cell ventas-table__cell--date">{{ p.purchase_date | localDate }}</td>
 
                   <!-- COMBO -->
                   <td class="ventas-table__cell ventas-table__cell--product">
@@ -498,7 +498,7 @@
                   <!-- CLIENTE -->
                   <td class="ventas-table__cell">
                     <div class="buyer-cell">
-                      <span class="buyer-name">{{ getComboBuyerName(p) }}</span>
+                      <span class="buyer-name">{{ p.buyer_name }}</span>
                       <span class="buyer-badge buyer-badge--client" *ngIf="p.client_id">Cliente</span>
                       <span class="buyer-badge buyer-badge--trainer" *ngIf="p.trainer_id && !p.client_id">Entrenador</span>
                     </div>
@@ -511,22 +511,22 @@
                       <div
                         class="progress-bar__fill"
                         [class.progress-bar__fill--full]="p.is_completed"
-                        [style.width.%]="getComboConsumptionPercent(p)"
+                        [style.width.%]="p.consumption_percent"
                       ></div>
                     </div>
                   </td>
 
                   <!-- PRECIO -->
-                  <td class="ventas-table__cell ventas-table__cell--amount">{{ formatCop(p.combo_price_snapshot_cop) }}</td>
+                  <td class="ventas-table__cell ventas-table__cell--amount">{{ p.combo_price_snapshot_cop | copCurrency }}</td>
 
                   <!-- RECIBIDO -->
                   <td class="ventas-table__cell ventas-table__cell--received">
-                    <span class="received-amount">{{ formatCop(p.amount_received_cop) }}</span>
+                    <span class="received-amount">{{ p.amount_received_cop | copCurrency }}</span>
                     <div class="progress-bar">
                       <div
                         class="progress-bar__fill"
                         [class.progress-bar__fill--full]="p.status === 'paid'"
-                        [style.width.%]="getComboPaymentProgressPercent(p)"
+                        [style.width.%]="p.payment_percent"
                       ></div>
                     </div>
                   </td>
@@ -535,7 +535,7 @@
                   <td class="ventas-table__cell ventas-table__cell--balance"
                       [class.ventas-table__cell--balance-danger]="p.balance_cop > 0"
                       [class.ventas-table__cell--balance-muted]="p.balance_cop === 0">
-                    {{ p.balance_cop === 0 ? '$0' : formatCop(p.balance_cop) }}
+                    {{ p.balance_cop === 0 ? '$0' : (p.balance_cop | copCurrency) }}
                   </td>
 
                   <!-- ESTADO -->
@@ -547,7 +547,7 @@
                       [class.status-badge--pending]="p.status === 'pending'"
                     >
                       <span class="status-badge__dot" aria-hidden="true"></span>
-                      {{ getStatusLabel(p.status) }}
+                      {{ p.status | statusLabel }}
                     </span>
                   </td>
 
@@ -569,7 +569,7 @@
         <!-- Cards (mobile) -->
         <div class="ventas-cards">
           <div
-            *ngFor="let p of filterPurchases(combosState.purchases); trackBy: trackByPurchaseId"
+            *ngFor="let p of filteredPurchases$ | async; trackBy: trackByPurchaseId"
             class="ventas-card"
           >
             <div class="ventas-card__top">
@@ -579,7 +579,7 @@
                   <span *ngIf="p.combo?.product?.name" class="size-badge">{{ p.combo!.product!.name }}</span>
                 </div>
                 <div class="ventas-card__buyer-row">
-                  <span class="buyer-name">{{ getComboBuyerName(p) }}</span>
+                  <span class="buyer-name">{{ p.buyer_name }}</span>
                   <span class="buyer-badge buyer-badge--client" *ngIf="p.client_id">Cliente</span>
                   <span class="buyer-badge buyer-badge--trainer" *ngIf="p.trainer_id && !p.client_id">Entrenador</span>
                 </div>
@@ -592,7 +592,7 @@
                   [class.status-badge--pending]="p.status === 'pending'"
                 >
                   <span class="status-badge__dot" aria-hidden="true"></span>
-                  {{ getStatusLabel(p.status) }}
+                  {{ p.status | statusLabel }}
                 </span>
                 <app-ventas-combos-actions-menu
                   [purchase]="p"
@@ -613,7 +613,7 @@
                 <div
                   class="progress-bar__fill"
                   [class.progress-bar__fill--full]="p.is_completed"
-                  [style.width.%]="getComboConsumptionPercent(p)"
+                  [style.width.%]="p.consumption_percent"
                 ></div>
               </div>
             </div>
@@ -621,11 +621,11 @@
             <div class="ventas-card__amounts">
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Precio</span>
-                <span class="ventas-card__amount-value">{{ formatCop(p.combo_price_snapshot_cop) }}</span>
+                <span class="ventas-card__amount-value">{{ p.combo_price_snapshot_cop | copCurrency }}</span>
               </div>
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Recibido</span>
-                <span class="ventas-card__amount-value">{{ formatCop(p.amount_received_cop) }}</span>
+                <span class="ventas-card__amount-value">{{ p.amount_received_cop | copCurrency }}</span>
               </div>
               <div class="ventas-card__amount-item">
                 <span class="ventas-card__amount-label">Saldo</span>
@@ -634,12 +634,12 @@
                   [class.ventas-card__amount-value--danger]="p.balance_cop > 0"
                   [class.ventas-card__amount-value--muted]="p.balance_cop === 0"
                 >
-                  {{ p.balance_cop === 0 ? '$0' : formatCop(p.balance_cop) }}
+                  {{ p.balance_cop === 0 ? '$0' : (p.balance_cop | copCurrency) }}
                 </span>
               </div>
             </div>
 
-            <div class="ventas-card__date">{{ formatDateShort(p.purchase_date) }}</div>
+            <div class="ventas-card__date">{{ p.purchase_date | localDate }}</div>
           </div>
         </div>
       </ng-container>
@@ -724,10 +724,10 @@
             <option
               *ngFor="let p of activeProducts; trackBy: trackByProductId"
               [value]="p.id"
-            >{{ p.name }} — {{ p.size_label }} — {{ formatCop(p.price_cop) }}</option>
+            >{{ p.name }} — {{ p.size_label }} — {{ p.price_cop | copCurrency }}</option>
           </select>
-          <p *ngIf="getSelectedProduct() as product" class="form-field__hint">
-            Precio individual: {{ formatCop(product.price_cop) }}
+          <p *ngIf="selectedProduct$ | async as product" class="form-field__hint">
+            Precio individual: {{ product.price_cop | copCurrency }}
           </p>
           <span
             *ngIf="newSaleForm.get('product_id')?.invalid && newSaleForm.get('product_id')?.touched"
@@ -756,10 +756,14 @@
         </div>
 
         <!-- Preview total -->
-        <div *ngIf="getFormTotal() > 0" class="total-preview">
-          Total: <strong>{{ formatCop(getFormTotal()) }}</strong>
-          <span class="total-preview__detail">({{ newSaleForm.get('quantity')?.value }} × {{ formatCop(getSelectedProduct()?.price_cop ?? 0) }})</span>
-        </div>
+        <ng-container *ngIf="formTotal$ | async as formTotal">
+          <div *ngIf="formTotal > 0" class="total-preview">
+            Total: <strong>{{ formTotal | copCurrency }}</strong>
+            <ng-container *ngIf="selectedProduct$ | async as product">
+              <span class="total-preview__detail">({{ newSaleForm.get('quantity')?.value }} × {{ product.price_cop | copCurrency }})</span>
+            </ng-container>
+          </div>
+        </ng-container>
 
         <!-- Comprador -->
         <div class="form-field">
@@ -789,9 +793,9 @@
               (blur)="onClientBlur()"
               (focus)="showClientDropdown = true"
             />
-            <div *ngIf="showClientDropdown && filteredClients.length > 0" class="autocomplete-dropdown">
+            <div *ngIf="showClientDropdown && ((filteredClients$ | async)?.length ?? 0) > 0" class="autocomplete-dropdown">
               <button
-                *ngFor="let c of filteredClients; trackBy: trackByClientId"
+                *ngFor="let c of filteredClients$ | async; trackBy: trackByClientId"
                 type="button"
                 class="autocomplete-dropdown__item"
                 (mousedown)="selectClient(c)"
@@ -840,9 +844,9 @@
               (blur)="onTrainerBlur()"
               (focus)="showTrainerDropdown = true"
             />
-            <div *ngIf="showTrainerDropdown && filteredTrainers.length > 0" class="autocomplete-dropdown">
+            <div *ngIf="showTrainerDropdown && ((filteredTrainers$ | async)?.length ?? 0) > 0" class="autocomplete-dropdown">
               <button
-                *ngFor="let t of filteredTrainers; trackBy: trackByTrainerId"
+                *ngFor="let t of filteredTrainers$ | async; trackBy: trackByTrainerId"
                 type="button"
                 class="autocomplete-dropdown__item"
                 (mousedown)="selectTrainer(t)"
@@ -884,19 +888,23 @@
             (input)="onAmountReceivedInput($event)"
             (blur)="onAmountReceivedBlur()"
           />
-          <div *ngIf="getAmountHint() === 'partial'" class="amount-hint amount-hint--partial">
-            Saldo pendiente: {{ formatCop(getFormTotal() - (newSaleForm.get('amount_received_cop')?.value ?? 0)) }}
-          </div>
-          <div *ngIf="getAmountHint() === 'exact'" class="amount-hint amount-hint--exact">
-            Pago completo ✓
-          </div>
-          <div *ngIf="getAmountHint() === 'over'" class="amount-hint amount-hint--over">
-            El monto supera el total
-          </div>
+          <ng-container *ngIf="amountHint$ | async as amountHint">
+            <ng-container *ngIf="formTotal$ | async as formTotal">
+              <div *ngIf="amountHint === 'partial'" class="amount-hint amount-hint--partial">
+                Saldo pendiente: {{ (formTotal - (newSaleForm.get('amount_received_cop')?.value ?? 0)) | copCurrency }}
+              </div>
+            </ng-container>
+            <div *ngIf="amountHint === 'exact'" class="amount-hint amount-hint--exact">
+              Pago completo ✓
+            </div>
+            <div *ngIf="amountHint === 'over'" class="amount-hint amount-hint--over">
+              El monto supera el total
+            </div>
+          </ng-container>
         </div>
 
         <!-- Método de pago -->
-        <div *ngIf="isPaymentMethodRequired()" class="form-field">
+        <div *ngIf="isPaymentMethodRequired$ | async" class="form-field">
           <label class="form-field__label" for="ns-method">
             Método de pago <span class="form-field__required" aria-hidden="true">*</span>
           </label>
@@ -967,7 +975,7 @@
             <option
               *ngFor="let c of activeCombos; trackBy: trackByComboId"
               [value]="c.id"
-            >{{ c.name }} — {{ c.product?.name ?? '' }} ({{ c.product?.size_label ?? '' }}) — {{ c.quantity }} unid · {{ formatCop(c.price_cop) }} ({{ formatCop(c.price_cop / c.quantity) }} c/u)</option>
+            >{{ c.name }} — {{ c.product?.name ?? '' }} ({{ c.product?.size_label ?? '' }}) — {{ c.quantity }} unid · {{ c.price_cop | copCurrency }} ({{ (c.price_cop / c.quantity) | copCurrency }} c/u)</option>
           </select>
           <span
             *ngIf="newComboForm.get('combo_id')?.invalid && newComboForm.get('combo_id')?.touched"
@@ -975,10 +983,10 @@
           >Selecciona un combo.</span>
 
           <!-- Combo preview mini-card -->
-          <div *ngIf="getSelectedCombo() as combo" class="combo-preview-card">
+          <div *ngIf="selectedCombo$ | async as combo" class="combo-preview-card">
             <span class="combo-preview-card__name">{{ combo.name }}</span>
-            <span class="combo-preview-card__detail">{{ combo.quantity }} unidades · {{ formatCop(combo.price_cop / combo.quantity) }} c/u</span>
-            <span class="combo-preview-card__total">Total: {{ formatCop(combo.price_cop) }}</span>
+            <span class="combo-preview-card__detail">{{ combo.quantity }} unidades · {{ (combo.price_cop / combo.quantity) | copCurrency }} c/u</span>
+            <span class="combo-preview-card__total">Total: {{ combo.price_cop | copCurrency }}</span>
           </div>
         </div>
 
@@ -998,9 +1006,9 @@
               (blur)="onComboClientBlur()"
               (focus)="showComboClientDropdown = true"
             />
-            <div *ngIf="showComboClientDropdown && filteredComboClients.length > 0" class="autocomplete-dropdown">
+            <div *ngIf="showComboClientDropdown && ((filteredComboClients$ | async)?.length ?? 0) > 0" class="autocomplete-dropdown">
               <button
-                *ngFor="let c of filteredComboClients; trackBy: trackByClientId"
+                *ngFor="let c of filteredComboClients$ | async; trackBy: trackByClientId"
                 type="button"
                 class="autocomplete-dropdown__item"
                 (mousedown)="selectComboClient(c)"
@@ -1053,19 +1061,23 @@
             (input)="onComboAmountReceivedInput($event)"
             (blur)="onComboAmountReceivedBlur()"
           />
-          <div *ngIf="getComboAmountHint() === 'partial'" class="amount-hint amount-hint--partial">
-            Saldo pendiente: {{ formatCop((getSelectedCombo()?.price_cop ?? 0) - (newComboForm.get('amount_received_cop')?.value ?? 0)) }}
-          </div>
-          <div *ngIf="getComboAmountHint() === 'exact'" class="amount-hint amount-hint--exact">
-            Pago completo ✓
-          </div>
-          <div *ngIf="getComboAmountHint() === 'over'" class="amount-hint amount-hint--over">
-            El monto supera el total
-          </div>
+          <ng-container *ngIf="comboAmountHint$ | async as comboAmountHint">
+            <ng-container *ngIf="selectedCombo$ | async as selectedCombo">
+              <div *ngIf="comboAmountHint === 'partial'" class="amount-hint amount-hint--partial">
+                Saldo pendiente: {{ (selectedCombo.price_cop - (newComboForm.get('amount_received_cop')?.value ?? 0)) | copCurrency }}
+              </div>
+            </ng-container>
+            <div *ngIf="comboAmountHint === 'exact'" class="amount-hint amount-hint--exact">
+              Pago completo ✓
+            </div>
+            <div *ngIf="comboAmountHint === 'over'" class="amount-hint amount-hint--over">
+              El monto supera el total
+            </div>
+          </ng-container>
         </div>
 
         <!-- Método de pago -->
-        <div *ngIf="isComboPaymentMethodRequired()" class="form-field">
+        <div *ngIf="isComboPaymentMethodRequired$ | async" class="form-field">
           <label class="form-field__label" for="nc-method">
             Método de pago <span class="form-field__required" aria-hidden="true">*</span>
           </label>
@@ -1155,11 +1167,11 @@
         <div class="modal-header__badges">
           <span
             class="buyer-badge"
-            [class.buyer-badge--client]="getBuyerType(selectedSale) === 'client'"
-            [class.buyer-badge--trainer]="getBuyerType(selectedSale) === 'trainer'"
+            [class.buyer-badge--client]="selectedSale.buyer_type === 'client'"
+            [class.buyer-badge--trainer]="selectedSale.buyer_type === 'trainer'"
           >
-            <ng-container *ngIf="getBuyerType(selectedSale) === 'client'">Cliente</ng-container>
-            <ng-container *ngIf="getBuyerType(selectedSale) === 'trainer'">Entrenador</ng-container>
+            <ng-container *ngIf="selectedSale.buyer_type === 'client'">Cliente</ng-container>
+            <ng-container *ngIf="selectedSale.buyer_type === 'trainer'">Entrenador</ng-container>
           </span>
           <span
             class="status-badge"
@@ -1168,7 +1180,7 @@
             [class.status-badge--pending]="selectedSale.status === 'pending'"
           >
             <span class="status-badge__dot" aria-hidden="true"></span>
-            {{ getStatusLabel(selectedSale.status) }}
+            {{ selectedSale.status | statusLabel }}
           </span>
         </div>
       </div>
@@ -1183,11 +1195,11 @@
       <div class="summary-cards summary-cards--modal">
         <div class="summary-card">
           <span class="summary-card__label">TOTAL</span>
-          <span class="summary-card__value">{{ formatCop(getSaleTotal(selectedSale)) }}</span>
+          <span class="summary-card__value">{{ selectedSale.total_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">RECIBIDO</span>
-          <span class="summary-card__value summary-card__value--paid">{{ formatCop(selectedSale.amount_received_cop) }}</span>
+          <span class="summary-card__value summary-card__value--paid">{{ selectedSale.amount_received_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">SALDO</span>
@@ -1195,15 +1207,15 @@
             class="summary-card__value"
             [class.summary-card__value--danger]="selectedSale.balance_cop > 0"
             [class.summary-card__value--muted]="selectedSale.balance_cop === 0"
-          >{{ selectedSale.balance_cop === 0 ? '$0' : formatCop(selectedSale.balance_cop) }}</span>
+          >{{ selectedSale.balance_cop === 0 ? '$0' : (selectedSale.balance_cop | copCurrency) }}</span>
         </div>
       </div>
 
       <div class="progress-bar progress-bar--full">
         <div
           class="progress-bar__fill"
-          [class.progress-bar__fill--full]="isFullyPaid(selectedSale)"
-          [style.width.%]="getProgressPercent(selectedSale)"
+          [class.progress-bar__fill--full]="selectedSale.is_fully_paid"
+          [style.width.%]="selectedSale.progress_percent"
         ></div>
       </div>
 
@@ -1211,24 +1223,24 @@
         <div class="info-item">
           <span class="info-item__label">Comprador</span>
           <div class="info-item__buyer">
-            <span class="info-item__value">{{ getBuyerName(selectedSale) }}</span>
+            <span class="info-item__value">{{ selectedSale.buyer_name }}</span>
             <span
               class="buyer-badge buyer-badge--sm"
-              [class.buyer-badge--client]="getBuyerType(selectedSale) === 'client'"
-              [class.buyer-badge--trainer]="getBuyerType(selectedSale) === 'trainer'"
+              [class.buyer-badge--client]="selectedSale.buyer_type === 'client'"
+              [class.buyer-badge--trainer]="selectedSale.buyer_type === 'trainer'"
             >
-              <ng-container *ngIf="getBuyerType(selectedSale) === 'client'">Cliente</ng-container>
-              <ng-container *ngIf="getBuyerType(selectedSale) === 'trainer'">Entrenador</ng-container>
+              <ng-container *ngIf="selectedSale.buyer_type === 'client'">Cliente</ng-container>
+              <ng-container *ngIf="selectedSale.buyer_type === 'trainer'">Entrenador</ng-container>
             </span>
           </div>
         </div>
         <div class="info-item">
           <span class="info-item__label">Fecha de venta</span>
-          <span class="info-item__value">{{ formatDateShort(selectedSale.sale_date) }}</span>
+          <span class="info-item__value">{{ selectedSale.sale_date | localDate }}</span>
         </div>
-        <div *ngIf="hasDifferentRegistrationDate(selectedSale)" class="info-item">
+        <div *ngIf="selectedSale.has_different_reg_date" class="info-item">
           <span class="info-item__label">Fecha de registro</span>
-          <span class="info-item__value">{{ formatDateShort(selectedSale.reported_date) }}</span>
+          <span class="info-item__value">{{ selectedSale.reported_date | localDate }}</span>
         </div>
         <div class="info-item">
           <span class="info-item__label">Cantidad</span>
@@ -1236,11 +1248,11 @@
         </div>
         <div class="info-item">
           <span class="info-item__label">Precio unitario (snapshot)</span>
-          <span class="info-item__value">{{ formatCop(selectedSale.product_price_snapshot_cop) }}</span>
+          <span class="info-item__value">{{ selectedSale.product_price_snapshot_cop | copCurrency }}</span>
         </div>
         <div *ngIf="selectedSale.payment_method" class="info-item">
           <span class="info-item__label">Método de pago inicial</span>
-          <span class="info-item__value">{{ getMethodLabel(selectedSale.payment_method) }}</span>
+          <span class="info-item__value">{{ selectedSale.payment_method | paymentMethodLabel }}</span>
         </div>
         <div *ngIf="selectedSale.notes" class="info-item info-item--full">
           <span class="info-item__label">Notas</span>
@@ -1264,13 +1276,13 @@
             *ngFor="let inst of installments; trackBy: trackByInstallmentId"
             class="installment-row"
           >
-            <span class="installment-row__date">{{ formatDateShort(inst.payment_date) }}</span>
-            <span class="installment-row__method">{{ getMethodLabel(inst.payment_method) }}</span>
-            <span class="installment-row__amount">{{ formatCop(inst.amount_cop) }}</span>
+            <span class="installment-row__date">{{ inst.payment_date | localDate }}</span>
+            <span class="installment-row__method">{{ inst.payment_method | paymentMethodLabel }}</span>
+            <span class="installment-row__amount">{{ inst.amount_cop | copCurrency }}</span>
           </div>
           <div class="installments-total">
             <span class="installments-total__label">Total abonado</span>
-            <span class="installments-total__value">{{ formatCop(installmentsTotal) }}</span>
+            <span class="installments-total__value">{{ installmentsTotal | copCurrency }}</span>
           </div>
         </div>
       </div>
@@ -1308,7 +1320,7 @@
       <div>
         <h2 class="modal-header__title">Registrar abono</h2>
         <p class="modal-header__subtitle">
-          {{ selectedSale.product?.name ?? '—' }} — {{ getBuyerName(selectedSale) }}
+          {{ selectedSale.product?.name ?? '—' }} — {{ selectedSale.buyer_name }}
         </p>
       </div>
       <button type="button" class="modal-header__close" (click)="closeInstallmentModal()" aria-label="Cerrar">
@@ -1320,9 +1332,9 @@
 
     <div class="modal-body">
       <div class="compact-summary">
-        <span>Total: <strong>{{ formatCop(getSaleTotal(selectedSale)) }}</strong></span>
+        <span>Total: <strong>{{ selectedSale.total_cop | copCurrency }}</strong></span>
         <span class="compact-summary__sep" aria-hidden="true">·</span>
-        <span>Saldo: <strong>{{ formatCop(selectedSale.balance_cop) }}</strong></span>
+        <span>Saldo: <strong>{{ selectedSale.balance_cop | copCurrency }}</strong></span>
       </div>
 
       <form [formGroup]="installmentForm" class="modal-form" (ngSubmit)="submitInstallment()">
@@ -1404,19 +1416,21 @@
       <div *ngIf="installmentForm.get('amount_cop')?.value as enteredAmount" class="result-preview">
         <div class="result-preview__row">
           <span class="result-preview__label">Saldo actual</span>
-          <span class="result-preview__value">{{ formatCop(selectedSale.balance_cop) }}</span>
+          <span class="result-preview__value">{{ selectedSale.balance_cop | copCurrency }}</span>
         </div>
         <div class="result-preview__row">
           <span class="result-preview__label">Este abono</span>
-          <span class="result-preview__value result-preview__value--deduct">− {{ formatCop(enteredAmount) }}</span>
+          <span class="result-preview__value result-preview__value--deduct">− {{ enteredAmount | copCurrency }}</span>
         </div>
         <div class="result-preview__divider"></div>
         <div class="result-preview__row">
           <span class="result-preview__label result-preview__label--strong">Nuevo saldo</span>
-          <span
-            class="result-preview__value result-preview__value--strong"
-            [class.result-preview__value--success]="getInstallmentNewBalance() === 0"
-          >{{ formatCop(getInstallmentNewBalance()) }}</span>
+          <ng-container *ngIf="installmentNewBalance$ | async as installmentNewBalance">
+            <span
+              class="result-preview__value result-preview__value--strong"
+              [class.result-preview__value--success]="installmentNewBalance === 0"
+            >{{ installmentNewBalance | copCurrency }}</span>
+          </ng-container>
         </div>
       </div>
 
@@ -1475,7 +1489,7 @@
             [class.status-badge--pending]="selectedPurchase.status === 'pending'"
           >
             <span class="status-badge__dot" aria-hidden="true"></span>
-            {{ getStatusLabel(selectedPurchase.status) }}
+            {{ selectedPurchase.status | statusLabel }}
           </span>
           <span class="status-badge status-badge--completed" *ngIf="selectedPurchase.is_completed">
             <span class="status-badge__dot" aria-hidden="true"></span>
@@ -1501,11 +1515,11 @@
       <div class="summary-cards summary-cards--modal">
         <div class="summary-card">
           <span class="summary-card__label">TOTAL PRECIO</span>
-          <span class="summary-card__value">{{ formatCop(selectedPurchase.combo_price_snapshot_cop) }}</span>
+          <span class="summary-card__value">{{ selectedPurchase.combo_price_snapshot_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">RECIBIDO</span>
-          <span class="summary-card__value summary-card__value--paid">{{ formatCop(selectedPurchase.amount_received_cop) }}</span>
+          <span class="summary-card__value summary-card__value--paid">{{ selectedPurchase.amount_received_cop | copCurrency }}</span>
         </div>
         <div class="summary-card">
           <span class="summary-card__label">SALDO PAGO</span>
@@ -1513,7 +1527,7 @@
             class="summary-card__value"
             [class.summary-card__value--danger]="selectedPurchase.balance_cop > 0"
             [class.summary-card__value--muted]="selectedPurchase.balance_cop === 0"
-          >{{ selectedPurchase.balance_cop === 0 ? '$0' : formatCop(selectedPurchase.balance_cop) }}</span>
+          >{{ selectedPurchase.balance_cop === 0 ? '$0' : (selectedPurchase.balance_cop | copCurrency) }}</span>
         </div>
       </div>
 
@@ -1522,7 +1536,7 @@
         <div
           class="progress-bar__fill"
           [class.progress-bar__fill--full]="selectedPurchase.status === 'paid'"
-          [style.width.%]="getComboPaymentProgressPercent(selectedPurchase)"
+          [style.width.%]="selectedPurchase.payment_percent"
         ></div>
       </div>
 
@@ -1543,7 +1557,7 @@
           <div
             class="progress-bar__fill"
             [class.progress-bar__fill--full]="selectedPurchase.is_completed"
-            [style.width.%]="getComboConsumptionPercent(selectedPurchase)"
+            [style.width.%]="selectedPurchase.consumption_percent"
           ></div>
         </div>
         <span class="combo-consumption-section__remaining" *ngIf="!selectedPurchase.is_completed">
@@ -1559,17 +1573,17 @@
         <div class="info-item">
           <span class="info-item__label">Cliente</span>
           <div class="info-item__buyer">
-            <span class="info-item__value">{{ getComboBuyerName(selectedPurchase) }}</span>
+            <span class="info-item__value">{{ selectedPurchase.buyer_name }}</span>
             <span class="buyer-badge buyer-badge--sm buyer-badge--client" *ngIf="selectedPurchase.client_id">Cliente</span>
           </div>
         </div>
         <div class="info-item">
           <span class="info-item__label">Fecha de compra</span>
-          <span class="info-item__value">{{ formatDateShort(selectedPurchase.purchase_date) }}</span>
+          <span class="info-item__value">{{ selectedPurchase.purchase_date | localDate }}</span>
         </div>
         <div class="info-item" *ngIf="selectedPurchase.payment_method">
           <span class="info-item__label">Método de pago inicial</span>
-          <span class="info-item__value">{{ getMethodLabel(selectedPurchase.payment_method) }}</span>
+          <span class="info-item__value">{{ selectedPurchase.payment_method | paymentMethodLabel }}</span>
         </div>
         <div class="info-item" *ngIf="selectedPurchase.combo?.product?.name">
           <span class="info-item__label">Producto</span>
@@ -1594,7 +1608,7 @@
             *ngFor="let con of comboConsumptions; trackBy: trackByConsumptionId"
             class="installment-row"
           >
-            <span class="installment-row__date">{{ formatDateTime(con.consumed_at) }}</span>
+            <span class="installment-row__date">{{ con.consumed_at | localDate:'long' }}</span>
             <span *ngIf="con.registered_by_name" class="installment-row__method">{{ con.registered_by_name }}</span>
           </div>
         </div>
@@ -1617,13 +1631,13 @@
             *ngFor="let inst of comboInstallments; trackBy: trackByInstallmentId"
             class="installment-row"
           >
-            <span class="installment-row__date">{{ formatDateShort(inst.payment_date) }}</span>
-            <span class="installment-row__method">{{ getMethodLabel(inst.payment_method) }}</span>
-            <span class="installment-row__amount">{{ formatCop(inst.amount_cop) }}</span>
+            <span class="installment-row__date">{{ inst.payment_date | localDate }}</span>
+            <span class="installment-row__method">{{ inst.payment_method | paymentMethodLabel }}</span>
+            <span class="installment-row__amount">{{ inst.amount_cop | copCurrency }}</span>
           </div>
           <div class="installments-total">
             <span class="installments-total__label">Total abonado</span>
-            <span class="installments-total__value">{{ formatCop(comboInstallmentsTotal) }}</span>
+            <span class="installments-total__value">{{ comboInstallmentsTotal | copCurrency }}</span>
           </div>
         </div>
       </div>
@@ -1678,7 +1692,7 @@
       <div>
         <h2 class="modal-header__title">Registrar abono</h2>
         <p class="modal-header__subtitle">
-          {{ selectedPurchase.combo?.name ?? 'Combo' }} — {{ getComboBuyerName(selectedPurchase) }}
+          {{ selectedPurchase.combo?.name ?? 'Combo' }} — {{ selectedPurchase.buyer_name }}
         </p>
       </div>
       <button type="button" class="modal-header__close" (click)="closeComboInstallmentModal()" aria-label="Cerrar">
@@ -1690,9 +1704,9 @@
 
     <div class="modal-body">
       <div class="compact-summary">
-        <span>Total: <strong>{{ formatCop(selectedPurchase.combo_price_snapshot_cop) }}</strong></span>
+        <span>Total: <strong>{{ selectedPurchase.combo_price_snapshot_cop | copCurrency }}</strong></span>
         <span class="compact-summary__sep" aria-hidden="true">·</span>
-        <span>Saldo: <strong>{{ formatCop(selectedPurchase.balance_cop) }}</strong></span>
+        <span>Saldo: <strong>{{ selectedPurchase.balance_cop | copCurrency }}</strong></span>
       </div>
 
       <form [formGroup]="comboInstallmentForm" class="modal-form" (ngSubmit)="submitComboInstallment()">
@@ -1774,19 +1788,21 @@
       <div *ngIf="comboInstallmentForm.get('amount_cop')?.value as enteredAmount" class="result-preview">
         <div class="result-preview__row">
           <span class="result-preview__label">Saldo actual</span>
-          <span class="result-preview__value">{{ formatCop(selectedPurchase.balance_cop) }}</span>
+          <span class="result-preview__value">{{ selectedPurchase.balance_cop | copCurrency }}</span>
         </div>
         <div class="result-preview__row">
           <span class="result-preview__label">Este abono</span>
-          <span class="result-preview__value result-preview__value--deduct">− {{ formatCop(enteredAmount) }}</span>
+          <span class="result-preview__value result-preview__value--deduct">− {{ enteredAmount | copCurrency }}</span>
         </div>
         <div class="result-preview__divider"></div>
         <div class="result-preview__row">
           <span class="result-preview__label result-preview__label--strong">Nuevo saldo</span>
-          <span
-            class="result-preview__value result-preview__value--strong"
-            [class.result-preview__value--success]="getComboInstallmentNewBalance() === 0"
-          >{{ formatCop(getComboInstallmentNewBalance()) }}</span>
+          <ng-container *ngIf="comboInstallmentNewBalance$ | async as comboInstallmentNewBalance">
+            <span
+              class="result-preview__value result-preview__value--strong"
+              [class.result-preview__value--success]="comboInstallmentNewBalance === 0"
+            >{{ comboInstallmentNewBalance | copCurrency }}</span>
+          </ng-container>
         </div>
       </div>
 

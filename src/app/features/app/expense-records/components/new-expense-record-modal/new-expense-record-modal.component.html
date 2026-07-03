@@ -73,7 +73,7 @@
             [class.form-field__select--error]="form.controls.payment_method.invalid && form.controls.payment_method.touched"
           >
             <option value="" disabled selected>Seleccionar...</option>
-            <option *ngFor="let method of paymentMethods" [value]="method.value">
+            <option *ngFor="let method of paymentMethods; trackBy: trackByMethodValue" [value]="method.value">
               {{ method.label }}
             </option>
           </select>

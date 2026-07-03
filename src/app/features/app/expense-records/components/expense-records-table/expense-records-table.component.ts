@@ -65,4 +65,7 @@ export class ExpenseRecordsTableComponent {
   trackByRecordId(_index: number, record: ExpenseRecordViewModel): string {
     return record.id;
   }
+
+  trackByCategoryId = (_: number, c: ExpenseCategoryViewModel): string => c.id;
+  trackByPage = (_: number, p: number): number => p;
 }

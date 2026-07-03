@@ -3,7 +3,7 @@
   <!-- Period chips -->
   <div class="chart-card__chips" role="group" aria-label="Período del gráfico">
     <button
-      *ngFor="let filter of periodFilters"
+      *ngFor="let filter of periodFilters; trackBy: trackByPeriodKey"
       type="button"
       class="chip"
       [class.chip--active]="selectedPeriod === filter.key"
