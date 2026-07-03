@@ -1534,7 +1534,16 @@
   background: #f3f4f6;
   border-radius: 12px;
   padding: 3px;
-  align-self: flex-start;
+  // En mobile ocupa el ancho completo para evitar que white-space:nowrap en los
+  // botones hijos desborde el viewport cuando align-self:flex-start se encoge al
+  // contenido intrínseco ("Ventas individuales" es suficientemente largo para salirse
+  // del contenedor en pantallas ≤ 360px).
+  width: 100%;
+
+  @media (min-width: 640px) {
+    width: auto;
+    align-self: flex-start;
+  }
 }
 
 .table-view-toggle__btn {
