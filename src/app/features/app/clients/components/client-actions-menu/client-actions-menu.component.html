@@ -21,9 +21,9 @@
     [ngStyle]="dropdownStyle"
     role="menu"
   >
-    <!-- 1. Registrar pago — solo admin y solo para clientes activos -->
+    <!-- 1. Registrar pago — solo admin, solo para clientes activos, nunca para CSM -->
     <button
-      *ngIf="isAdmin && client.status === 'active'"
+      *ngIf="isAdmin && !isCsm && client.status === 'active'"
       type="button"
       class="actions-menu__item actions-menu__item--primary"
       role="menuitem"
@@ -38,8 +38,9 @@
       <span class="actions-menu__label">Registrar pago</span>
     </button>
 
-    <!-- 2. Editar -->
+    <!-- 2. Editar — oculto para CSM (solo lectura) -->
     <button
+      *ngIf="!isCsm"
       type="button"
       class="actions-menu__item"
       role="menuitem"
@@ -54,7 +55,7 @@
       <span class="actions-menu__label">Editar</span>
     </button>
 
-    <!-- 3. Medidas — visible para todos (admin y trainer via RLS) -->
+    <!-- 3. Medidas — visible para todos (admin, trainer y CSM via RLS) -->
     <button
       type="button"
       class="actions-menu__item"
@@ -70,9 +71,9 @@
       <span class="actions-menu__label">Medidas</span>
     </button>
 
-    <!-- 4. Desactivar -->
+    <!-- 4. Desactivar — oculto para CSM (solo lectura) -->
     <button
-      *ngIf="client.status === 'active'"
+      *ngIf="!isCsm && client.status === 'active'"
       type="button"
       class="actions-menu__item actions-menu__item--danger"
       role="menuitem"

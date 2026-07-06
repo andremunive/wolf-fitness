@@ -23,6 +23,7 @@
           <app-client-actions-menu
             [client]="client"
             [isAdmin]="isAdmin"
+            [isCsm]="isCsm"
             dropdownAlign="left"
             (editRequested)="editRequested.emit($event)"
             (deactivateRequested)="deactivateRequested.emit($event)"

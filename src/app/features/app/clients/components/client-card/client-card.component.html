@@ -14,6 +14,7 @@
     <app-client-actions-menu
       [client]="client"
       [isAdmin]="isAdmin"
+      [isCsm]="isCsm"
       (editRequested)="editRequested.emit($event)"
       (deactivateRequested)="deactivateRequested.emit($event)"
       (registerPaymentRequested)="registerPaymentRequested.emit($event)"

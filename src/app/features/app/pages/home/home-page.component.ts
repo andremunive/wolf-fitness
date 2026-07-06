@@ -21,6 +21,8 @@ export class HomePageComponent {
         return 'Administrador';
       case 'trainer':
         return 'Entrenador';
+      case 'csm':
+        return 'Customer Success';
       case 'client':
         return 'Cliente';
     }

@@ -130,7 +130,8 @@ export class LoginPageComponent implements OnInit, OnDestroy {
         return;
       }
 
-      void this.router.navigate(['/app/home']);
+      const destination = profile.role === 'csm' ? '/app/clientes' : '/app/home';
+      void this.router.navigate([destination]);
     } catch (err) {
       console.error('[LoginPage] Exception en finalize:', err);
       this.finishWithError('network');

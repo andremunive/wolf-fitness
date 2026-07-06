@@ -21,6 +21,8 @@ type HubView = 'main' | 'weight';
 })
 export class MeasurementsHubModalComponent {
   @Input() client!: Client;
+  /** Cuando es true, el usuario es CSM (solo lectura) — oculta Registrar medida y Registrar peso. */
+  @Input() isCsm = false;
 
   @Output() closed = new EventEmitter<void>();
   @Output() actionSelected = new EventEmitter<MeasurementAction>();

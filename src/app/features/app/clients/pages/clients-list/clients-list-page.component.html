@@ -120,6 +120,7 @@
             *ngFor="let client of state.clients; trackBy: trackByClientId"
             [client]="client"
             [isAdmin]="isAdmin"
+            [isCsm]="isCsm"
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
             (registerPaymentRequested)="onRegisterPaymentRequested($event)"
@@ -132,6 +133,7 @@
           <app-clients-table
             [clients]="state.clients"
             [isAdmin]="isAdmin"
+            [isCsm]="isCsm"
             (editRequested)="onEditRequested($event)"
             (deactivateRequested)="onDeactivateRequested($event)"
             (registerPaymentRequested)="onRegisterPaymentRequested($event)"
@@ -173,8 +175,9 @@
     </button>
   </div>
 
-  <!-- ===== FAB nuevo cliente ===== -->
+  <!-- ===== FAB nuevo cliente — oculto para CSM (solo lectura) ===== -->
   <button
+    *ngIf="!isCsm"
     type="button"
     class="clients-page__fab"
     (click)="openWizard()"
@@ -244,6 +247,7 @@
 <app-measurements-hub-modal
   *ngIf="measurementsHubClient"
   [client]="measurementsHubClient"
+  [isCsm]="isCsm"
   (closed)="onMeasurementsHubClosed()"
   (actionSelected)="onMeasurementsActionSelected($event)"
 ></app-measurements-hub-modal>

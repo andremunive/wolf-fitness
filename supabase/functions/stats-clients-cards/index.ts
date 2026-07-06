@@ -19,6 +19,8 @@ interface StatsCardsResponse {
   tipo_a: Breakdown;
   tipo_b: Breakdown;
   total_activos_hoy: Breakdown;
+  total_clientes_sistema: number;
+  parciales_mes: number;
 }
 
 /** Raw row returned by fn_stats_clients_cards SQL function */
@@ -35,6 +37,8 @@ interface StatsRawRow {
   tah_6d: number;
   tah_3d: number;
   tah_prev_total: number;
+  total_sistema: number;
+  parciales_mes: number;
 }
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
@@ -131,7 +135,7 @@ Deno.serve(async (req: Request) => {
     }));
     return errResp(403, "FORBIDDEN", "Los clientes no tienen acceso a estas estadísticas.");
   }
-  if (!["admin", "trainer"].includes(callerRole)) {
+  if (!Object.freeze(["admin", "trainer", "csm"]).includes(callerRole)) {
     return errResp(403, "FORBIDDEN", "Rol no reconocido o sin acceso.");
   }
 
@@ -164,6 +168,7 @@ Deno.serve(async (req: Request) => {
   // ── [D] Apply role-based entrenador_id override ───────────────────────────
   //   admin   → respects entrenador_id (null = all trainers)
   //   trainer → always forced to own uid; payload.entrenador_id is ignored
+  //   csm     → respects entrenador_id (null = all trainers), same as admin
   const effectiveEntrenadorId: string | null =
     callerRole === "trainer" ? callerUser.id : rawEntrenadorId;
 
@@ -180,7 +185,7 @@ Deno.serve(async (req: Request) => {
   // ── [E] Execute aggregation via SQL function fn_stats_clients_cards ───────
   //
   // fn_stats_clients_cards(p_ref date, p_te uuid) returns a single row with
-  // 12 columns: ta_*, tb_*, tah_* (tah = total activos hoy = Tipo A ∪ Tipo B).
+  // 14 columns: ta_*, tb_*, tah_*, total_sistema, parciales_mes.
   // The function is defined in migration stats_clients_cards_fn_add_total_activos.
   // Filters use status != 'voided' AND voided_at IS NULL — exact partial index predicate.
   const { data: rpcData, error: rpcError } = await adminClient.rpc(
@@ -211,6 +216,7 @@ Deno.serve(async (req: Request) => {
     ta_total: 0, ta_6d: 0, ta_3d: 0, ta_prev_total: 0,
     tb_total: 0, tb_6d: 0, tb_3d: 0, tb_prev_total: 0,
     tah_total: 0, tah_6d: 0, tah_3d: 0, tah_prev_total: 0,
+    total_sistema: 0, parciales_mes: 0,
   };
 
   const response: StatsCardsResponse = {
@@ -232,6 +238,8 @@ Deno.serve(async (req: Request) => {
       plan_3d: Number(row.tah_3d),
       delta:   Number(row.tah_total) - Number(row.tah_prev_total),
     },
+    total_clientes_sistema: Number(row.total_sistema),
+    parciales_mes: Number(row.parciales_mes),
   };
 
   console.log(JSON.stringify({
@@ -244,6 +252,8 @@ Deno.serve(async (req: Request) => {
     ta_total: response.tipo_a.total,
     tb_total: response.tipo_b.total,
     tah_total: response.total_activos_hoy.total,
+    total_clientes_sistema: response.total_clientes_sistema,
+    parciales_mes: response.parciales_mes,
   }));
 
   return jsonOk(response);

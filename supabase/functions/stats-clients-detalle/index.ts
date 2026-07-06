@@ -3,38 +3,46 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface TendenciaPayload {
+interface DetallePayload {
   entrenador_id: string | null;
   fecha_referencia: string; // YYYY-MM-DD
-  meses_atras: number;      // must be one of: 1, 2, 6, 12
 }
 
-interface TendenciaRawRow {
-  mes: string;          // "YYYY-MM"
-  cut_date: string;     // "YYYY-MM-DD"
-  is_current: boolean;
-  total: number;
-  plan_6d: number;
-  plan_3d: number;
+interface DetalleRawRow {
+  retencion_activos_prev:        number | bigint;
+  retencion_repitieron:          number | bigint;
+  nuevos_total:                  number | bigint;
+  nuevos_6d:                     number | bigint;
+  nuevos_3d:                     number | bigint;
+  nuevos_prev_total:             number | bigint;
+  nuevos_referido_total:         number | bigint;
+  nuevos_referido_6d:            number | bigint;
+  nuevos_referido_3d:            number | bigint;
+  nuevos_referido_prev_total:    number | bigint;
+  nuevos_publicidad_total:       number | bigint;
+  nuevos_publicidad_6d:          number | bigint;
+  nuevos_publicidad_3d:          number | bigint;
+  nuevos_publicidad_prev_total:  number | bigint;
+  nuevos_llego_solo_total:       number | bigint;
+  nuevos_llego_solo_6d:          number | bigint;
+  nuevos_llego_solo_3d:          number | bigint;
+  nuevos_llego_solo_prev_total:  number | bigint;
+  recuperados_total:             number | bigint;
+  recuperados_6d:                number | bigint;
+  recuperados_3d:                number | bigint;
+  recuperados_prev_total:        number | bigint;
+  en_riesgo:                     EnRiesgoEntry[] | null;
 }
 
-interface TendenciaItem {
-  mes: string;          // "YYYY-MM"
-  label: string;        // "Abr 26"
-  total: number;
-  plan_6d: number;
-  plan_3d: number;
-  es_mes_actual: boolean;
+interface EnRiesgoEntry {
+  cliente_id:  string;
+  nombre:      string;
+  entrenador:  string;
+  plan:        string; // "6d" | "3d"
+  ultimo_pago: string; // "YYYY-MM-DD"
+  vence_el:    string; // "YYYY-MM-DD"
+  estado:      string; // "pendiente" | "por_vencer"
 }
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const VALID_MESES_ATRAS = new Set([1, 2, 6, 12]);
-
-const MES_LABELS = [
-  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
-];
 
 // ─── CORS ─────────────────────────────────────────────────────────────────────
 
@@ -83,17 +91,6 @@ function isValidUUID(v: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v);
 }
 
-/**
- * Derives a short Spanish label from a "YYYY-MM" string.
- * Examples: "2026-04" → "Abr 26", "2025-12" → "Dic 25"
- */
-function buildLabel(mes: string): string {
-  const [yearStr, monthStr] = mes.split("-");
-  const monthIndex = parseInt(monthStr, 10) - 1; // 0-based
-  const yearShort = yearStr.slice(2);             // last 2 digits
-  return `${MES_LABELS[monthIndex]} ${yearShort}`;
-}
-
 // ─── Main handler ─────────────────────────────────────────────────────────────
 
 Deno.serve(async (req: Request) => {
@@ -109,8 +106,8 @@ Deno.serve(async (req: Request) => {
     return errResp(401, "UNAUTHORIZED", "Token de autenticación requerido.");
   }
 
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+  const supabaseUrl      = Deno.env.get("SUPABASE_URL")              ?? "";
+  const supabaseAnonKey  = Deno.env.get("SUPABASE_ANON_KEY")         ?? "";
   const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 
   // callerClient — validates caller JWT; role is read from app_metadata
@@ -124,7 +121,8 @@ Deno.serve(async (req: Request) => {
   });
 
   // ── [A] Verify JWT ────────────────────────────────────────────────────────
-  const { data: { user: callerUser }, error: callerError } = await callerClient.auth.getUser();
+  const { data: { user: callerUser }, error: callerError } =
+    await callerClient.auth.getUser();
   if (callerError || !callerUser) {
     return errResp(401, "UNAUTHORIZED", "Token inválido o expirado.");
   }
@@ -134,7 +132,7 @@ Deno.serve(async (req: Request) => {
 
   if (callerRole === "client") {
     console.warn(JSON.stringify({
-      fn: "stats-clients-tendencia",
+      fn: "stats-clients-detalle",
       level: "warn",
       msg: "Forbidden: client role",
       caller_id: callerUser.id,
@@ -146,14 +144,14 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── [C] Parse and validate input ─────────────────────────────────────────
-  let payload: TendenciaPayload;
+  let payload: DetallePayload;
   try {
-    payload = await req.json() as TendenciaPayload;
+    payload = await req.json() as DetallePayload;
   } catch {
     return errResp(400, "INVALID_INPUT", "Payload JSON inválido.");
   }
 
-  const { fecha_referencia, meses_atras } = payload;
+  const { fecha_referencia } = payload;
 
   if (!fecha_referencia || typeof fecha_referencia !== "string") {
     return errResp(400, "INVALID_INPUT", "fecha_referencia es obligatorio.");
@@ -161,15 +159,6 @@ Deno.serve(async (req: Request) => {
   if (!isValidDate(fecha_referencia)) {
     return errResp(400, "INVALID_INPUT", "fecha_referencia debe ser una fecha válida en formato YYYY-MM-DD.", {
       received: fecha_referencia,
-    });
-  }
-
-  if (meses_atras === undefined || meses_atras === null) {
-    return errResp(400, "INVALID_INPUT", "meses_atras es obligatorio.");
-  }
-  if (typeof meses_atras !== "number" || !Number.isInteger(meses_atras) || !VALID_MESES_ATRAS.has(meses_atras)) {
-    return errResp(400, "INVALID_INPUT", "meses_atras debe ser uno de: 1, 2, 6, 12.", {
-      received: meses_atras,
     });
   }
 
@@ -181,70 +170,133 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── [D] Apply role-based entrenador_id override ───────────────────────────
-  //   admin   → respects entrenador_id (null = all trainers)
+  //   admin   → respects entrenador_id from payload (null = all trainers)
   //   trainer → always forced to own uid; payload.entrenador_id is ignored
+  //   csm     → respects entrenador_id from payload (null = all trainers)
   const effectiveEntrenadorId: string | null =
     callerRole === "trainer" ? callerUser.id : rawEntrenadorId;
 
   console.log(JSON.stringify({
-    fn: "stats-clients-tendencia",
+    fn: "stats-clients-detalle",
     level: "info",
     msg: "Request received",
     caller_id: callerUser.id,
     caller_role: callerRole,
     fecha_referencia,
-    meses_atras,
     effective_entrenador_id: effectiveEntrenadorId,
   }));
 
-  // ── [E] Execute aggregation via SQL function fn_stats_clients_tendencia ───
+  // ── [E] Execute aggregation via SQL function fn_stats_clients_detalle ────
   //
-  // fn_stats_clients_tendencia(p_ref date, p_meses_atras int, p_te uuid)
-  // returns SETOF rows — one per month from (p_ref - p_meses_atras months) to p_ref inclusive.
-  // Defined in migration stats_clients_tendencia_fn.
+  // fn_stats_clients_detalle(p_ref date, p_te uuid)
+  // returns exactly 1 row with cohort + breakdowns + nuevos por origen +
+  // jsonb en_riesgo array.
   const { data: rpcData, error: rpcError } = await adminClient.rpc(
-    "fn_stats_clients_tendencia",
+    "fn_stats_clients_detalle",
     {
       p_ref: fecha_referencia,
-      p_meses_atras: meses_atras,
-      p_te: effectiveEntrenadorId,
+      p_te:  effectiveEntrenadorId,
     }
   );
 
   if (rpcError) {
     console.error(JSON.stringify({
-      fn: "stats-clients-tendencia",
+      fn: "stats-clients-detalle",
       level: "error",
-      msg: "RPC fn_stats_clients_tendencia error",
+      msg: "RPC fn_stats_clients_detalle error",
       error: rpcError,
       caller_id: callerUser.id,
     }));
-    return errResp(500, "INTERNAL_ERROR", "Error al calcular estadísticas de tendencia.", {
+    return errResp(500, "INTERNAL_ERROR", "Error al calcular estadísticas de detalle.", {
       detail: rpcError.message,
     });
   }
 
-  // ── [F] Map rows to response items ───────────────────────────────────────
-  const rows = (rpcData ?? []) as TendenciaRawRow[];
+  const rows = (rpcData ?? []) as DetalleRawRow[];
+  if (rows.length === 0) {
+    return errResp(500, "INTERNAL_ERROR", "La función SQL no devolvió datos.");
+  }
+  const row = rows[0];
 
-  const response: TendenciaItem[] = rows.map((row) => ({
-    mes: row.mes,
-    label: buildLabel(row.mes),
-    total: Number(row.total),
-    plan_6d: Number(row.plan_6d),
-    plan_3d: Number(row.plan_3d),
-    es_mes_actual: row.is_current,
-  }));
+  // ── [F] Map raw row to structured response ────────────────────────────────
+  //
+  // BigInt columns arrive as number in Deno; cast with Number() to be explicit.
+  // tasa: percentage with one decimal, null when activos_prev === 0 (no data).
+  const activosPrev    = Number(row.retencion_activos_prev);
+  const repitieron     = Number(row.retencion_repitieron);
+
+  const tasa: number | null =
+    activosPrev > 0
+      ? Math.round((repitieron / activosPrev) * 1000) / 10
+      : null;
+
+  const nuevosTotal       = Number(row.nuevos_total);
+  const nuevosPrevTotal   = Number(row.nuevos_prev_total);
+  const recuperadosTotal      = Number(row.recuperados_total);
+  const recuperadosPrevTotal  = Number(row.recuperados_prev_total);
+
+  const referidoTotal       = Number(row.nuevos_referido_total);
+  const referidoPrevTotal   = Number(row.nuevos_referido_prev_total);
+  const publicidadTotal     = Number(row.nuevos_publicidad_total);
+  const publicidadPrevTotal = Number(row.nuevos_publicidad_prev_total);
+  const llegoSoloTotal      = Number(row.nuevos_llego_solo_total);
+  const llegoSoloPrevTotal  = Number(row.nuevos_llego_solo_prev_total);
+
+  const response = {
+    retencion: {
+      tasa,
+      activos_mes_anterior: activosPrev,
+      repitieron_este_mes:  repitieron,
+    },
+    nuevos: {
+      total:   nuevosTotal,
+      plan_6d: Number(row.nuevos_6d),
+      plan_3d: Number(row.nuevos_3d),
+      delta:   nuevosTotal - nuevosPrevTotal,
+    },
+    nuevos_por_origen: {
+      referido: {
+        total:   referidoTotal,
+        plan_6d: Number(row.nuevos_referido_6d),
+        plan_3d: Number(row.nuevos_referido_3d),
+        delta:   referidoTotal - referidoPrevTotal,
+      },
+      publicidad: {
+        total:   publicidadTotal,
+        plan_6d: Number(row.nuevos_publicidad_6d),
+        plan_3d: Number(row.nuevos_publicidad_3d),
+        delta:   publicidadTotal - publicidadPrevTotal,
+      },
+      llego_solo: {
+        total:   llegoSoloTotal,
+        plan_6d: Number(row.nuevos_llego_solo_6d),
+        plan_3d: Number(row.nuevos_llego_solo_3d),
+        delta:   llegoSoloTotal - llegoSoloPrevTotal,
+      },
+    },
+    recuperados: {
+      total:   recuperadosTotal,
+      plan_6d: Number(row.recuperados_6d),
+      plan_3d: Number(row.recuperados_3d),
+      delta:   recuperadosTotal - recuperadosPrevTotal,
+    },
+    en_riesgo: (row.en_riesgo ?? []) as EnRiesgoEntry[],
+  };
 
   console.log(JSON.stringify({
-    fn: "stats-clients-tendencia",
+    fn: "stats-clients-detalle",
     level: "info",
     msg: "Response built successfully",
     caller_id: callerUser.id,
     fecha_referencia,
-    meses_atras,
     effective_entrenador_id: effectiveEntrenadorId,
-    row_count: response.length,
+    tasa,
+    nuevos_total:        response.nuevos.total,
+    nuevos_referido:     response.nuevos_por_origen.referido.total,
+    nuevos_publicidad:   response.nuevos_por_origen.publicidad.total,
+    nuevos_llego_solo:   response.nuevos_por_origen.llego_solo.total,
+    recuperados_total:   response.recuperados.total,
+    en_riesgo_count:     response.en_riesgo.length,
   }));
 
   return jsonOk(response);

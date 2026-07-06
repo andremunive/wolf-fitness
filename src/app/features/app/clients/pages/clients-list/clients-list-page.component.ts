@@ -94,6 +94,7 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
   // ─── Auth state ──────────────────────────────────────────────────────────────
 
   isAdmin = false;
+  isCsm = false;
 
   // ─── Modales existentes ──────────────────────────────────────────────────────
 
@@ -231,11 +232,12 @@ export class ClientsListPageComponent implements OnInit, OnDestroy {
         }
       });
 
-    // Determine admin role for showing the "Registrar pago" action.
+    // Determine admin and csm roles for controlling write-action visibility.
     this.authService.profile$
       .pipe(takeUntil(this.destroy$))
       .subscribe((profile) => {
         this.isAdmin = profile?.role === 'admin';
+        this.isCsm = profile?.role === 'csm';
         this.cdr.markForCheck();
       });
   }

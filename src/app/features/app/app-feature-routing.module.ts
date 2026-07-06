@@ -22,8 +22,8 @@ const routes: Routes = [
         path: 'clientes',
         loadChildren: () =>
           import('./clients/clients.module').then((m) => m.ClientsModule),
-        canActivate: [roleGuard(['admin', 'trainer'])],
-        canLoad: [roleGuard(['admin', 'trainer'])]
+        canActivate: [roleGuard(['admin', 'trainer', 'csm'])],
+        canLoad: [roleGuard(['admin', 'trainer', 'csm'])]
       },
       {
         path: 'entrenadores',
@@ -73,8 +73,8 @@ const routes: Routes = [
         path: 'estadisticas',
         loadChildren: () =>
           import('./estadisticas/estadisticas.module').then((m) => m.EstadisticasModule),
-        canActivate: [roleGuard(['admin', 'trainer'])],
-        canLoad: [roleGuard(['admin', 'trainer'])]
+        canActivate: [roleGuard(['admin', 'trainer', 'csm'])],
+        canLoad: [roleGuard(['admin', 'trainer', 'csm'])]
       },
       {
         path: 'contabilidad',

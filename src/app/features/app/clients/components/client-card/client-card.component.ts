@@ -18,6 +18,8 @@ import { formatDateOnly } from 'src/app/shared/utils/date.utils';
 export class ClientCardComponent {
   @Input() client!: Client;
   @Input() isAdmin = false;
+  /** Cuando es true, el usuario es CSM (solo lectura) — oculta acciones de escritura. */
+  @Input() isCsm = false;
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
   @Output() registerPaymentRequested = new EventEmitter<Client>();

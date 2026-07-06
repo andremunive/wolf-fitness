@@ -1,4 +1,4 @@
-﻿export type Json =
+export type Json =
   | string
   | number
   | boolean
@@ -2584,6 +2584,7 @@ export type Database = {
       }
       is_admin: { Args: never; Returns: boolean }
       is_client: { Args: never; Returns: boolean }
+      is_csm: { Args: never; Returns: boolean }
       is_trainer: { Args: never; Returns: boolean }
       stats_finanzas_caja_al_corte: {
         Args: { p_corte: string }
@@ -2675,7 +2676,7 @@ export type Database = {
         | "arl"
         | "certificado_bancario"
         | "otro"
-      user_role: "admin" | "trainer" | "client"
+      user_role: "admin" | "trainer" | "csm" | "client"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -2837,7 +2838,7 @@ export const Constants = {
         "certificado_bancario",
         "otro",
       ],
-      user_role: ["admin", "trainer", "client"],
+      user_role: ["admin", "trainer", "csm", "client"],
     },
   },
 } as const

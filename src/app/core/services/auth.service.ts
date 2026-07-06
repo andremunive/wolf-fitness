@@ -60,6 +60,26 @@ export class AuthService implements OnDestroy {
     this.wireProfileToSession();
   }
 
+  get isAdmin(): boolean {
+    return this.profileSubject.getValue()?.role === 'admin';
+  }
+
+  get isTrainer(): boolean {
+    return this.profileSubject.getValue()?.role === 'trainer';
+  }
+
+  get isClient(): boolean {
+    return this.profileSubject.getValue()?.role === 'client';
+  }
+
+  get isCsm(): boolean {
+    return this.profileSubject.getValue()?.role === 'csm';
+  }
+
+  get profile(): Profile | null {
+    return this.profileSubject.getValue();
+  }
+
   signIn(email: string, password: string) {
     return from(
       this.supabase.auth.signInWithPassword({ email: email.trim(), password })

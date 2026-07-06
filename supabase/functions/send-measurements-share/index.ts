@@ -460,7 +460,7 @@ Deno.serve(async (req: Request) => {
   const senderName: string = callerProfile.full_name ?? "Wolf Fitness";
 
   // ── [A4] Verificar rol: solo admin o trainer ───────────────────────────────
-  if (callerRole !== "admin" && callerRole !== "trainer") {
+  if (callerRole !== "admin" && callerRole !== "trainer" && callerRole !== "csm") {
     console.warn(JSON.stringify({
       fn: FN_NAME, level: "warn",
       msg: "Forbidden: non-admin non-trainer caller",

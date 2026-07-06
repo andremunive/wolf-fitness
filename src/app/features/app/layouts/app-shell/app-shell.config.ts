@@ -43,14 +43,14 @@ export const NAV_SECTIONS: NavMenuSection[] = [
     label: 'Personal',
     description: 'Administra el equipo y los clientes del gimnasio.',
     triggerIcon: 'users',
-    allowedRoles: ['admin', 'trainer'],
+    allowedRoles: ['admin', 'trainer', 'csm'],
     items: [
       {
         label: 'Clientes',
         description: 'Tus clientes organizados por estado, activos, invitados y leads.',
         iconKey: 'users',
-        routerLink: '/app/clientes'
-        // Sin allowedRoles: visible para admin y trainer (todos los que pasan el filtro de la sección).
+        routerLink: '/app/clientes',
+        allowedRoles: ['admin', 'trainer', 'csm']
       },
       {
         label: 'Entrenadores',
@@ -103,20 +103,21 @@ export const NAV_SECTIONS: NavMenuSection[] = [
     label: 'Estadísticas',
     description: 'Métricas e indicadores del gimnasio.',
     triggerIcon: 'chart',
-    allowedRoles: ['admin', 'trainer'],
+    allowedRoles: ['admin', 'trainer', 'csm'],
     items: [
       {
         label: 'Clientes',
         description: 'Métricas de clientes activos, retención y comportamiento de pago.',
         iconKey: 'chart',
         routerLink: '/app/estadisticas/clientes'
+        // Sin allowedRoles: visible para admin, trainer y csm (todos los que pasan el filtro de la sección).
       },
       {
         label: 'Finanzas',
         description: 'Ingresos, egresos y estado de caja del gimnasio.',
         iconKey: 'chart',
         routerLink: '/app/estadisticas/finanzas',
-        allowedRoles: ['admin']
+        allowedRoles: ['admin', 'trainer']
       }
     ]
   },

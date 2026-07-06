@@ -3,33 +3,43 @@ import { createClient } from "jsr:@supabase/supabase-js@2";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
-interface TendenciaPayload {
+interface QuincenalTendenciaPayload {
   entrenador_id: string | null;
   fecha_referencia: string; // YYYY-MM-DD
-  meses_atras: number;      // must be one of: 1, 2, 6, 12
+  meses_atras: number;      // must be one of: 1, 2, 3, 6
 }
 
-interface TendenciaRawRow {
+interface QuincenalTendenciaRawRow {
   mes: string;          // "YYYY-MM"
   cut_date: string;     // "YYYY-MM-DD"
   is_current: boolean;
-  total: number;
-  plan_6d: number;
-  plan_3d: number;
+  q1_total: number;
+  q1_6d: number;
+  q1_3d: number;
+  q2_total: number;
+  q2_6d: number;
+  q2_3d: number;
 }
 
-interface TendenciaItem {
-  mes: string;          // "YYYY-MM"
-  label: string;        // "Abr 26"
-  total: number;
-  plan_6d: number;
-  plan_3d: number;
+type QuincenaEstado = "completa" | "parcial" | "no_iniciada";
+
+interface QuincenalTendenciaItem {
+  mes: string;              // "YYYY-MM"
+  label: string;            // "Abr 26"
+  q1_total: number;
+  q1_plan_6d: number;
+  q1_plan_3d: number;
+  q1_estado: QuincenaEstado;
+  q2_total: number;
+  q2_plan_6d: number;
+  q2_plan_3d: number;
+  q2_estado: QuincenaEstado;
   es_mes_actual: boolean;
 }
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const VALID_MESES_ATRAS = new Set([1, 2, 6, 12]);
+const VALID_MESES_ATRAS = new Set([1, 2, 3, 6]);
 
 const MES_LABELS = [
   "Ene", "Feb", "Mar", "Abr", "May", "Jun",
@@ -134,7 +144,7 @@ Deno.serve(async (req: Request) => {
 
   if (callerRole === "client") {
     console.warn(JSON.stringify({
-      fn: "stats-clients-tendencia",
+      fn: "stats-clients-quincenal-tendencia",
       level: "warn",
       msg: "Forbidden: client role",
       caller_id: callerUser.id,
@@ -146,9 +156,9 @@ Deno.serve(async (req: Request) => {
   }
 
   // ── [C] Parse and validate input ─────────────────────────────────────────
-  let payload: TendenciaPayload;
+  let payload: QuincenalTendenciaPayload;
   try {
-    payload = await req.json() as TendenciaPayload;
+    payload = await req.json() as QuincenalTendenciaPayload;
   } catch {
     return errResp(400, "INVALID_INPUT", "Payload JSON inválido.");
   }
@@ -168,8 +178,9 @@ Deno.serve(async (req: Request) => {
     return errResp(400, "INVALID_INPUT", "meses_atras es obligatorio.");
   }
   if (typeof meses_atras !== "number" || !Number.isInteger(meses_atras) || !VALID_MESES_ATRAS.has(meses_atras)) {
-    return errResp(400, "INVALID_INPUT", "meses_atras debe ser uno de: 1, 2, 6, 12.", {
+    return errResp(400, "INVALID_INPUT", "meses_atras debe ser uno de: 1, 2, 3, 6.", {
       received: meses_atras,
+      allowed: [1, 2, 3, 6],
     });
   }
 
@@ -183,11 +194,12 @@ Deno.serve(async (req: Request) => {
   // ── [D] Apply role-based entrenador_id override ───────────────────────────
   //   admin   → respects entrenador_id (null = all trainers)
   //   trainer → always forced to own uid; payload.entrenador_id is ignored
+  //   csm     → respects entrenador_id (null = all trainers)
   const effectiveEntrenadorId: string | null =
     callerRole === "trainer" ? callerUser.id : rawEntrenadorId;
 
   console.log(JSON.stringify({
-    fn: "stats-clients-tendencia",
+    fn: "stats-clients-quincenal-tendencia",
     level: "info",
     msg: "Request received",
     caller_id: callerUser.id,
@@ -197,13 +209,13 @@ Deno.serve(async (req: Request) => {
     effective_entrenador_id: effectiveEntrenadorId,
   }));
 
-  // ── [E] Execute aggregation via SQL function fn_stats_clients_tendencia ───
+  // ── [E] Execute aggregation via SQL function fn_stats_clients_quincenal_tendencia
   //
-  // fn_stats_clients_tendencia(p_ref date, p_meses_atras int, p_te uuid)
+  // fn_stats_clients_quincenal_tendencia(p_ref date, p_meses_atras int, p_te uuid)
   // returns SETOF rows — one per month from (p_ref - p_meses_atras months) to p_ref inclusive.
-  // Defined in migration stats_clients_tendencia_fn.
+  // Defined in migration stats_clients_quincenal_tendencia_fn.
   const { data: rpcData, error: rpcError } = await adminClient.rpc(
-    "fn_stats_clients_tendencia",
+    "fn_stats_clients_quincenal_tendencia",
     {
       p_ref: fecha_referencia,
       p_meses_atras: meses_atras,
@@ -213,31 +225,60 @@ Deno.serve(async (req: Request) => {
 
   if (rpcError) {
     console.error(JSON.stringify({
-      fn: "stats-clients-tendencia",
+      fn: "stats-clients-quincenal-tendencia",
       level: "error",
-      msg: "RPC fn_stats_clients_tendencia error",
+      msg: "RPC fn_stats_clients_quincenal_tendencia error",
       error: rpcError,
       caller_id: callerUser.id,
     }));
-    return errResp(500, "INTERNAL_ERROR", "Error al calcular estadísticas de tendencia.", {
+    return errResp(500, "INTERNAL_ERROR", "Error al calcular estadísticas quincenal tendencia.", {
       detail: rpcError.message,
     });
   }
 
-  // ── [F] Map rows to response items ───────────────────────────────────────
-  const rows = (rpcData ?? []) as TendenciaRawRow[];
+  // ── [F] Derive quincena estados and map rows to response items ────────────
+  //
+  // Estado logic is derived from fecha_referencia and is_current:
+  //   - Months before current: both Q1 and Q2 are "completa"
+  //   - Current month, ref day <= 15: Q1 = "parcial", Q2 = "no_iniciada"
+  //   - Current month, ref day > 15:  Q1 = "completa", Q2 = "parcial"
+  const refDay = parseInt(fecha_referencia.split("-")[2], 10);
+  const isFirstHalfOnly = refDay <= 15;
 
-  const response: TendenciaItem[] = rows.map((row) => ({
-    mes: row.mes,
-    label: buildLabel(row.mes),
-    total: Number(row.total),
-    plan_6d: Number(row.plan_6d),
-    plan_3d: Number(row.plan_3d),
-    es_mes_actual: row.is_current,
-  }));
+  const rows = (rpcData ?? []) as QuincenalTendenciaRawRow[];
+
+  const response: QuincenalTendenciaItem[] = rows.map((row) => {
+    let q1Estado: QuincenaEstado;
+    let q2Estado: QuincenaEstado;
+
+    if (!row.is_current) {
+      q1Estado = "completa";
+      q2Estado = "completa";
+    } else if (isFirstHalfOnly) {
+      q1Estado = "parcial";
+      q2Estado = "no_iniciada";
+    } else {
+      q1Estado = "completa";
+      q2Estado = "parcial";
+    }
+
+    return {
+      mes: row.mes,
+      label: buildLabel(row.mes),
+      q1_total: Number(row.q1_total),
+      q1_plan_6d: Number(row.q1_6d),
+      q1_plan_3d: Number(row.q1_3d),
+      q1_estado: q1Estado,
+      q2_total: Number(row.q2_total),
+      q2_plan_6d: Number(row.q2_6d),
+      q2_plan_3d: Number(row.q2_3d),
+      q2_estado: q2Estado,
+      es_mes_actual: row.is_current,
+    };
+  });
 
   console.log(JSON.stringify({
-    fn: "stats-clients-tendencia",
+    fn: "stats-clients-quincenal-tendencia",
     level: "info",
     msg: "Response built successfully",
     caller_id: callerUser.id,

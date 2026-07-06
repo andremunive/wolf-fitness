@@ -39,6 +39,7 @@
     <!-- ── Main hub (4 action cards) ── -->
     <div *ngIf="view === 'main'" class="hub-body">
       <button
+        *ngIf="!isCsm"
         type="button"
         class="hub-action"
         (click)="selectAction('register')"
@@ -131,6 +132,7 @@
     <!-- ── Weight sub-hub (two action cards) ── -->
     <div *ngIf="view === 'weight'" class="hub-body">
       <button
+        *ngIf="!isCsm"
         type="button"
         class="hub-action"
         (click)="selectAction('weight-register')"

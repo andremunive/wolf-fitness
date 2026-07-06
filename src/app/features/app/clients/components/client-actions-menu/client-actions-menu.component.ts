@@ -30,6 +30,8 @@ export class ClientActionsMenuComponent {
    * El contenedor padre decide si el usuario logueado tiene rol admin.
    */
   @Input() isAdmin = false;
+  /** Cuando es true, el usuario es CSM (solo lectura) — oculta Editar, Desactivar y Registrar pago. */
+  @Input() isCsm = false;
 
   @Output() editRequested = new EventEmitter<Client>();
   @Output() deactivateRequested = new EventEmitter<Client>();
