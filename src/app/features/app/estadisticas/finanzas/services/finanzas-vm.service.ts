@@ -18,6 +18,8 @@ import {
   FinanzasResumenResponse,
   FinanzasTendenciaResponse,
   MetodoPago,
+  QuincenaBreakdown,
+  ResumenMetric,
   VentanaTendenciaFin
 } from '../models/finanzas.model';
 
@@ -54,11 +56,42 @@ export interface CardVM {
   /** Si true, delta>0 = negativo (egresos/nómina). */
   deltaInverted: boolean;
   secondaryText: string;
+  /**
+   * Cuando existe, la card renderiza dos íconos (persona + café) con sus montos
+   * en vez del `secondaryText` plano. `cafeText` = null cuando no hubo cafetería.
+   */
+  secondaryBreakdown?: { mensText: string; cafeText: string | null } | null;
   /** Caption alternativo al delta pill (ej. "Desde 30/04/2026"). */
   caption: string | null;
   sparkline: import('../../services/sparkline-geometry.service').SparklineGeometry | null;
   /** Id del gradient SVG para que múltiples sparklines no colisionen. */
   gradId: string;
+  /** true → la card renderiza el trigger "Ver desglose" y responde a clicks. */
+  expandable?: boolean;
+}
+
+// ─── VM del panel de quincenas ────────────────────────────────────────────────
+
+export interface QuincenaCardVM {
+  total_cop: number;
+  mensualidades_cop: number;
+  cafeteria_cop: number;
+  delta_cop: number;
+  periodo_label: string;
+  mensText: string;
+  cafeText: string;
+}
+
+export interface QuincenaQ2CardVM extends QuincenaCardVM {
+  es_parcial: boolean;
+}
+
+export interface IngresosQuincenasVM {
+  mes_label: string;
+  q1: QuincenaCardVM;
+  q2: QuincenaQ2CardVM;
+  /** Cuál quincena está transcurriendo hoy. null si el desglose no es del mes actual. */
+  quincena_activa: 'q1' | 'q2' | null;
 }
 
 // ─── Rows de listas ───────────────────────────────────────────────────────────
@@ -275,6 +308,8 @@ export class FinanzasVmService {
       ? ts.data!.map((p) => p.ingresos_cop)
       : [];
 
+    const hasQuincenas = rs?.status === 'loaded' && !!rs.data!.ingresos.quincenas;
+
     return {
       key: 'ingresos',
       label: 'Ingresos',
@@ -284,29 +319,42 @@ export class FinanzasVmService {
       delta,
       deltaInverted: false,
       secondaryText: this.buildIngresosSecondaryText(rs),
+      secondaryBreakdown: this.buildIngresosSecondaryBreakdown(rs),
       caption: null,
       sparkline: this.sparklineSvc.build(sparkVals),
-      gradId: 'fv2-card-spark-ingresos'
+      gradId: 'fv2-card-spark-ingresos',
+      expandable: status === 'loaded' && hasQuincenas
     };
   }
 
   /**
-   * Subtexto de la card de ingresos.
-   * Si cafetería aportó algo, muestra el desglose abreviado.
-   * Si solo mensualidades, muestra el conteo de pagos clásico.
+   * Fallback textual — se usa cuando la card está en loading/error/pre-app,
+   * o cuando el mes no tiene ni mensualidades ni cafetería registradas.
    */
   private buildIngresosSecondaryText(
     rs: StateWithData<FinanzasResumenResponse> | null
   ): string {
     if (rs?.status !== 'loaded') return '';
     const { ingresos } = rs.data!;
-    const cafeteriaCop = ingresos.cafeteria_cop ?? 0;
-    if (cafeteriaCop > 0) {
-      const mens = formatAmountShort(ingresos.mensualidades_cop ?? 0);
-      const cafe = formatAmountShort(cafeteriaCop);
-      return `Mensualidades ${mens} · Cafetería ${cafe}`;
-    }
     return `${ingresos.cantidad_pagos ?? 0} pagos recibidos`;
+  }
+
+  /**
+   * Desglose con íconos (persona + café) que reemplaza al texto plano
+   * en el estado `loaded`. Devuelve null si no hay ingresos que mostrar.
+   */
+  private buildIngresosSecondaryBreakdown(
+    rs: StateWithData<FinanzasResumenResponse> | null
+  ): { mensText: string; cafeText: string | null } | null {
+    if (rs?.status !== 'loaded') return null;
+    const { ingresos } = rs.data!;
+    const mensCop = ingresos.mensualidades_cop ?? 0;
+    const cafeCop = ingresos.cafeteria_cop ?? 0;
+    if (mensCop === 0 && cafeCop === 0) return null;
+    return {
+      mensText: formatAmountShort(mensCop),
+      cafeText: cafeCop > 0 ? formatAmountShort(cafeCop) : null
+    };
   }
 
   private makeEgresosCard(
@@ -332,7 +380,8 @@ export class FinanzasVmService {
       secondaryText: `${cantidad} registros`,
       caption: null,
       sparkline: this.sparklineSvc.build(sparkVals),
-      gradId: 'fv2-card-spark-egresos'
+      gradId: 'fv2-card-spark-egresos',
+      expandable: status === 'loaded'
     };
   }
 
@@ -428,6 +477,54 @@ export class FinanzasVmService {
       saldos.push(prev + tendencia[i].ingresos_cop - tendencia[i].egresos_totales_cop);
     }
     return saldos;
+  }
+
+  // ═══════════════════════════════════════════════════════════════════════════
+  // PANEL FLOTANTE — desglose quincenal de ingresos
+  // ═══════════════════════════════════════════════════════════════════════════
+
+  /**
+   * Construye el VM del panel de quincenas de ingresos.
+   * Devuelve null si el campo `quincenas` no está presente en el response
+   * (backend antiguo o período sin datos).
+   */
+  buildIngresosQuincenas(ingresos: ResumenMetric): IngresosQuincenasVM | null {
+    if (!ingresos.quincenas) return null;
+    const { mes_label, q1, q2 } = ingresos.quincenas;
+
+    // `es_parcial` del backend = "mes en curso" (true cuando el mes solicitado
+    // aún no cerró). Con esa señal + el día local decidimos cuál quincena está
+    // transcurriendo hoy.
+    const quincena_activa: 'q1' | 'q2' | null = q2.es_parcial
+      ? (new Date().getDate() <= 15 ? 'q1' : 'q2')
+      : null;
+
+    return {
+      mes_label,
+      q1: this.buildQuincenaCardVM(q1),
+      q2: {
+        ...this.buildQuincenaCardVM(q2),
+        es_parcial: q2.es_parcial
+      },
+      quincena_activa
+    };
+  }
+
+  private buildQuincenaCardVM(q: QuincenaBreakdown): QuincenaCardVM {
+    const mensText = `Mens. ${formatAmountShort(q.mensualidades_cop)}`;
+    const cafeText = q.cafeteria_cop > 0
+      ? `Café ${formatAmountShort(q.cafeteria_cop)}`
+      : '';
+
+    return {
+      total_cop:         q.total_cop,
+      mensualidades_cop: q.mensualidades_cop,
+      cafeteria_cop:     q.cafeteria_cop,
+      delta_cop:         q.delta_cop,
+      periodo_label:     q.periodo_label,
+      mensText,
+      cafeText
+    };
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

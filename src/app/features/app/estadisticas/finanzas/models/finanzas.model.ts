@@ -57,6 +57,24 @@ interface ResumenMetricBase {
  * Cada métrica concreta usa solo uno de ellos; los demás quedan undefined.
  * Consolidar en una sola interfaz simplifica los helpers del componente.
  */
+export interface QuincenaBreakdown {
+  total_cop: number;
+  mensualidades_cop: number;
+  cafeteria_cop: number;
+  delta_cop: number;
+  periodo_label: string;
+}
+
+export interface QuincenaQ2 extends QuincenaBreakdown {
+  es_parcial: boolean;
+}
+
+export interface IngresosQuincenas {
+  mes_label: string;
+  q1: QuincenaBreakdown;
+  q2: QuincenaQ2;
+}
+
 export interface ResumenMetric extends ResumenMetricBase {
   /** Solo en ingresos: desglose de mensualidades (fase 10+). */
   mensualidades_cop?: number;
@@ -65,6 +83,8 @@ export interface ResumenMetric extends ResumenMetricBase {
   cantidad_pagos?: number;      // ingresos (solo mensualidades)
   cantidad_registros?: number;  // egresos operativos
   cantidad_cierres?: number;    // nómina
+  /** Solo en ingresos: desglose quincenal con comparativa vs mes anterior. */
+  quincenas?: IngresosQuincenas;
 }
 
 export interface UtilidadMetric extends ResumenMetricBase {

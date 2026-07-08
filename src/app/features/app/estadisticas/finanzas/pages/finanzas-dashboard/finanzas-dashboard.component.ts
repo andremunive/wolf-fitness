@@ -23,7 +23,7 @@ import { ChartConfiguration } from 'chart.js';
 
 import { formatAmountCop, formatAmountShort } from 'src/app/features/app/expense-records/models/expense-record.model';
 import { FinanzasService, MesPeriodo } from '../../services/finanzas.service';
-import { FinanzasVmService, CardKey, CardVM, ExpenseType, EgresosDesgloseRow, VistaComposicion } from '../../services/finanzas-vm.service';
+import { FinanzasVmService, CardKey, CardVM, ExpenseType, EgresosDesgloseRow, IngresosQuincenasVM, VistaComposicion } from '../../services/finanzas-vm.service';
 import { SparklineGeometryService } from '../../../services/sparkline-geometry.service';
 import { GaugeGeometryService } from '../../../services/gauge-geometry.service';
 import {
@@ -432,6 +432,14 @@ export class FinanzasDashboardComponent implements OnDestroy {
     )
   );
 
+  readonly ingresosQuincenas$: Observable<IngresosQuincenasVM | null> = this.resumenState$.pipe(
+    map((rs) =>
+      rs.status === 'loaded'
+        ? this.vmSvc.buildIngresosQuincenas(rs.data!.ingresos)
+        : null
+    )
+  );
+
   readonly vistasComposicionDisponibles$ = this.composicionState$.pipe(
     map((cs) =>
       this.vmSvc.vistasComposicionDisponibles(
@@ -509,7 +517,7 @@ export class FinanzasDashboardComponent implements OnDestroy {
     this.openCardKey = null;
   }
 
-  onToggleEgresosPanel(key: CardKey, event: MouseEvent): void {
+  onToggleCardPanel(key: CardKey, event: MouseEvent): void {
     event.stopPropagation();
     this.openCardKey = this.openCardKey === key ? null : key;
   }

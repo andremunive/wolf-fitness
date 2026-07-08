@@ -323,9 +323,9 @@
           *ngFor="let card of state.cards; trackBy: trackByCardKey"
           class="fv2-card fv2-card--metric"
           [class.fv2-card--metric-open]="openCardKey === card.key"
-          [class.fv2-card--metric-clickable]="card.key === 'egresos' && card.status === 'loaded'"
+          [class.fv2-card--metric-clickable]="card.expandable"
           [attr.data-key]="card.key"
-          (click)="card.key === 'egresos' && card.status === 'loaded' ? onToggleEgresosPanel(card.key, $event) : null">
+          (click)="card.expandable ? onToggleCardPanel(card.key, $event) : null">
 
           <!-- ── Loading skeleton ─────────────────────────────────── -->
           <ng-container *ngIf="card.status === 'loading'">
@@ -418,20 +418,44 @@
 
             <!-- Texto secundario + trigger en una sola fila -->
             <div class="fv2-card-metric__bottom">
-              <p class="fv2-card-metric__secondary">{{ card.secondaryText }}</p>
+              <p class="fv2-card-metric__secondary">
+                <ng-container *ngIf="card.secondaryBreakdown as bd; else secondaryPlain">
+                  <span class="fv2-card-metric__secondary-item" aria-label="Mensualidades">
+                    <svg class="fv2-card-metric__secondary-icon" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="1.75"
+                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="8" r="3.5"></circle>
+                      <path d="M4.5 20c1.5-3.5 4.4-5.5 7.5-5.5s6 2 7.5 5.5"></path>
+                    </svg>
+                    <span>{{ bd.mensText }}</span>
+                  </span>
+                  <span *ngIf="bd.cafeText" class="fv2-card-metric__secondary-sep" aria-hidden="true">·</span>
+                  <span *ngIf="bd.cafeText" class="fv2-card-metric__secondary-item" aria-label="Cafetería">
+                    <svg class="fv2-card-metric__secondary-icon" viewBox="0 0 24 24"
+                      fill="none" stroke="currentColor" stroke-width="1.75"
+                      stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4 10h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5z"></path>
+                      <path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"></path>
+                      <path d="M8 3v2M12 3v2"></path>
+                    </svg>
+                    <span>{{ bd.cafeText }}</span>
+                  </span>
+                </ng-container>
+                <ng-template #secondaryPlain>{{ card.secondaryText }}</ng-template>
+              </p>
 
-              <!-- Trigger "Ver desglose" — solo en la card de egresos -->
-              <ng-container *ngIf="card.key === 'egresos' && card.status === 'loaded'">
+              <!-- Trigger "Ver desglose" — cards expandibles (ingresos y egresos) -->
+              <ng-container *ngIf="card.expandable">
                 <button
                   type="button"
                   class="fv2-card-metric__trigger"
-                  [attr.aria-expanded]="openCardKey === 'egresos'"
-                  (click)="$event.stopPropagation(); onToggleEgresosPanel('egresos', $event)"
-                  aria-label="Ver desglose de egresos por tipo">
+                  [attr.aria-expanded]="openCardKey === card.key"
+                  (click)="$event.stopPropagation(); onToggleCardPanel(card.key, $event)"
+                  [attr.aria-label]="'Ver desglose de ' + card.label">
                   Ver desglose
                   <span
                     class="fv2-card-metric__chevron"
-                    [class.fv2-card-metric__chevron--open]="openCardKey === 'egresos'"
+                    [class.fv2-card-metric__chevron--open]="openCardKey === card.key"
                     aria-hidden="true">▾</span>
                 </button>
               </ng-container>
@@ -439,10 +463,10 @@
 
           </ng-container>
 
-          <!-- ── Panel flotante de desglose — solo card egresos ──── -->
+          <!-- ── Panel flotante de desglose — card egresos ────────── -->
           <ng-container *ngIf="card.key === 'egresos' && openCardKey === 'egresos'">
             <div
-              class="fv2-egresos-panel"
+              class="fv2-metric-panel"
               role="dialog"
               aria-modal="false"
               aria-label="Desglose de egresos por tipo"
@@ -451,8 +475,8 @@
               <!-- Botón X de cierre — visible solo en mobile -->
               <button
                 type="button"
-                class="fv2-egresos-panel__close"
-                (click)="onToggleEgresosPanel('egresos', $event)"
+                class="fv2-metric-panel__close"
+                (click)="onToggleCardPanel('egresos', $event)"
                 aria-label="Cerrar desglose">
                 <svg
                   width="16" height="16" viewBox="0 0 24 24"
@@ -464,26 +488,26 @@
                 </svg>
               </button>
 
-              <p class="fv2-egresos-panel__title">Desglose por tipo</p>
+              <p class="fv2-metric-panel__title">Desglose por tipo</p>
 
-              <ul class="fv2-egresos-panel__list">
+              <ul class="fv2-metric-panel__list">
                 <li
                   *ngFor="let row of state.desglose; trackBy: trackByExpenseType"
-                  class="fv2-egresos-panel__item">
-                  <div class="fv2-egresos-panel__item-head">
+                  class="fv2-metric-panel__item">
+                  <div class="fv2-metric-panel__item-head">
                     <span
-                      class="fv2-egresos-panel__badge"
+                      class="fv2-metric-panel__badge"
                       [style.background]="row.badgeBg"
                       [style.color]="row.badgeText">
                       {{ row.label }}
                     </span>
-                    <span class="fv2-egresos-panel__amount">
+                    <span class="fv2-metric-panel__amount">
                       {{ row.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
-                  <div class="fv2-egresos-panel__bar-track">
+                  <div class="fv2-metric-panel__bar-track">
                     <div
-                      class="fv2-egresos-panel__bar"
+                      class="fv2-metric-panel__bar"
                       [style.width.%]="row.barWidthPct"
                       [style.background]="row.barFill">
                     </div>
@@ -494,20 +518,93 @@
               <!-- Empty state si todos son 0 -->
               <p
                 *ngIf="!state.desglose || state.desglose.length === 0"
-                class="fv2-egresos-panel__empty">
+                class="fv2-metric-panel__empty">
                 Sin egresos registrados en este período.
               </p>
 
               <ng-container *ngIf="resumenState$ | async as rs">
                 <ng-container *ngIf="rs.status === 'loaded'">
-                  <div class="fv2-egresos-panel__sep"></div>
-                  <div class="fv2-egresos-panel__total-row">
-                    <span class="fv2-egresos-panel__total-label">Total</span>
-                    <span class="fv2-egresos-panel__total-amount">
+                  <div class="fv2-metric-panel__sep"></div>
+                  <div class="fv2-metric-panel__total-row">
+                    <span class="fv2-metric-panel__total-label">Total</span>
+                    <span class="fv2-metric-panel__total-amount">
                       {{ rs.data!.egresos_por_tipo.total_cop | visibleCop:state.v }}
                     </span>
                   </div>
                 </ng-container>
+              </ng-container>
+
+            </div>
+          </ng-container>
+
+          <!-- ── Panel flotante de desglose — card ingresos ─────── -->
+          <ng-container *ngIf="card.key === 'ingresos' && openCardKey === 'ingresos'">
+            <div
+              class="fv2-metric-panel"
+              role="dialog"
+              aria-modal="false"
+              aria-label="Desglose de ingresos por quincena"
+              (click)="$event.stopPropagation()">
+
+              <!-- Botón X de cierre — visible solo en mobile -->
+              <button
+                type="button"
+                class="fv2-metric-panel__close"
+                (click)="onToggleCardPanel('ingresos', $event)"
+                aria-label="Cerrar desglose">
+                <svg
+                  width="16" height="16" viewBox="0 0 24 24"
+                  fill="none" stroke="currentColor"
+                  stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+
+              <ng-container *ngIf="ingresosQuincenas$ | async as q">
+
+                <p class="fv2-metric-panel__title">
+                  Por quincena
+                  <span class="fv2-metric-panel__mes-label">· {{ q.mes_label }}</span>
+                </p>
+
+                <div class="fv2-quincenas-grid">
+
+                  <!-- Q1 -->
+                  <div class="fv2-quincena-card" [class.fv2-quincena-card--activa]="q.quincena_activa === 'q1'">
+                    <p class="fv2-quincena-card__label">Q1 · {{ q.q1.periodo_label }}</p>
+                    <p class="fv2-quincena-card__value">{{ q.q1.total_cop | visibleCop:state.v }}</p>
+                    <span [ngClass]="q.q1.delta_cop | deltaClass" class="fv2-quincena-card__delta">
+                      {{ q.q1.delta_cop | deltaArrow }}
+                      <ng-container *ngIf="q.q1.delta_cop !== 0">
+                        {{ (q.q1.delta_cop < 0 ? -q.q1.delta_cop : q.q1.delta_cop) | visibleCop:state.v:true }}
+                      </ng-container>
+                      <span class="fv2-quincena-card__delta-label">vs Q1 ant</span>
+                    </span>
+                    <p class="fv2-quincena-card__breakdown">
+                      {{ q.q1.mensText }}<ng-container *ngIf="q.q1.cafeText"> · {{ q.q1.cafeText }}</ng-container>
+                    </p>
+                  </div>
+
+                  <!-- Q2 -->
+                  <div class="fv2-quincena-card" [class.fv2-quincena-card--activa]="q.quincena_activa === 'q2'">
+                    <p class="fv2-quincena-card__label">Q2 · {{ q.q2.periodo_label }}</p>
+                    <p class="fv2-quincena-card__value">{{ q.q2.total_cop | visibleCop:state.v }}</p>
+                    <span [ngClass]="q.q2.delta_cop | deltaClass" class="fv2-quincena-card__delta">
+                      {{ q.q2.delta_cop | deltaArrow }}
+                      <ng-container *ngIf="q.q2.delta_cop !== 0">
+                        {{ (q.q2.delta_cop < 0 ? -q.q2.delta_cop : q.q2.delta_cop) | visibleCop:state.v:true }}
+                      </ng-container>
+                      <span class="fv2-quincena-card__delta-label">vs Q2 ant</span>
+                    </span>
+                    <p class="fv2-quincena-card__breakdown">
+                      {{ q.q2.mensText }}<ng-container *ngIf="q.q2.cafeText"> · {{ q.q2.cafeText }}</ng-container>
+                    </p>
+                  </div>
+
+                </div>
+
               </ng-container>
 
             </div>
