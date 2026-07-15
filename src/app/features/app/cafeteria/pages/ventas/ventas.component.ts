@@ -54,6 +54,12 @@ export type BuyerType = 'client' | 'trainer';
 export type SaleType = 'individual' | 'combo';
 export type TableView = 'individual' | 'combos';
 
+export interface PersonSearchOption {
+  id: string;
+  full_name: string;
+  type: 'client' | 'trainer';
+}
+
 interface SalesSummary {
   total_ingresos_cop: number;
   count: number;
@@ -172,15 +178,79 @@ export class VentasComponent implements OnInit, OnDestroy {
     return this.statusFilter$.getValue();
   }
 
+  // ─── Person search (deudores históricos) ──────────────────────────────────────
+
+  /** Lista unificada de clientes + entrenadores para el autocomplete. */
+  private readonly allPeople$ = new BehaviorSubject<PersonSearchOption[]>([]);
+  private readonly personQuery$ = new BehaviorSubject<string>('');
+  private readonly selectedPerson$ = new BehaviorSubject<PersonSearchOption | null>(null);
+
+  personQuery = '';
+  showPersonDropdown = false;
+  isLoadingPeople = false;
+  isLoadingPersonSales = false;
+
+  get selectedPerson(): PersonSearchOption | null {
+    return this.selectedPerson$.getValue();
+  }
+
+  readonly filteredPeople$ = combineLatest([
+    this.personQuery$.pipe(debounceTime(100), distinctUntilChanged()),
+    this.allPeople$
+  ]).pipe(
+    map(([query, people]) => {
+      const q = query.trim().toLowerCase();
+      if (!q) return people.slice(0, 10);
+      return people.filter(p => p.full_name.toLowerCase().includes(q)).slice(0, 10);
+    })
+  );
+
+  /** Ventas pendientes históricas de la persona seleccionada (o [] si no hay). */
+  private readonly personPendingSales$ = this.selectedPerson$.pipe(
+    switchMap((person) => {
+      if (!person) return of([] as CafeteriaSaleView[]);
+      this.isLoadingPersonSales = true;
+      this.cdr.markForCheck();
+      return this.ventasService.getPendingSalesByPerson(person.id, person.type).pipe(
+        map((sales) => {
+          this.isLoadingPersonSales = false;
+          this.cdr.markForCheck();
+          return sales;
+        }),
+        catchError((err) => {
+          console.error('[Ventas] getPendingSalesByPerson error:', err);
+          this.isLoadingPersonSales = false;
+          this.cdr.markForCheck();
+          return of([] as CafeteriaSaleView[]);
+        })
+      );
+    }),
+    shareReplay(1)
+  );
+
   // ─── Filtered lists (derived Observables — no method calls in template) ───────
 
+  /**
+   * Cuando hay una persona seleccionada, la tabla individual muestra el histórico
+   * pendiente de esa persona (ignora mes y chips). Si no, aplica el filtro por status
+   * sobre las ventas del mes.
+   */
   readonly filteredSales$ = combineLatest([
     this.salesState$.pipe(map(state => state.sales ?? [])),
-    this.statusFilter$
+    this.statusFilter$,
+    this.selectedPerson$,
+    this.personPendingSales$
   ]).pipe(
-    map(([sales, filter]) =>
-      filter === 'all' ? sales : sales.filter(s => s.status === filter)
-    )
+    map(([sales, filter, person, personSales]) => {
+      if (person) return personSales;
+      return filter === 'all' ? sales : sales.filter(s => s.status === filter);
+    }),
+    shareReplay(1)
+  );
+
+  /** Suma del saldo pendiente de las ventas de la persona seleccionada. */
+  readonly personPendingTotal$ = this.personPendingSales$.pipe(
+    map(sales => sales.reduce((acc, s) => acc + (s.balance_cop ?? 0), 0))
   );
 
   readonly filteredPurchases$ = combineLatest([
@@ -189,7 +259,41 @@ export class VentasComponent implements OnInit, OnDestroy {
   ]).pipe(
     map(([purchases, filter]) =>
       filter === 'all' ? purchases : purchases.filter(p => p.status === filter)
-    )
+    ),
+    shareReplay(1)
+  );
+
+  // ─── Pagination state (independent per table) ─────────────────────────────────
+
+  private readonly salesPage$ = new BehaviorSubject<{ page: number; pageSize: number }>({
+    page: 1,
+    pageSize: 10
+  });
+  private readonly combosPage$ = new BehaviorSubject<{ page: number; pageSize: number }>({
+    page: 1,
+    pageSize: 10
+  });
+
+  readonly pagedSales$ = combineLatest([this.filteredSales$, this.salesPage$]).pipe(
+    map(([sales, { page, pageSize }]) => {
+      const start = (page - 1) * pageSize;
+      return sales.slice(start, start + pageSize);
+    })
+  );
+
+  readonly pagedPurchases$ = combineLatest([this.filteredPurchases$, this.combosPage$]).pipe(
+    map(([purchases, { page, pageSize }]) => {
+      const start = (page - 1) * pageSize;
+      return purchases.slice(start, start + pageSize);
+    })
+  );
+
+  readonly salesPagination$ = combineLatest([this.filteredSales$, this.salesPage$]).pipe(
+    map(([sales, { page, pageSize }]) => ({ page, pageSize, total: sales.length }))
+  );
+
+  readonly combosPagination$ = combineLatest([this.filteredPurchases$, this.combosPage$]).pipe(
+    map(([purchases, { page, pageSize }]) => ({ page, pageSize, total: purchases.length }))
   );
 
   // ─── Modal state ──────────────────────────────────────────────────────────────
@@ -202,6 +306,10 @@ export class VentasComponent implements OnInit, OnDestroy {
 
   installments: CafeteriaInstallment[] = [];
   isLoadingInstallments = false;
+
+  /** Tracks how the installment modal was opened to route the close/cancel action back correctly. */
+  private installmentOpenedFromDetail = false;
+  private comboInstallmentOpenedFromDetail = false;
 
   // ─── Active combos banner (individual sale modal) ─────────────────────────────
 
@@ -462,11 +570,37 @@ export class VentasComponent implements OnInit, OnDestroy {
     private readonly cdr: ChangeDetectorRef
   ) {}
 
-  ngOnInit(): void {}
+  ngOnInit(): void {
+    this.loadAllPeopleForSearch();
+  }
 
   ngOnDestroy(): void {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+
+  private loadAllPeopleForSearch(): void {
+    this.isLoadingPeople = true;
+    combineLatest([
+      this.ventasService.getAllClientsForSearch().pipe(catchError(() => of([] as { id: string; full_name: string }[]))),
+      this.ventasService.getAllTrainersForSearch().pipe(catchError(() => of([] as { id: string; full_name: string }[])))
+    ])
+      .pipe(takeUntil(this.destroy$))
+      .subscribe({
+        next: ([clients, trainers]) => {
+          const people: PersonSearchOption[] = [
+            ...clients.map(c => ({ id: c.id, full_name: c.full_name, type: 'client' as const })),
+            ...trainers.map(t => ({ id: t.id, full_name: t.full_name, type: 'trainer' as const }))
+          ].sort((a, b) => a.full_name.localeCompare(b.full_name));
+          this.allPeople$.next(people);
+          this.isLoadingPeople = false;
+          this.cdr.markForCheck();
+        },
+        error: () => {
+          this.isLoadingPeople = false;
+          this.cdr.markForCheck();
+        }
+      });
   }
 
   // ─── Table view toggle ────────────────────────────────────────────────────────
@@ -474,6 +608,7 @@ export class VentasComponent implements OnInit, OnDestroy {
   setTableView(view: TableView): void {
     this.tableView = view;
     this.statusFilter$.next('all');
+    this.resetPagination();
     this.cdr.markForCheck();
   }
 
@@ -489,17 +624,20 @@ export class VentasComponent implements OnInit, OnDestroy {
   }
 
   goToPreviousMonth(): void {
+    if (this.selectedPerson) return;
     if (this.currentMonth === 1) {
       this.currentMonth = 12;
       this.currentYear -= 1;
     } else {
       this.currentMonth -= 1;
     }
+    this.resetPagination();
     this.refresh$.next({ year: this.currentYear, month: this.currentMonth });
     this.cdr.markForCheck();
   }
 
   goToNextMonth(): void {
+    if (this.selectedPerson) return;
     if (this.isNextMonthBlocked) return;
     if (this.currentMonth === 12) {
       this.currentMonth = 1;
@@ -507,6 +645,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     } else {
       this.currentMonth += 1;
     }
+    this.resetPagination();
     this.refresh$.next({ year: this.currentYear, month: this.currentMonth });
     this.cdr.markForCheck();
   }
@@ -514,8 +653,85 @@ export class VentasComponent implements OnInit, OnDestroy {
   // ─── Status filter ────────────────────────────────────────────────────────────
 
   setFilter(filter: StatusFilter): void {
+    if (this.selectedPerson) return;
     this.statusFilter$.next(filter);
+    this.resetPagination();
     this.cdr.markForCheck();
+  }
+
+  // ─── Person search ────────────────────────────────────────────────────────────
+
+  onPersonQueryInput(event: Event): void {
+    const value = (event.target as HTMLInputElement).value;
+    this.personQuery = value;
+    this.personQuery$.next(value);
+    this.showPersonDropdown = true;
+    // Si borra completamente, limpia la selección.
+    if (!value.trim() && this.selectedPerson) {
+      this.clearPersonSelection();
+    }
+    this.cdr.markForCheck();
+  }
+
+  onPersonFocus(): void {
+    this.showPersonDropdown = true;
+    this.cdr.markForCheck();
+  }
+
+  onPersonBlur(): void {
+    setTimeout(() => {
+      this.showPersonDropdown = false;
+      this.cdr.markForCheck();
+    }, 150);
+  }
+
+  selectPerson(person: PersonSearchOption): void {
+    this.personQuery = person.full_name;
+    this.personQuery$.next(person.full_name);
+    this.selectedPerson$.next(person);
+    this.showPersonDropdown = false;
+    this.resetPagination();
+    this.cdr.markForCheck();
+  }
+
+  clearPersonSelection(): void {
+    this.personQuery = '';
+    this.personQuery$.next('');
+    this.selectedPerson$.next(null);
+    this.showPersonDropdown = false;
+    this.resetPagination();
+    this.cdr.markForCheck();
+  }
+
+  trackByPersonId(_index: number, p: PersonSearchOption): string {
+    return `${p.type}-${p.id}`;
+  }
+
+  // ─── Pagination handlers ──────────────────────────────────────────────────────
+
+  onSalesPageChange(page: number): void {
+    this.salesPage$.next({ ...this.salesPage$.getValue(), page });
+    this.cdr.markForCheck();
+  }
+
+  onSalesPageSizeChange(pageSize: number): void {
+    this.salesPage$.next({ page: 1, pageSize });
+    this.cdr.markForCheck();
+  }
+
+  onCombosPageChange(page: number): void {
+    this.combosPage$.next({ ...this.combosPage$.getValue(), page });
+    this.cdr.markForCheck();
+  }
+
+  onCombosPageSizeChange(pageSize: number): void {
+    this.combosPage$.next({ page: 1, pageSize });
+    this.cdr.markForCheck();
+  }
+
+  private resetPagination(): void {
+    this.salesPage$.next({ ...this.salesPage$.getValue(), page: 1 });
+    this.combosPage$.next({ ...this.combosPage$.getValue(), page: 1 });
   }
 
   // ─── Modal: New sale (opener) ─────────────────────────────────────────────────
@@ -988,6 +1204,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.selectedSale = sale;
     this.installmentAmountRaw = '';
     this.saveError = null;
+    this.installmentOpenedFromDetail = false;
     this.installmentForm.reset({
       amount_cop: null,
       payment_date: localDateString(new Date()),
@@ -1002,6 +1219,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     if (!this.selectedSale) return;
     this.installmentAmountRaw = '';
     this.saveError = null;
+    this.installmentOpenedFromDetail = true;
     this.installmentForm.reset({
       amount_cop: null,
       payment_date: localDateString(new Date()),
@@ -1013,7 +1231,12 @@ export class VentasComponent implements OnInit, OnDestroy {
   }
 
   closeInstallmentModal(): void {
-    this.activeModal = 'detail';
+    if (this.installmentOpenedFromDetail) {
+      this.activeModal = 'detail';
+    } else {
+      this.activeModal = null;
+      this.selectedSale = null;
+    }
     this.saveError = null;
     this.cdr.markForCheck();
   }
@@ -1198,6 +1421,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     if (!this.selectedPurchase) return;
     this.comboInstallmentAmountRaw = '';
     this.saveError = null;
+    this.comboInstallmentOpenedFromDetail = true;
     this.comboInstallmentForm.reset({
       amount_cop: null,
       payment_date: localDateString(new Date()),
@@ -1212,6 +1436,7 @@ export class VentasComponent implements OnInit, OnDestroy {
     this.selectedPurchase = purchase;
     this.comboInstallmentAmountRaw = '';
     this.saveError = null;
+    this.comboInstallmentOpenedFromDetail = false;
     this.comboInstallmentForm.reset({
       amount_cop: null,
       payment_date: localDateString(new Date()),
@@ -1223,10 +1448,11 @@ export class VentasComponent implements OnInit, OnDestroy {
   }
 
   closeComboInstallmentModal(): void {
-    if (this.activeModal === 'combo-installment' && this.selectedPurchase) {
+    if (this.comboInstallmentOpenedFromDetail) {
       this.activeModal = 'combo-detail';
     } else {
       this.activeModal = null;
+      this.selectedPurchase = null;
     }
     this.saveError = null;
     this.cdr.markForCheck();

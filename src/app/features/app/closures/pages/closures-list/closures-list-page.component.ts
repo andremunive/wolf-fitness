@@ -15,6 +15,7 @@ import { ClosurePdfService } from '../../services/closure-pdf.service';
 import {
   mapClosureErrorToMessage,
   MonthYear,
+  StaffRole,
   TrainerClosureResult,
   ListTrainersClosuresResult,
   TrainerClosureSummary
@@ -23,6 +24,7 @@ import { HistoryRow } from '../../components/closures-history-table/closures-his
 
 export interface CurrentMonthCard {
   trainerName: string;
+  staffRole: StaffRole;
   q1: TrainerClosureResult;
   q2: TrainerClosureResult;
 }
@@ -259,7 +261,7 @@ export class ClosuresListPageComponent implements OnInit, OnDestroy {
       q2: this.closuresService.computeTrainerClosure(profile.id, month.year, month.month, 'q2')
     }).pipe(
       switchMap(({ q1, q2 }) => {
-        const cards: CurrentMonthCard[] = [{ trainerName: '', q1, q2 }];
+        const cards: CurrentMonthCard[] = [{ trainerName: '', staffRole: 'trainer', q1, q2 }];
         const nextBlocked = this.isNextMonthBlocked(cards, month, this.currentMonthYear());
         return this.loadTrainerHistory(profile, month.year).pipe(
           map((historyRows) => ({
@@ -285,15 +287,17 @@ export class ClosuresListPageComponent implements OnInit, OnDestroy {
     currentMonth: MonthYear
   ): CurrentMonthCard[] {
     return result.trainers.map((t) => {
-      const q1 = this.summaryQToResult(t.q1, t.trainer_id, currentMonth, 'q1');
-      const q2 = this.summaryQToResult(t.q2, t.trainer_id, currentMonth, 'q2');
-      return { trainerName: t.trainer_name, q1, q2 };
+      const role: StaffRole = t.role ?? 'trainer';
+      const q1 = this.summaryQToResult(t.q1, t.trainer_id, role, currentMonth, 'q1');
+      const q2 = this.summaryQToResult(t.q2, t.trainer_id, role, currentMonth, 'q2');
+      return { trainerName: t.trainer_name, staffRole: role, q1, q2 };
     });
   }
 
   private summaryQToResult(
     q: TrainerClosureSummary['q1'],
     trainerId: string,
+    role: StaffRole,
     month: MonthYear,
     quincena: 'q1' | 'q2'
   ): TrainerClosureResult {
@@ -301,6 +305,7 @@ export class ClosuresListPageComponent implements OnInit, OnDestroy {
       status: q.status,
       closure_id: q.closure_id,
       trainer_id: trainerId,
+      role,
       year: month.year,
       month: month.month,
       quincena,

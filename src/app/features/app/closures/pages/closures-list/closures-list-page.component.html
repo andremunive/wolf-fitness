@@ -67,6 +67,7 @@
               <app-trainer-closure-card
                 [closure]="card.q1"
                 [trainerName]="card.trainerName"
+                [staffRole]="card.staffRole"
                 [isAdmin]="isAdmin"
                 (viewDetails)="onViewDetails($event, card.trainerName)"
                 (closeQuincena)="onViewDetails($event, card.trainerName)"
@@ -80,6 +81,7 @@
               <app-trainer-closure-card
                 [closure]="card.q2"
                 [trainerName]="card.trainerName"
+                [staffRole]="card.staffRole"
                 [isAdmin]="isAdmin"
                 (viewDetails)="onViewDetails($event, card.trainerName)"
                 (closeQuincena)="onViewDetails($event, card.trainerName)"

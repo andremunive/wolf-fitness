@@ -26,10 +26,16 @@
   <main class="ventas-page__main">
 
     <!-- Month navigator -->
-    <div class="month-nav" role="group" aria-label="Navegación de mes">
+    <div
+      class="month-nav"
+      role="group"
+      aria-label="Navegación de mes"
+      [class.month-nav--disabled]="!!selectedPerson"
+    >
       <button
         type="button"
         class="month-nav__btn"
+        [disabled]="!!selectedPerson"
         (click)="goToPreviousMonth()"
         aria-label="Mes anterior"
       >
@@ -42,8 +48,9 @@
         type="button"
         class="month-nav__btn"
         [class.month-nav__btn--disabled]="isNextMonthBlocked"
+        [disabled]="!!selectedPerson || isNextMonthBlocked"
         [attr.aria-disabled]="isNextMonthBlocked ? 'true' : null"
-        [title]="isNextMonthBlocked ? 'Ya estás en el mes actual' : ''"
+        [title]="!!selectedPerson ? 'Filtro por persona activo' : (isNextMonthBlocked ? 'Ya estás en el mes actual' : '')"
         (click)="goToNextMonth()"
         aria-label="Mes siguiente"
       >
@@ -116,19 +123,89 @@
       >Combos</button>
     </div>
 
+    <!-- Person search (solo en vista individual) -->
+    <div *ngIf="tableView === 'individual'" class="person-search">
+      <div class="person-search__field" [class.person-search__field--active]="!!selectedPerson">
+        <svg class="person-search__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="11" cy="11" r="7"/>
+          <path stroke-linecap="round" d="M21 21l-4.35-4.35"/>
+        </svg>
+        <input
+          type="text"
+          class="person-search__input"
+          placeholder="Buscar cliente o entrenador con ventas pendientes…"
+          [value]="personQuery"
+          (input)="onPersonQueryInput($event)"
+          (focus)="onPersonFocus()"
+          (blur)="onPersonBlur()"
+          autocomplete="off"
+          aria-label="Buscar persona con ventas pendientes"
+        />
+        <button
+          *ngIf="personQuery || selectedPerson"
+          type="button"
+          class="person-search__clear"
+          (click)="clearPersonSelection()"
+          aria-label="Limpiar búsqueda"
+        >
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 6l12 12M18 6L6 18"/>
+          </svg>
+        </button>
+
+        <div *ngIf="showPersonDropdown" class="person-search__dropdown">
+          <ng-container *ngIf="filteredPeople$ | async as people">
+            <div *ngIf="people.length === 0" class="person-search__empty">Sin resultados</div>
+            <button
+              *ngFor="let p of people; trackBy: trackByPersonId"
+              type="button"
+              class="person-search__option"
+              (mousedown)="selectPerson(p)"
+            >
+              <span class="person-search__option-name">{{ p.full_name }}</span>
+              <span
+                class="person-search__option-badge"
+                [class.person-search__option-badge--client]="p.type === 'client'"
+                [class.person-search__option-badge--trainer]="p.type === 'trainer'"
+              >{{ p.type === 'client' ? 'Cliente' : 'Entrenador' }}</span>
+            </button>
+          </ng-container>
+        </div>
+      </div>
+
+      <div *ngIf="selectedPerson" class="person-search__result">
+        <span class="person-search__result-label">
+          Mostrando ventas pendientes históricas de
+          <strong>{{ selectedPerson.full_name }}</strong>
+          ({{ selectedPerson.type === 'client' ? 'Cliente' : 'Entrenador' }})
+        </span>
+        <span
+          *ngIf="personPendingTotal$ | async as total"
+          class="person-search__result-total"
+        >
+          Total pendiente: <strong>{{ total | copCurrency }}</strong>
+        </span>
+      </div>
+    </div>
+
     <!-- Status filter pills -->
-    <div class="status-filter" role="group" aria-label="Filtrar por estado">
-      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'all'" (click)="setFilter('all')">Todos</button>
-      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'paid'" (click)="setFilter('paid')">Pagado</button>
-      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'partial'" (click)="setFilter('partial')">Parcial</button>
-      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'pending'" (click)="setFilter('pending')">Pendiente</button>
+    <div
+      class="status-filter"
+      role="group"
+      aria-label="Filtrar por estado"
+      [class.status-filter--disabled]="!!selectedPerson"
+    >
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'all'" [disabled]="!!selectedPerson" (click)="setFilter('all')">Todos</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'paid'" [disabled]="!!selectedPerson" (click)="setFilter('paid')">Pagado</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'partial'" [disabled]="!!selectedPerson" (click)="setFilter('partial')">Parcial</button>
+      <button type="button" class="status-filter__pill" [class.status-filter__pill--active]="statusFilter === 'pending'" [disabled]="!!selectedPerson" (click)="setFilter('pending')">Pendiente</button>
     </div>
 
     <!-- ════════════════════ INDIVIDUAL SALES VIEW ════════════════════ -->
     <ng-container *ngIf="tableView === 'individual'">
 
       <!-- Loading skeleton -->
-      <ng-container *ngIf="salesState.loading">
+      <ng-container *ngIf="salesState.loading || isLoadingPersonSales">
         <div class="ventas-table-shell" aria-hidden="true">
           <div class="ventas-table-wrapper">
             <table class="ventas-table">
@@ -182,25 +259,31 @@
       </div>
 
       <!-- Empty state -->
-      <div *ngIf="!salesState.loading && !salesState.error && ((filteredSales$ | async)?.length ?? 0) === 0" class="ventas-empty">
+      <div *ngIf="!salesState.loading && !salesState.error && !isLoadingPersonSales && ((filteredSales$ | async)?.length ?? 0) === 0" class="ventas-empty">
         <div class="ventas-empty__icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
             <path stroke-linecap="round" stroke-linejoin="round"
               d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
           </svg>
         </div>
-        <p class="ventas-empty__title">Sin ventas en este período.</p>
-        <p *ngIf="statusFilter !== 'all'" class="ventas-empty__msg">Prueba cambiando el filtro de estado.</p>
-        <button
-          *ngIf="statusFilter === 'all'"
-          type="button"
-          class="ventas-empty__add-btn"
-          (click)="openNewSaleModal()"
-        >+ Nueva venta</button>
+        <ng-container *ngIf="selectedPerson; else emptyDefault">
+          <p class="ventas-empty__title">{{ selectedPerson.full_name }} no tiene ventas pendientes.</p>
+          <p class="ventas-empty__msg">Todo su histórico está al día.</p>
+        </ng-container>
+        <ng-template #emptyDefault>
+          <p class="ventas-empty__title">Sin ventas en este período.</p>
+          <p *ngIf="statusFilter !== 'all'" class="ventas-empty__msg">Prueba cambiando el filtro de estado.</p>
+          <button
+            *ngIf="statusFilter === 'all'"
+            type="button"
+            class="ventas-empty__add-btn"
+            (click)="openNewSaleModal()"
+          >+ Nueva venta</button>
+        </ng-template>
       </div>
 
       <!-- Table (tablet/desktop) -->
-      <ng-container *ngIf="!salesState.loading && !salesState.error && ((filteredSales$ | async)?.length ?? 0) > 0">
+      <ng-container *ngIf="!salesState.loading && !salesState.error && !isLoadingPersonSales && ((filteredSales$ | async)?.length ?? 0) > 0">
         <div class="ventas-table-shell">
           <div class="ventas-table-wrapper" role="region" aria-label="Tabla de ventas">
             <table class="ventas-table">
@@ -218,7 +301,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let sale of filteredSales$ | async; trackBy: trackBySaleId"
+                  *ngFor="let sale of pagedSales$ | async; trackBy: trackBySaleId"
                   class="ventas-table__row"
                 >
                   <td class="ventas-table__cell ventas-table__cell--date">
@@ -299,7 +382,7 @@
         <!-- Cards (mobile) -->
         <div class="ventas-cards">
           <div
-            *ngFor="let sale of filteredSales$ | async; trackBy: trackBySaleId"
+            *ngFor="let sale of pagedSales$ | async; trackBy: trackBySaleId"
             class="ventas-card"
           >
             <div class="ventas-card__top">
@@ -383,6 +466,14 @@
             </div>
           </div>
         </div>
+
+        <app-ventas-pagination
+          *ngIf="salesPagination$ | async as p"
+          [state]="p"
+          itemLabel="ventas"
+          (pageChange)="onSalesPageChange($event)"
+          (pageSizeChange)="onSalesPageSizeChange($event)"
+        ></app-ventas-pagination>
       </ng-container>
 
     </ng-container>
@@ -483,7 +574,7 @@
               </thead>
               <tbody>
                 <tr
-                  *ngFor="let p of filteredPurchases$ | async; trackBy: trackByPurchaseId"
+                  *ngFor="let p of pagedPurchases$ | async; trackBy: trackByPurchaseId"
                   class="ventas-table__row"
                 >
                   <!-- FECHA -->
@@ -569,7 +660,7 @@
         <!-- Cards (mobile) -->
         <div class="ventas-cards">
           <div
-            *ngFor="let p of filteredPurchases$ | async; trackBy: trackByPurchaseId"
+            *ngFor="let p of pagedPurchases$ | async; trackBy: trackByPurchaseId"
             class="ventas-card"
           >
             <div class="ventas-card__top">
@@ -642,6 +733,14 @@
             <div class="ventas-card__date">{{ p.purchase_date | localDate }}</div>
           </div>
         </div>
+
+        <app-ventas-pagination
+          *ngIf="combosPagination$ | async as p"
+          [state]="p"
+          itemLabel="combos"
+          (pageChange)="onCombosPageChange($event)"
+          (pageSizeChange)="onCombosPageSizeChange($event)"
+        ></app-ventas-pagination>
       </ng-container>
 
     </ng-container>

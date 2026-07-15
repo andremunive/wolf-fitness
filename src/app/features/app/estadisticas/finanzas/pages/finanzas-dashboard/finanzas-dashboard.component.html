@@ -921,10 +921,45 @@
               {{ state.cs.data!.caja_menor.total_cop | visibleCop:state.v }}
             </div>
 
-            <p class="fv2-caja-card__pagos">
-              {{ state.cs.data!.caja_menor.cantidad_pagos }} pagos recibidos
-            </p>
             <p class="fv2-caja-card__sub">Aún no consolidados</p>
+
+            <ul class="fv2-caja-recaudo-list">
+              <li class="fv2-caja-recaudo-row">
+                <span class="fv2-caja-recaudo-row__head">
+                  <svg class="fv2-caja-recaudo-row__icon" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="1.75"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="8" r="3.5"></circle>
+                    <path d="M4.5 20c1.5-3.5 4.4-5.5 7.5-5.5s6 2 7.5 5.5"></path>
+                  </svg>
+                  <span class="fv2-caja-recaudo-row__label">Mensualidades</span>
+                </span>
+                <span class="fv2-caja-recaudo-row__amount">
+                  {{ state.cs.data!.caja_menor.mensualidades_cop | visibleCop:state.v }}
+                </span>
+                <span class="fv2-caja-recaudo-row__count">
+                  {{ state.cs.data!.caja_menor.cantidad_pagos }} pagos
+                </span>
+              </li>
+              <li class="fv2-caja-recaudo-row">
+                <span class="fv2-caja-recaudo-row__head">
+                  <svg class="fv2-caja-recaudo-row__icon" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="1.75"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M4 10h13v5a5 5 0 0 1-5 5H9a5 5 0 0 1-5-5v-5z"></path>
+                    <path d="M17 11h1.5a2.5 2.5 0 0 1 0 5H17"></path>
+                    <path d="M8 3v2M12 3v2"></path>
+                  </svg>
+                  <span class="fv2-caja-recaudo-row__label">Cafetería</span>
+                </span>
+                <span class="fv2-caja-recaudo-row__amount">
+                  {{ state.cs.data!.caja_menor.cafeteria_cop | visibleCop:state.v }}
+                </span>
+                <span class="fv2-caja-recaudo-row__count">
+                  {{ state.cs.data!.caja_menor.cantidad_ventas_cafeteria }} ventas
+                </span>
+              </li>
+            </ul>
 
             <div class="fv2-caja-card__divider fv2-caja-card__divider--dark"></div>
 

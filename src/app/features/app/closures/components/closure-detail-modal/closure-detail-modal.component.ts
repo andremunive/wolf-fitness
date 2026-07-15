@@ -101,6 +101,10 @@ export class ClosureDetailModalComponent implements OnChanges, OnDestroy {
     return this.closure?.status === 'closed' || this.closure?.status === 'paid';
   }
 
+  get isCsm(): boolean {
+    return this.closure?.role === 'csm';
+  }
+
   // ─── Confirmation flow ─────────────────────────────────────────────────────
 
   requestCloseQuincena(): void {

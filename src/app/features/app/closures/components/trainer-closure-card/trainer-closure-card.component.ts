@@ -10,6 +10,7 @@ import {
 import {
   MONTH_NAMES_ES,
   PAYMENT_METHOD_LABELS,
+  StaffRole,
   TrainerClosureResult
 } from '../../models/closure.model';
 
@@ -24,8 +25,14 @@ export class TrainerClosureCardComponent implements OnChanges {
   @Input() closure!: TrainerClosureResult;
   /** Full name of the trainer — displayed when isAdmin = true. */
   @Input() trainerName = '';
+  /** Rol del staff: 'trainer' muestra bono y conteos; 'csm' solo base + ajustes + total. */
+  @Input() staffRole: StaffRole = 'trainer';
   /** When true, admin-only action buttons are rendered. */
   @Input() isAdmin = false;
+
+  get isCsm(): boolean {
+    return this.staffRole === 'csm';
+  }
 
   @Output() viewDetails = new EventEmitter<TrainerClosureResult>();
   @Output() closeQuincena = new EventEmitter<TrainerClosureResult>();

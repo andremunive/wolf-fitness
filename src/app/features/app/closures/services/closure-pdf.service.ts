@@ -90,13 +90,16 @@ export class ClosurePdfService {
     doc.setTextColor(0);
 
     // ─── Tabla de resumen financiero ─────────────────────────────────────────
-    const summaryBody: string[][] = [
-      ['Clientes plan 6 días', String(closure.count_six_days)],
-      ['Clientes plan 3 días', String(closure.count_three_days)],
-      ['Equivalente total quincena', closure.equivalente_q.toFixed(1)],
-      ['Salario base', formatCop(closure.base_cop)],
-      ['Bono de la quincena', formatCop(closure.bonus_q_cop)]
-    ];
+    const isCsm = closure.role === 'csm';
+    const summaryBody: string[][] = isCsm
+      ? [['Salario base', formatCop(closure.base_cop)]]
+      : [
+          ['Clientes plan 6 días', String(closure.count_six_days)],
+          ['Clientes plan 3 días', String(closure.count_three_days)],
+          ['Equivalente total quincena', closure.equivalente_q.toFixed(1)],
+          ['Salario base', formatCop(closure.base_cop)],
+          ['Bono de la quincena', formatCop(closure.bonus_q_cop)]
+        ];
 
     // Ajustes (si hay)
     if (closure.adjustments && closure.adjustments.length > 0) {

@@ -57,7 +57,7 @@
     <section class="modal-section">
       <h3 class="modal-section__title">Resumen financiero</h3>
 
-      <div class="summary-grid">
+      <div class="summary-grid" *ngIf="!isCsm">
         <div class="summary-item">
           <span class="summary-item__label">Clientes 6 días</span>
           <span class="summary-item__value">{{ closure.count_six_days }}</span>
@@ -81,7 +81,7 @@
           <span>Salario base</span>
           <span>{{ formatCop(closure.base_cop) }}</span>
         </div>
-        <div class="amounts-list__row">
+        <div class="amounts-list__row" *ngIf="!isCsm">
           <span>Bono quincena</span>
           <span>{{ formatCop(closure.bonus_q_cop) }}</span>
         </div>
@@ -98,8 +98,8 @@
       </div>
     </section>
 
-    <!-- ── Sección 2: Clientes que aportaron ── -->
-    <section class="modal-section" *ngIf="closure.entries && closure.entries.length > 0">
+    <!-- ── Sección 2: Clientes que aportaron (solo trainer) ── -->
+    <section class="modal-section" *ngIf="!isCsm && closure.entries && closure.entries.length > 0">
       <h3 class="modal-section__title">
         Clientes que aportaron ({{ closure.entries.length }})
       </h3>
@@ -162,7 +162,7 @@
       </div>
     </section>
 
-    <section class="modal-section" *ngIf="!closure.entries || closure.entries.length === 0">
+    <section class="modal-section" *ngIf="!isCsm && (!closure.entries || closure.entries.length === 0)">
       <h3 class="modal-section__title">Clientes que aportaron</h3>
       <p class="empty-text">Sin clientes en esta quincena.</p>
     </section>

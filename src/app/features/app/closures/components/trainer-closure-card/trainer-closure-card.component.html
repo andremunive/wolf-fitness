@@ -11,8 +11,8 @@
     <span class="badge" [ngClass]="statusClass">{{ statusLabel }}</span>
   </div>
 
-  <!-- ── Conteos ── -->
-  <div class="closure-card__counts">
+  <!-- ── Conteos (solo trainer) ── -->
+  <div class="closure-card__counts" *ngIf="!isCsm">
     <div class="closure-card__count-item">
       <span class="closure-card__count-label">6 días</span>
       <span class="closure-card__count-value">{{ closure.count_six_days }}</span>
@@ -33,7 +33,7 @@
       <span class="closure-card__amount-label">Base</span>
       <span class="closure-card__amount-value">{{ formatCop(closure.base_cop) }}</span>
     </div>
-    <div class="closure-card__amount-row">
+    <div class="closure-card__amount-row" *ngIf="!isCsm">
       <span class="closure-card__amount-label">Bono Q</span>
       <span class="closure-card__amount-value">{{ formatCop(closure.bonus_q_cop) }}</span>
     </div>

@@ -13,6 +13,7 @@ import { CatalogoCombosActionsMenuComponent } from './components/catalogo-combos
 import { VentasActionsMenuComponent } from './components/ventas-actions-menu/ventas-actions-menu.component';
 import { VentasCombosActionsMenuComponent } from './components/ventas-combos-actions-menu/ventas-combos-actions-menu.component';
 import { InsumosActionsMenuComponent } from './components/insumos-actions-menu/insumos-actions-menu.component';
+import { VentasPaginationComponent } from './components/ventas-pagination/ventas-pagination.component';
 
 @NgModule({
   declarations: [
@@ -25,7 +26,8 @@ import { InsumosActionsMenuComponent } from './components/insumos-actions-menu/i
     CatalogoCombosActionsMenuComponent,
     VentasActionsMenuComponent,
     VentasCombosActionsMenuComponent,
-    InsumosActionsMenuComponent
+    InsumosActionsMenuComponent,
+    VentasPaginationComponent
   ],
   imports: [SharedModule, CafeteriaRoutingModule]
 })

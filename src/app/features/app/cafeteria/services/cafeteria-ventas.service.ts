@@ -339,6 +339,118 @@ export class CafeteriaVentasService {
     );
   }
 
+  /** Todos los clientes (cualquier status) para el buscador de deudores. */
+  getAllClientsForSearch(): Observable<{ id: string; full_name: string }[]> {
+    return fromPromise(
+      this.supabase.client
+        .from('clients')
+        .select('id, profiles!clients_profiles_fkey(full_name)')
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return ((data ?? []) as unknown[])
+          .map((row) => {
+            const r = row as { id: string; profiles: { full_name: string } | null };
+            return { id: r.id, full_name: r.profiles?.full_name ?? '' };
+          })
+          .filter((c) => c.full_name.length > 0)
+          .sort((a, b) => a.full_name.localeCompare(b.full_name));
+      }),
+      catchError((err) => {
+        console.error('[CafeteriaVentasService] getAllClientsForSearch error:', err);
+        throw err;
+      })
+    );
+  }
+
+  /** Todos los entrenadores (cualquier status) para el buscador de deudores. */
+  getAllTrainersForSearch(): Observable<{ id: string; full_name: string }[]> {
+    return fromPromise(
+      this.supabase.client
+        .from('profiles')
+        .select('id, full_name')
+        .eq('role', 'trainer')
+        .order('full_name', { ascending: true })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return ((data ?? []) as { id: string; full_name: string | null }[])
+          .map((r) => ({ id: r.id, full_name: r.full_name ?? '' }))
+          .filter((t) => t.full_name.length > 0);
+      }),
+      catchError((err) => {
+        console.error('[CafeteriaVentasService] getAllTrainersForSearch error:', err);
+        throw err;
+      })
+    );
+  }
+
+  /**
+   * Trae TODAS las ventas individuales pendientes o parciales de una persona
+   * a lo largo del histórico (sin filtro de mes).
+   */
+  getPendingSalesByPerson(
+    personId: string,
+    personType: 'client' | 'trainer'
+  ): Observable<CafeteriaSaleView[]> {
+    const column = personType === 'client' ? 'client_id' : 'trainer_id';
+
+    return fromPromise(
+      this.supabase.client
+        .from('cafeteria_sales')
+        .select(`
+          *,
+          product:cafeteria_products(name, size_label),
+          client:clients!cafeteria_sales_client_id_fkey(id, profiles!clients_profiles_fkey(full_name)),
+          trainer:profiles!cafeteria_sales_trainer_id_fkey(id, full_name)
+        `)
+        .eq(column, personId)
+        .eq('is_active', true)
+        .in('status', ['pending', 'partial'])
+        .order('sale_date', { ascending: false })
+        .order('created_at', { ascending: false })
+    ).pipe(
+      map(({ data, error }) => {
+        if (error) throw error;
+        return ((data ?? []) as unknown[]).map((row) => {
+          const r = row as CafeteriaSale & {
+            product: Pick<CafeteriaProduct, 'name' | 'size_label'> | null;
+            client: { id: string; profiles: { full_name: string } | null } | null;
+            trainer: { id: string; full_name: string } | null;
+          };
+          const base: CafeteriaSaleWithDetails = {
+            ...r,
+            client: r.client
+              ? { id: r.client.id, full_name: r.client.profiles?.full_name ?? '' }
+              : null
+          };
+          const total_cop =
+            (base.product_price_snapshot_cop ?? 0) * (base.quantity ?? 1);
+          const amount_received = base.amount_received_cop ?? 0;
+
+          return {
+            ...base,
+            total_cop,
+            progress_percent:
+              total_cop > 0
+                ? Math.min(100, Math.round((amount_received / total_cop) * 100))
+                : 0,
+            is_fully_paid: amount_received >= total_cop,
+            buyer_name: base.client?.full_name ?? base.trainer?.full_name ?? '—',
+            has_different_reg_date:
+              !!base.sale_date &&
+              !!base.reported_date &&
+              base.sale_date !== base.reported_date
+          } as CafeteriaSaleView;
+        });
+      }),
+      catchError((err) => {
+        console.error('[CafeteriaVentasService] getPendingSalesByPerson error:', err);
+        throw err;
+      })
+    );
+  }
+
   // ─── Compras de combo ──────────────────────────────────────────────────────
 
   getComboPurchases(year: number, month: number): Observable<CafeteriaCombosResult> {

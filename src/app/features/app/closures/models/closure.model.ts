@@ -8,6 +8,10 @@ import {
 // Re-export for convenience.
 export type { ClosureAdjustment, ClosureQuincena, ClosureStatus, PaymentMethod };
 
+// ─── Staff role (subset of user_role) que aplica a cierres ────────────────────
+
+export type StaffRole = 'trainer' | 'csm';
+
 // ─── Bank account snapshot ─────────────────────────────────────────────────────
 
 export interface ClosureBankAccount {
@@ -35,6 +39,7 @@ export interface TrainerClosureResult {
   status: ClosureStatus | 'open';
   closure_id: string | null;
   trainer_id: string;
+  role?: StaffRole;
   year: number;
   month: number;
   quincena: ClosureQuincena;
@@ -79,6 +84,7 @@ export interface TrainerClosureSummaryQ {
 export interface TrainerClosureSummary {
   trainer_id: string;
   trainer_name: string;
+  role: StaffRole;
   bono_mes_total_cop: number;
   q1: TrainerClosureSummaryQ;
   q2: TrainerClosureSummaryQ;

@@ -31,8 +31,11 @@ export interface CajaConsolidada {
 export interface CajaMenor {
   quincena_inicio: string;            // ISO
   quincena_label: string;             // "Q1 Mayo 2026" | "Q2 Mayo 2026"
-  total_cop: number;
-  cantidad_pagos: number;
+  total_cop: number;                  // mensualidades + cafetería (recaudo)
+  mensualidades_cop: number;
+  cantidad_pagos: number;             // solo mensualidades
+  cafeteria_cop: number;
+  cantidad_ventas_cafeteria: number;
 }
 
 export interface FinanzasCajaResponse {

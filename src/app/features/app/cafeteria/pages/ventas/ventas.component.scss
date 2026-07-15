@@ -233,6 +233,10 @@
   display: flex;
   gap: 6px;
   flex-wrap: wrap;
+
+  &--disabled {
+    opacity: 0.55;
+  }
 }
 
 .status-filter__pill {
@@ -248,7 +252,7 @@
   transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   white-space: nowrap;
 
-  &:hover {
+  &:hover:not(:disabled) {
     border-color: #228d9f;
     color: #228d9f;
   }
@@ -259,16 +263,211 @@
     color: #ffffff;
     font-weight: 600;
 
-    &:hover {
+    &:hover:not(:disabled) {
       background: #1b7281;
       border-color: #1b7281;
       color: #ffffff;
     }
   }
 
+  &:disabled {
+    cursor: not-allowed;
+  }
+
   &:focus-visible {
     outline: 2px solid #228d9f;
     outline-offset: 2px;
+  }
+}
+
+// ─── Month nav disabled state ────────────────────────────────────────────────
+
+.month-nav {
+  &--disabled {
+    opacity: 0.55;
+  }
+
+  &__btn:disabled {
+    cursor: not-allowed;
+  }
+}
+
+// ─── Person search (deudores históricos) ─────────────────────────────────────
+
+.person-search {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+
+  &__field {
+    position: relative;
+    display: flex;
+    align-items: center;
+    background: #ffffff;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 0 12px;
+    height: 44px;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+
+    &:focus-within {
+      border-color: #228d9f;
+      box-shadow: 0 0 0 3px rgba(34, 141, 159, 0.12);
+    }
+
+    &--active {
+      border-color: #228d9f;
+      background: #eaf6f9;
+    }
+  }
+
+  &__icon {
+    width: 18px;
+    height: 18px;
+    color: #9ca3af;
+    flex-shrink: 0;
+    margin-right: 8px;
+  }
+
+  &__input {
+    flex: 1;
+    height: 100%;
+    border: none;
+    outline: none;
+    background: transparent;
+    font-size: 14px;
+    color: #111827;
+    min-width: 0;
+
+    &::placeholder {
+      color: #9ca3af;
+    }
+  }
+
+  &__clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 8px;
+    background: transparent;
+    color: #6b7280;
+    cursor: pointer;
+    flex-shrink: 0;
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
+
+    &:hover {
+      background: #f3f4f6;
+      color: #111827;
+    }
+  }
+
+  &__dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    left: 0;
+    right: 0;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+    max-height: 280px;
+    overflow-y: auto;
+    z-index: 20;
+  }
+
+  &__empty {
+    padding: 14px 16px;
+    font-size: 13px;
+    color: #9ca3af;
+    text-align: center;
+  }
+
+  &__option {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    width: 100%;
+    padding: 10px 14px;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    font-size: 14px;
+    color: #111827;
+    transition: background 0.12s ease;
+
+    &:hover {
+      background: #f7f8fa;
+    }
+
+    &:not(:last-child) {
+      border-bottom: 1px solid #f3f4f6;
+    }
+  }
+
+  &__option-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  &__option-badge {
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 8px;
+    border-radius: 9999px;
+    flex-shrink: 0;
+
+    &--client {
+      background: #eaf6f9;
+      color: #1b7281;
+    }
+
+    &--trainer {
+      background: #fef3c7;
+      color: #92400e;
+    }
+  }
+
+  &__result {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 10px 14px;
+    background: #eaf6f9;
+    border: 1px solid #cfe9ee;
+    border-radius: 10px;
+    font-size: 13px;
+    color: #1b7281;
+
+    @media (min-width: 640px) {
+      flex-direction: row;
+      align-items: center;
+      justify-content: space-between;
+    }
+  }
+
+  &__result-label strong {
+    color: #0f5865;
+  }
+
+  &__result-total {
+    font-size: 14px;
+
+    strong {
+      color: #b91c1c;
+      font-weight: 700;
+    }
   }
 }
 
