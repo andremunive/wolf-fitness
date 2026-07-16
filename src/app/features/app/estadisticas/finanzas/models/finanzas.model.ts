@@ -31,11 +31,15 @@ export interface CajaConsolidada {
 export interface CajaMenor {
   quincena_inicio: string;            // ISO
   quincena_label: string;             // "Q1 Mayo 2026" | "Q2 Mayo 2026"
-  total_cop: number;                  // mensualidades + cafetería (recaudo)
-  mensualidades_cop: number;
-  cantidad_pagos: number;             // solo mensualidades
+  total_cop: number;                  // mensualidades + cafetería + abonos (recaudo)
+  mensualidades_cop: number;          // solo pagos status='paid' no consolidados
+  cantidad_pagos: number;
   cafeteria_cop: number;
   cantidad_ventas_cafeteria: number;
+  // Abonos: pagos status='partial' no consolidados. Incluye huérfanos de
+  // quincenas cerradas hasta que el cliente complete el pago.
+  abonos_cop: number;
+  cantidad_abonos: number;
 }
 
 export interface FinanzasCajaResponse {

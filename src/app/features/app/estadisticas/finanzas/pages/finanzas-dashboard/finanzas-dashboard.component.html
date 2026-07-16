@@ -959,6 +959,23 @@
                   {{ state.cs.data!.caja_menor.cantidad_ventas_cafeteria }} ventas
                 </span>
               </li>
+              <li class="fv2-caja-recaudo-row">
+                <span class="fv2-caja-recaudo-row__head">
+                  <svg class="fv2-caja-recaudo-row__icon" viewBox="0 0 24 24"
+                    fill="none" stroke="currentColor" stroke-width="1.75"
+                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 3v18"></path>
+                    <path d="M17 8.5c0-1.933-2.239-3.5-5-3.5S7 6.567 7 8.5s2.239 3 5 3 5 1.067 5 3-2.239 3.5-5 3.5-5-1.567-5-3.5"></path>
+                  </svg>
+                  <span class="fv2-caja-recaudo-row__label">Abonos</span>
+                </span>
+                <span class="fv2-caja-recaudo-row__amount">
+                  {{ state.cs.data!.caja_menor.abonos_cop | visibleCop:state.v }}
+                </span>
+                <span class="fv2-caja-recaudo-row__count">
+                  {{ state.cs.data!.caja_menor.cantidad_abonos }} abonos
+                </span>
+              </li>
             </ul>
 
             <div class="fv2-caja-card__divider fv2-caja-card__divider--dark"></div>
