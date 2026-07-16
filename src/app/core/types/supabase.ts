@@ -101,6 +101,7 @@ export type Database = {
           is_completed: boolean
           payment_method: string | null
           purchase_date: string
+          reception_date: string | null
           status: string
           total_units: number
           trainer_id: string | null
@@ -123,6 +124,7 @@ export type Database = {
           is_completed?: boolean
           payment_method?: string | null
           purchase_date?: string
+          reception_date?: string | null
           status?: string
           total_units: number
           trainer_id?: string | null
@@ -145,6 +147,7 @@ export type Database = {
           is_completed?: boolean
           payment_method?: string | null
           purchase_date?: string
+          reception_date?: string | null
           status?: string
           total_units?: number
           trainer_id?: string | null
@@ -583,6 +586,7 @@ export type Database = {
           product_id: string
           product_price_snapshot_cop: number
           quantity: number
+          reception_date: string | null
           reported_date: string
           sale_date: string
           status: string
@@ -605,6 +609,7 @@ export type Database = {
           product_id: string
           product_price_snapshot_cop: number
           quantity?: number
+          reception_date?: string | null
           reported_date?: string
           sale_date?: string
           status?: string
@@ -627,6 +632,7 @@ export type Database = {
           product_id?: string
           product_price_snapshot_cop?: number
           quantity?: number
+          reception_date?: string | null
           reported_date?: string
           sale_date?: string
           status?: string
@@ -647,6 +653,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "v_clients_with_payment_status"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "cafeteria_sales_consolidation_id_fkey"
+            columns: ["consolidation_id"]
+            isOneToOne: false
+            referencedRelation: "cafeteria_consolidations"
             referencedColumns: ["id"]
           },
           {
@@ -2431,6 +2444,18 @@ export type Database = {
           reception_date: string
         }[]
       }
+      execute_register_cafeteria_installment: {
+        Args: {
+          p_amount_cop: number
+          p_created_by: string
+          p_notes?: string
+          p_parent_id: string
+          p_parent_type: string
+          p_payment_date: string
+          p_payment_method: string
+        }
+        Returns: Json
+      }
       execute_register_installment: {
         Args: {
           p_amount_cop: number
@@ -2843,7 +2868,6 @@ export const Constants = {
   },
 } as const
 
-// ---------------------------------------------------------------------------
 // Aliases de conveniencia — usar en lugar de los tipos genéricos de Database
 // ---------------------------------------------------------------------------
 

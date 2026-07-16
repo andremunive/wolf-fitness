@@ -168,7 +168,8 @@ export class CafeteriaVentasService {
                   status,
                   payment_method: data.payment_method ?? null,
                   notes: data.notes ?? null,
-                  created_by: uid
+                  created_by: uid,
+                  ...(status === 'paid' ? { reception_date: data.sale_date } : {})
                 })
                 .select('*')
                 .single()
@@ -203,81 +204,56 @@ export class CafeteriaVentasService {
         const userId = authData.user?.id;
         if (!userId) throw new Error('Usuario no autenticado');
 
-        // Paso 1: leer sale actual antes del INSERT del installment.
         return fromPromise(
-          this.supabase.client
-            .from('cafeteria_sales')
-            .select('amount_received_cop, balance_cop, product_price_snapshot_cop, quantity')
-            .eq('id', saleId)
-            .single()
+          this.supabase.client.rpc('execute_register_cafeteria_installment', {
+            p_parent_type: 'sale',
+            p_parent_id: saleId,
+            p_payment_date: data.payment_date,
+            p_amount_cop: data.amount_cop,
+            p_payment_method: data.payment_method,
+            p_created_by: userId,
+            p_notes: data.notes ?? undefined
+          })
         ).pipe(
-          map(({ data: currentSale, error }) => {
-            if (error) throw error;
-            const sale = currentSale as {
-              amount_received_cop: number;
-              balance_cop: number;
-              product_price_snapshot_cop: number;
-              quantity: number;
+          switchMap(({ data: rpcResult, error: rpcError }) => {
+            if (rpcError) throw rpcError;
+            const result = rpcResult as {
+              installment_id: string;
+              parent_id: string;
+              parent_type: string;
+              nuevo_balance: number;
+              nuevo_status: string;
+              reception_date: string | null;
             };
-            const newReceived = sale.amount_received_cop + data.amount_cop;
-            const total = sale.product_price_snapshot_cop * sale.quantity;
-            const newBalance = Math.max(0, total - newReceived);
-            const newStatus =
-              newBalance <= 0 ? 'paid' : newReceived > 0 ? 'partial' : 'pending';
-            return { newReceived, newBalance, newStatus, userId };
-          }),
-          // Paso 2: INSERT installment.
-          switchMap(({ newReceived, newBalance, newStatus, userId: uid }) =>
-            fromPromise(
+
+            return fromPromise(
               this.supabase.client
                 .from('cafeteria_installments')
-                .insert({
-                  sale_id: saleId,
-                  amount_cop: data.amount_cop,
-                  payment_date: data.payment_date,
-                  payment_method: data.payment_method,
-                  notes: data.notes ?? null,
-                  created_by: uid
-                })
                 .select('*')
+                .eq('id', result.installment_id)
                 .single()
             ).pipe(
-              map(({ data: installment, error }) => {
-                if (error) throw error;
-                return {
-                  installment: installment as CafeteriaInstallment,
-                  newReceived,
-                  newBalance,
-                  newStatus,
-                  uid
-                };
+              switchMap(({ data: installmentRow, error: installmentError }) => {
+                if (installmentError) throw installmentError;
+
+                return fromPromise(
+                  this.supabase.client
+                    .from('cafeteria_sales')
+                    .select('*')
+                    .eq('id', saleId)
+                    .single()
+                ).pipe(
+                  map(({ data: saleRow, error: saleError }) => {
+                    if (saleError) throw saleError;
+                    return {
+                      installment: installmentRow as CafeteriaInstallment,
+                      sale: saleRow as CafeteriaSale
+                    };
+                  })
+                );
               })
-            )
-          ),
-          // Paso 3: UPDATE sale con los valores calculados.
-          switchMap(({ installment, newReceived, newBalance, newStatus, uid }) =>
-            fromPromise(
-              this.supabase.client
-                .from('cafeteria_sales')
-                .update({
-                  amount_received_cop: newReceived,
-                  balance_cop: newBalance,
-                  status: newStatus,
-                  updated_by: uid
-                })
-                .eq('id', saleId)
-                .select('*')
-                .single()
-            ).pipe(
-              map(({ data: updatedSale, error }) => {
-                if (error) throw error;
-                return {
-                  installment,
-                  sale: updatedSale as CafeteriaSale
-                };
-              })
-            )
-          )
+            );
+          })
         );
       }),
       catchError((err) => {
@@ -656,7 +632,8 @@ export class CafeteriaVentasService {
                   balance_cop: balance,
                   status,
                   payment_method: data.payment_method ?? null,
-                  created_by: uid
+                  created_by: uid,
+                  ...(status === 'paid' ? { reception_date: data.purchase_date } : {})
                 })
                 .select('*')
                 .single()
@@ -733,75 +710,55 @@ export class CafeteriaVentasService {
         if (!userId) throw new Error('Usuario no autenticado');
 
         return fromPromise(
-          this.supabase.client
-            .from('cafeteria_combo_purchases')
-            .select('amount_received_cop, combo_price_snapshot_cop')
-            .eq('id', purchaseId)
-            .single()
+          this.supabase.client.rpc('execute_register_cafeteria_installment', {
+            p_parent_type: 'combo_purchase',
+            p_parent_id: purchaseId,
+            p_payment_date: data.payment_date,
+            p_amount_cop: data.amount_cop,
+            p_payment_method: data.payment_method,
+            p_created_by: userId,
+            p_notes: data.notes ?? undefined
+          })
         ).pipe(
-          map(({ data: currentPurchase, error }) => {
-            if (error) throw error;
-            const p = currentPurchase as {
-              amount_received_cop: number;
-              combo_price_snapshot_cop: number;
+          switchMap(({ data: rpcResult, error: rpcError }) => {
+            if (rpcError) throw rpcError;
+            const result = rpcResult as {
+              installment_id: string;
+              parent_id: string;
+              parent_type: string;
+              nuevo_balance: number;
+              nuevo_status: string;
+              reception_date: string | null;
             };
-            const newReceived = p.amount_received_cop + data.amount_cop;
-            const newBalance = Math.max(0, p.combo_price_snapshot_cop - newReceived);
-            const newStatus =
-              newBalance <= 0 ? 'paid' : newReceived > 0 ? 'partial' : 'pending';
-            return { newReceived, newBalance, newStatus, userId };
-          }),
-          switchMap(({ newReceived, newBalance, newStatus, userId: uid }) =>
-            fromPromise(
+
+            return fromPromise(
               this.supabase.client
                 .from('cafeteria_installments')
-                .insert({
-                  combo_purchase_id: purchaseId,
-                  sale_id: null,
-                  amount_cop: data.amount_cop,
-                  payment_date: data.payment_date,
-                  payment_method: data.payment_method,
-                  notes: data.notes ?? null,
-                  created_by: uid
-                })
                 .select('*')
+                .eq('id', result.installment_id)
                 .single()
             ).pipe(
-              map(({ data: installment, error }) => {
-                if (error) throw error;
-                return {
-                  installment: installment as CafeteriaInstallment,
-                  newReceived,
-                  newBalance,
-                  newStatus,
-                  uid
-                };
+              switchMap(({ data: installmentRow, error: installmentError }) => {
+                if (installmentError) throw installmentError;
+
+                return fromPromise(
+                  this.supabase.client
+                    .from('cafeteria_combo_purchases')
+                    .select('*')
+                    .eq('id', purchaseId)
+                    .single()
+                ).pipe(
+                  map(({ data: purchaseRow, error: purchaseError }) => {
+                    if (purchaseError) throw purchaseError;
+                    return {
+                      installment: installmentRow as CafeteriaInstallment,
+                      purchase: purchaseRow as CafeteriaComboPurchase
+                    };
+                  })
+                );
               })
-            )
-          ),
-          switchMap(({ installment, newReceived, newBalance, newStatus, uid }) =>
-            fromPromise(
-              this.supabase.client
-                .from('cafeteria_combo_purchases')
-                .update({
-                  amount_received_cop: newReceived,
-                  balance_cop: newBalance,
-                  status: newStatus,
-                  updated_by: uid
-                })
-                .eq('id', purchaseId)
-                .select('*')
-                .single()
-            ).pipe(
-              map(({ data: updatedPurchase, error }) => {
-                if (error) throw error;
-                return {
-                  installment,
-                  purchase: updatedPurchase as CafeteriaComboPurchase
-                };
-              })
-            )
-          )
+            );
+          })
         );
       }),
       catchError((err) => {
