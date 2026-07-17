@@ -219,4 +219,50 @@ export interface DetalleResponse {
   en_riesgo: EnRiesgoEntry[];
 }
 
+// ─── Stats Origen Detalle (modal) ─────────────────────────────────────────────
+
+/**
+ * Valor del origen tal como está en `clients.origin` (BD).
+ * En la UI se mapean así:
+ *   publicidad → "Publicidad"
+ *   llego_solo → "Directos"
+ *   referido   → "Recomendación"
+ */
+export type OrigenDbKey = 'publicidad' | 'llego_solo' | 'referido';
+
+/** Resumen del modal de detalle por origen. */
+export interface OrigenResumen {
+  total:   number;
+  plan_6d: number;
+  plan_3d: number;
+  /** current_month_total_up_to_ref - full_prev_month_total. */
+  delta:   number;
+}
+
+/** Fila del breakdown por entrenador. */
+export interface OrigenEntrenadorRow {
+  /** null cuando el cliente no tiene entrenador asignado. */
+  entrenador_id: string | null;
+  nombre:        string;
+  total_actual:  number;
+  total_prev:    number;
+  delta:         number;
+}
+
+/** Fila individual de cliente captado por el origen en el mes seleccionado. */
+export interface OrigenClienteRow {
+  cliente_id:   string;
+  nombre:       string;
+  plan:         EnRiesgoPlan;   // reutiliza el union '6d' | '3d'
+  entrenador:   string;         // '' si sin asignar
+  fecha_inicio: string;         // YYYY-MM-DD (fecha del primer pago)
+}
+
+/** Respuesta completa de la Edge Function `stats-clients-origen-detalle`. */
+export interface OrigenDetalleResponse {
+  resumen:        OrigenResumen;
+  por_entrenador: OrigenEntrenadorRow[];
+  clientes:       OrigenClienteRow[];
+}
+
 // Tipos del dashboard de estadísticas

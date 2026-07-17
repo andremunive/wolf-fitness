@@ -1,19 +1,28 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable, combineLatest, from, throwError } from 'rxjs';
+import { BehaviorSubject, Observable, from, throwError } from 'rxjs';
 import { catchError, distinctUntilChanged, map, switchMap } from 'rxjs/operators';
 
 import { SupabaseService } from 'src/app/core/services/supabase.service';
+import { MONTH_NAMES_ES } from 'src/app/features/app/closures/models/closure.model';
 import {
   ClientesActivosCards,
   ClientesQuincenalCards,
   DetalleResponse,
   EntrenadorFilter,
   EntrenadorOption,
+  OrigenDbKey,
+  OrigenDetalleResponse,
   QuincenalTendenciaResponse,
   TendenciaResponse,
   VentanaQuincenal,
   VentanaTendencia
 } from '../models/estadisticas.model';
+
+/** Período mes/año navegable en el dashboard de clientes. */
+export interface MesPeriodo {
+  year: number;
+  month: number;
+}
 
 /** Fila cruda de `profiles` para la query de entrenadores activos. */
 interface EntrenadorRow {
@@ -87,8 +96,38 @@ export class EstadisticasService {
   private readonly _selectedEntrenador$ = new BehaviorSubject<EntrenadorFilter>('todos');
   private readonly _ventanaTendencia$   = new BehaviorSubject<VentanaTendencia>(1);
   private readonly _ventanaQuincenal$   = new BehaviorSubject<VentanaQuincenal>(2);
+  private readonly _mesPeriodo$         = new BehaviorSubject<MesPeriodo>(this.currentMonthYear());
 
   constructor(private readonly supabase: SupabaseService) {}
+
+  // ─── Período mes/año ──────────────────────────────────────────────────────
+
+  /**
+   * Observable del período mes/año activo del dashboard.
+   * Solo emite cuando cambia el par (year, month).
+   */
+  get mesPeriodo$(): Observable<MesPeriodo> {
+    return this._mesPeriodo$.asObservable().pipe(
+      distinctUntilChanged((a, b) => a.year === b.year && a.month === b.month)
+    );
+  }
+
+  /** Snapshot sincrónico del período seleccionado. */
+  get currentMesPeriodo(): MesPeriodo {
+    return this._mesPeriodo$.getValue();
+  }
+
+  setPeriodo(year: number, month: number): void {
+    this._mesPeriodo$.next({ year, month });
+  }
+
+  /** Devuelve "Mayo 2026" para el período dado o el actual si no se pasan args. */
+  getPeriodoLabel(year?: number, month?: number): string {
+    const p = this._mesPeriodo$.getValue();
+    const y = year  ?? p.year;
+    const m = month ?? p.month;
+    return `${MONTH_NAMES_ES[m - 1]} ${y}`;
+  }
 
   /**
    * Observable del entrenador seleccionado en el filtro global del dashboard.
@@ -142,50 +181,45 @@ export class EstadisticasService {
   }
 
   /**
-   * Retorna un Observable que emite `QuincenalTendenciaResponse` cada vez que
-   * cambia el entrenador seleccionado o la ventana quincenal activa.
-   *
-   * - combineLatest reacciona a cualquiera de los dos triggers.
-   * - switchMap cancela la llamada en vuelo si alguno de los dos cambia antes de
-   *   que la EF responda.
-   * - `fecha_referencia` se construye con la zona local del navegador (no UTC).
+   * Invoca `stats-clients-quincenal-tendencia` one-shot con los parámetros
+   * explícitos. El componente orquesta el trigger vía combineLatest sobre
+   * `mesPeriodo$`, `selectedEntrenador$`, `ventanaQuincenal$` y su retry$.
    */
-  getQuincenalTendencia(): Observable<QuincenalTendenciaResponse> {
-    return combineLatest([this.selectedEntrenador$, this.ventanaQuincenal$]).pipe(
-      switchMap(([selected, ventana]) => {
-        const entrenadorId: string | null = selected === 'todos' ? null : selected;
-        return from(
-          this.supabase.client.functions.invoke<QuincenalTendenciaResponse>(
-            'stats-clients-quincenal-tendencia',
-            {
-              body: {
-                entrenador_id:    entrenadorId,
-                fecha_referencia: this.todayLocalIsoDate(),
-                meses_atras:      ventana
-              }
-            }
-          )
-        ).pipe(
-          switchMap(({ data, error }) => {
-            if (error) {
-              return from(extractEfErrorAsync(error)).pipe(
-                switchMap((efErr) => throwError(() => efErr))
-              );
-            }
-            if (!data) {
-              return throwError(() => ({
-                code: 'INTERNAL_ERROR',
-                message: 'Respuesta vacía de stats-clients-quincenal-tendencia',
-                details: {}
-              }));
-            }
-            return [data];
-          }),
-          catchError((err) => {
-            if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
-            return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
-          })
-        );
+  getQuincenalTendencia(
+    entrenadorId: string | null,
+    fechaReferencia: string,
+    mesesAtras: VentanaQuincenal
+  ): Observable<QuincenalTendenciaResponse> {
+    return from(
+      this.supabase.client.functions.invoke<QuincenalTendenciaResponse>(
+        'stats-clients-quincenal-tendencia',
+        {
+          body: {
+            entrenador_id:    entrenadorId,
+            fecha_referencia: fechaReferencia,
+            meses_atras:      mesesAtras
+          }
+        }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) {
+          return from(extractEfErrorAsync(error)).pipe(
+            switchMap((efErr) => throwError(() => efErr))
+          );
+        }
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Respuesta vacía de stats-clients-quincenal-tendencia',
+            details: {}
+          }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
       })
     );
   }
@@ -221,165 +255,174 @@ export class EstadisticasService {
   }
 
   /**
-   * Retorna un Observable que emite `ClientesQuincenalCards` cada vez que cambia
-   * el filtro de entrenador seleccionado.
-   *
-   * - Cada cambio de `selectedEntrenador$` cancela la llamada anterior (switchMap).
-   * - `fecha_referencia` se construye con la zona local del navegador (no UTC) para
-   *   evitar el desplazamiento de día en zonas con offset negativo como Colombia (UTC-5).
-   * - `entrenador_id`: 'todos' se convierte a null (todos los entrenadores).
-   * - No usa shareReplay: el componente decide la estrategia de caché.
+   * Invoca `stats-clients-quincenal` one-shot. El componente orquesta el trigger
+   * vía combineLatest sobre `mesPeriodo$`, `selectedEntrenador$` y su retry$.
    */
-  getQuincenalCards(): Observable<ClientesQuincenalCards> {
-    return this.selectedEntrenador$.pipe(
-      switchMap((selected) => {
-        const entrenadorId: string | null = selected === 'todos' ? null : selected;
-        return from(
-          this.supabase.client.functions.invoke<ClientesQuincenalCards>(
-            'stats-clients-quincenal',
-            { body: { entrenador_id: entrenadorId, fecha_referencia: this.todayLocalIsoDate() } }
-          )
-        ).pipe(
-          switchMap(({ data, error }) => {
-            if (error) {
-              return from(extractEfErrorAsync(error)).pipe(
-                switchMap((efErr) => throwError(() => efErr))
-              );
-            }
-            if (!data) {
-              return throwError(() => ({
-                code: 'INTERNAL_ERROR',
-                message: 'Respuesta vacía de stats-clients-quincenal',
-                details: {}
-              }));
-            }
-            return [data];
-          }),
-          catchError((err) => {
-            if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
-            return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
-          })
-        );
+  getQuincenalCards(
+    entrenadorId: string | null,
+    fechaReferencia: string
+  ): Observable<ClientesQuincenalCards> {
+    return from(
+      this.supabase.client.functions.invoke<ClientesQuincenalCards>(
+        'stats-clients-quincenal',
+        { body: { entrenador_id: entrenadorId, fecha_referencia: fechaReferencia } }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) {
+          return from(extractEfErrorAsync(error)).pipe(
+            switchMap((efErr) => throwError(() => efErr))
+          );
+        }
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Respuesta vacía de stats-clients-quincenal',
+            details: {}
+          }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
       })
     );
   }
 
   /**
-   * Retorna un Observable que emite `ClientesActivosCards` cada vez que cambia
-   * el filtro de entrenador seleccionado.
-   *
-   * - Cada cambio de `selectedEntrenador$` cancela la llamada anterior (switchMap).
-   * - `fecha_referencia` se construye con la zona local del navegador (no UTC).
-   * - `entrenador_id`: 'todos' se convierte a null (todos los entrenadores).
-   * - No usa shareReplay: el componente decide la estrategia de caché.
+   * Invoca `stats-clients-cards` one-shot. El componente orquesta el trigger
+   * vía combineLatest sobre `mesPeriodo$`, `selectedEntrenador$` y su retry$.
    */
-  getClientesActivosCards(): Observable<ClientesActivosCards> {
-    return this.selectedEntrenador$.pipe(
-      switchMap((selected) => {
-        const entrenadorId: string | null = selected === 'todos' ? null : selected;
-        return from(
-          this.supabase.client.functions.invoke<ClientesActivosCards>(
-            'stats-clients-cards',
-            { body: { entrenador_id: entrenadorId, fecha_referencia: this.todayLocalIsoDate() } }
-          )
-        ).pipe(
-          switchMap(({ data, error }) => {
-            if (error) {
-              return from(extractEfErrorAsync(error)).pipe(
-                switchMap((efErr) => throwError(() => efErr))
-              );
-            }
-            if (!data) {
-              return throwError(() => ({
-                code: 'INTERNAL_ERROR',
-                message: 'Respuesta vacía de stats-clients-cards',
-                details: {}
-              }));
-            }
-            return [data];
-          }),
-          catchError((err) => {
-            if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
-            return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
-          })
-        );
+  getClientesActivosCards(
+    entrenadorId: string | null,
+    fechaReferencia: string
+  ): Observable<ClientesActivosCards> {
+    return from(
+      this.supabase.client.functions.invoke<ClientesActivosCards>(
+        'stats-clients-cards',
+        { body: { entrenador_id: entrenadorId, fecha_referencia: fechaReferencia } }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) {
+          return from(extractEfErrorAsync(error)).pipe(
+            switchMap((efErr) => throwError(() => efErr))
+          );
+        }
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Respuesta vacía de stats-clients-cards',
+            details: {}
+          }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
       })
     );
   }
 
   /**
-   * Retorna un Observable que emite `TendenciaResponse` cada vez que cambia el
-   * entrenador seleccionado o la ventana temporal activa.
-   *
-   * - combineLatest reacciona a cualquiera de los dos triggers.
-   * - switchMap cancela la llamada en vuelo si alguno de los dos cambia antes de
-   *   que la EF responda.
-   * - `fecha_referencia` se construye con la zona local del navegador (no UTC).
+   * Invoca `stats-clients-tendencia` one-shot. El componente orquesta el trigger
+   * vía combineLatest sobre `mesPeriodo$`, `selectedEntrenador$`,
+   * `ventanaTendencia$` y su retry$.
    */
-  getTendencia(): Observable<TendenciaResponse> {
-    return combineLatest([this.selectedEntrenador$, this.ventanaTendencia$]).pipe(
-      switchMap(([selected, ventana]) => {
-        const entrenadorId: string | null = selected === 'todos' ? null : selected;
-        return from(
-          this.supabase.client.functions.invoke<TendenciaResponse>(
-            'stats-clients-tendencia',
-            {
-              body: {
-                entrenador_id:    entrenadorId,
-                fecha_referencia: this.todayLocalIsoDate(),
-                meses_atras:      ventana
-              }
-            }
-          )
-        ).pipe(
-          switchMap(({ data, error }) => {
-            if (error) {
-              return from(extractEfErrorAsync(error)).pipe(
-                switchMap((efErr) => throwError(() => efErr))
-              );
-            }
-            if (!data) {
-              return throwError(() => ({
-                code: 'INTERNAL_ERROR',
-                message: 'Respuesta vacía de stats-clients-tendencia',
-                details: {}
-              }));
-            }
-            return [data];
-          }),
-          catchError((err) => {
-            if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
-            return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
-          })
-        );
+  getTendencia(
+    entrenadorId: string | null,
+    fechaReferencia: string,
+    mesesAtras: VentanaTendencia
+  ): Observable<TendenciaResponse> {
+    return from(
+      this.supabase.client.functions.invoke<TendenciaResponse>(
+        'stats-clients-tendencia',
+        {
+          body: {
+            entrenador_id:    entrenadorId,
+            fecha_referencia: fechaReferencia,
+            meses_atras:      mesesAtras
+          }
+        }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) {
+          return from(extractEfErrorAsync(error)).pipe(
+            switchMap((efErr) => throwError(() => efErr))
+          );
+        }
+        if (!data) {
+          return throwError(() => ({
+            code: 'INTERNAL_ERROR',
+            message: 'Respuesta vacía de stats-clients-tendencia',
+            details: {}
+          }));
+        }
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
       })
     );
   }
 
   /**
-   * Retorna un Observable que emite `DetalleResponse` cada vez que cambia el
-   * entrenador seleccionado.
-   *
-   * - Depende solo de `selectedEntrenador$`, no de una ventana adicional.
-   * - `fecha_referencia` usa la zona local del navegador (no UTC).
+   * Invoca `stats-clients-origen-detalle` one-shot. Sirve al modal de detalle
+   * por origen (Publicidad, Directos, Recomendación) — devuelve resumen +
+   * breakdown por entrenador + lista de clientes captados. No es reactivo:
+   * el modal lo llama al abrirse.
    */
-  getDetalle(): Observable<DetalleResponse> {
-    return this.selectedEntrenador$.pipe(
-      switchMap((selected) => {
-        const entrenadorId = selected === 'todos' ? null : selected;
-        const fechaReferencia = this.todayLocalIsoDate();
-        return from(
-          this.supabase.client.functions.invoke<DetalleResponse>(
-            'stats-clients-detalle',
-            { body: { entrenador_id: entrenadorId, fecha_referencia: fechaReferencia } }
-          )
-        ).pipe(
-          switchMap(({ data, error }) => {
-            if (error) return from(extractEfErrorAsync(error)).pipe(switchMap(efErr => throwError(() => efErr)));
-            if (!data) return throwError(() => ({ code: 'INTERNAL_ERROR', message: 'Respuesta vacía de stats-clients-detalle', details: {} }));
-            return [data];
-          })
-        );
+  getOrigenDetalle(
+    origen: OrigenDbKey,
+    entrenadorId: string | null,
+    fechaReferencia: string
+  ): Observable<OrigenDetalleResponse> {
+    return from(
+      this.supabase.client.functions.invoke<OrigenDetalleResponse>(
+        'stats-clients-origen-detalle',
+        {
+          body: {
+            entrenador_id:    entrenadorId,
+            fecha_referencia: fechaReferencia,
+            origen
+          }
+        }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) return from(extractEfErrorAsync(error)).pipe(switchMap(efErr => throwError(() => efErr)));
+        if (!data) return throwError(() => ({ code: 'INTERNAL_ERROR', message: 'Respuesta vacía de stats-clients-origen-detalle', details: {} }));
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap(efErr => throwError(() => efErr)));
+      })
+    );
+  }
+
+  /**
+   * Invoca `stats-clients-detalle` one-shot. El componente orquesta el trigger
+   * vía combineLatest sobre `mesPeriodo$`, `selectedEntrenador$` y su retry$.
+   */
+  getDetalle(
+    entrenadorId: string | null,
+    fechaReferencia: string
+  ): Observable<DetalleResponse> {
+    return from(
+      this.supabase.client.functions.invoke<DetalleResponse>(
+        'stats-clients-detalle',
+        { body: { entrenador_id: entrenadorId, fecha_referencia: fechaReferencia } }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) return from(extractEfErrorAsync(error)).pipe(switchMap(efErr => throwError(() => efErr)));
+        if (!data) return throwError(() => ({ code: 'INTERNAL_ERROR', message: 'Respuesta vacía de stats-clients-detalle', details: {} }));
+        return [data];
       }),
       catchError((err) => {
         if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
@@ -399,5 +442,31 @@ export class EstadisticasService {
     const mm   = String(now.getMonth() + 1).padStart(2, '0');
     const dd   = String(now.getDate()).padStart(2, '0');
     return `${yyyy}-${mm}-${dd}`;
+  }
+
+  /**
+   * `fecha_referencia` para las Edge Functions según el período seleccionado:
+   * - Mes en curso  → fecha de hoy (zona local).
+   * - Mes pasado    → último día de ese mes.
+   * - Mes futuro    → primer día de ese mes (los botones lo evitan, pero el
+   *                   servicio no asume que el llamador respete el límite).
+   */
+  buildFechaReferencia(p: MesPeriodo): string {
+    const now = new Date();
+    const isCurrent = p.year === now.getFullYear() && p.month === now.getMonth() + 1;
+    if (isCurrent) return this.todayLocalIsoDate();
+
+    const isPast =
+      p.year < now.getFullYear() ||
+      (p.year === now.getFullYear() && p.month < now.getMonth() + 1);
+    const day = isPast ? new Date(p.year, p.month, 0).getDate() : 1;
+    const mm  = String(p.month).padStart(2, '0');
+    const dd  = String(day).padStart(2, '0');
+    return `${p.year}-${mm}-${dd}`;
+  }
+
+  private currentMonthYear(): MesPeriodo {
+    const now = new Date();
+    return { year: now.getFullYear(), month: now.getMonth() + 1 };
   }
 }

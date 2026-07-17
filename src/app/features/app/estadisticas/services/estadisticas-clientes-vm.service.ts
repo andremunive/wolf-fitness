@@ -12,10 +12,6 @@ import {
 } from '../models/estadisticas.model';
 
 import {
-  CardVM,
-  CardKey,
-  CardStatus,
-  CardTrend,
   QuincenaCardVM,
   QuincenaKey,
   QuincenaEstado,
@@ -46,37 +42,7 @@ import {
   MESES_COMPLETOS
 } from '../models/estadisticas-constants';
 
-// ─── Tipo de fila de origen (inline en el componente, extraemos aquí) ─────────
-
-/** Fila del panel flotante "Nuevos por origen". */
-export interface NuevosOrigenRow {
-  key: 'directo' | 'publicidad' | 'recomendacion';
-  label: string;
-  color: string;
-  value: number;
-  widthPct: number;
-}
-
-// ─── Estados mínimos necesarios para firmas de buildCards ────────────────────
-
-interface CardsStateLoaded  { status: 'loaded';  data: ClientesActivosCards; }
-interface CardsStateOther   { status: 'loading' | 'error'; data: null; }
-type CardsState = CardsStateLoaded | CardsStateOther;
-
-interface DetalleStateLoaded { status: 'loaded';  data: DetalleResponse; }
-interface DetalleStateOther  { status: 'loading' | 'error'; data: null; }
-type DetalleState = DetalleStateLoaded | DetalleStateOther;
-
-// ─── Colores semánticos por card (copiados de las constantes del componente) ──
-
-const COLOR_TIPO_A      = '#10b981';
-const COLOR_TIPO_B      = '#228d9f';
-const COLOR_NUEVOS      = '#f59e0b';
-const COLOR_RECUPERADOS = '#6366f1';
-
-const COLOR_NUEVOS_REFERIDO   = '#ec4899';
-const COLOR_NUEVOS_PUBLICIDAD = '#06b6d4';
-const COLOR_NUEVOS_DIRECTOS   = '#8b5cf6';
+// ─── Colores de series (tendencia + distribución) ────────────────────────────
 
 const COLOR_SERIE_TOTAL = '#228d9f';
 const COLOR_SERIE_6D    = '#1a7080';
@@ -112,134 +78,37 @@ export class EstadisticasClientesVmService {
   ) {}
 
   // ═══════════════════════════════════════════════════════════════════════════
-  // SECCIÓN 01 — Movimiento del mes
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Fila superior: Tipo A, Tipo B, Nuevos, Recuperados.
-   * Cada card lleva su propio status para skeleton/error/loaded independiente.
-   */
-  buildCards(cs: CardsState | null, ds: DetalleState | null): CardVM[] {
-    return [
-      this.makeTipoACard(cs),
-      this.makeTipoBCard(cs),
-      this.makeNuevosCard(ds),
-      this.makeRecuperadosCard(ds)
-    ];
-  }
-
-  private makeTipoACard(cs: CardsState | null): CardVM {
-    const status = this.deriveCardsStatus(cs);
-    const data   = cs?.status === 'loaded' ? cs.data : null;
-    const value  = data?.tipo_a.total ?? 0;
-    const delta  = data?.tipo_a.delta ?? null;
-    return {
-      key: 'tipo_a',
-      label: 'Pagaron',
-      color: COLOR_TIPO_A,
-      trend: this.deriveTrend(data ? value : null, delta),
-      status,
-      value,
-      delta,
-      plan6d: data?.tipo_a.plan_6d ?? 0,
-      plan3d: data?.tipo_a.plan_3d ?? 0
-    };
-  }
-
-  private makeTipoBCard(cs: CardsState | null): CardVM {
-    const status = this.deriveCardsStatus(cs);
-    const data   = cs?.status === 'loaded' ? cs.data : null;
-    const value  = data?.tipo_b.total ?? 0;
-    const delta  = data?.tipo_b.delta ?? null;
-    return {
-      key: 'tipo_b',
-      label: 'Vigentes mes anterior',
-      color: COLOR_TIPO_B,
-      trend: this.deriveTrend(data ? value : null, delta),
-      status,
-      value,
-      delta,
-      plan6d: data?.tipo_b.plan_6d ?? 0,
-      plan3d: data?.tipo_b.plan_3d ?? 0
-    };
-  }
-
-  private makeNuevosCard(ds: DetalleState | null): CardVM {
-    const status = this.deriveDetalleStatus(ds);
-    const data   = ds?.status === 'loaded' ? ds.data : null;
-    const value  = data?.nuevos.total ?? 0;
-    const delta  = data?.nuevos.delta ?? null;
-    return {
-      key: 'nuevos',
-      label: 'Nuevos',
-      color: COLOR_NUEVOS,
-      trend: this.deriveTrend(data ? value : null, delta),
-      status,
-      value,
-      delta,
-      plan6d: data?.nuevos.plan_6d ?? 0,
-      plan3d: data?.nuevos.plan_3d ?? 0
-    };
-  }
-
-  private makeRecuperadosCard(ds: DetalleState | null): CardVM {
-    const status = this.deriveDetalleStatus(ds);
-    const data   = ds?.status === 'loaded' ? ds.data : null;
-    const value  = data?.recuperados.total ?? 0;
-    const delta  = data?.recuperados.delta ?? null;
-    return {
-      key: 'recuperados',
-      label: 'Recuperados',
-      color: COLOR_RECUPERADOS,
-      trend: this.deriveTrend(data ? value : null, delta),
-      status,
-      value,
-      delta,
-      plan6d: data?.recuperados.plan_6d ?? 0,
-      plan3d: data?.recuperados.plan_3d ?? 0
-    };
-  }
-
-  private deriveTrend(current: number | null, delta: number | null): CardTrend {
-    if (current === null || delta === null) return 'flat';
-    if (delta > 0) return 'up';
-    if (delta < 0) return 'down';
-    return 'flat';
-  }
-
-  private deriveCardsStatus(cs: CardsState | null): CardStatus {
-    if (!cs || cs.status === 'loading') return 'loading';
-    if (cs.status === 'error') return 'error';
-    return 'loaded';
-  }
-
-  private deriveDetalleStatus(ds: DetalleState | null): CardStatus {
-    if (!ds || ds.status === 'loading') return 'loading';
-    if (ds.status === 'error') return 'error';
-    return 'loaded';
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
   // SECCIÓN 02 — Quincenas en curso
   // ═══════════════════════════════════════════════════════════════════════════
 
   /**
    * Construye los VMs de las dos cards Q1 y Q2 a partir del response de la EF
-   * `stats-clients-quincenal`. `today` se pasa para permitir tests.
+   * `stats-clients-quincenal`.
+   *
+   * @param today          Fecha de referencia (hoy si el período es el mes en
+   *                       curso, último día del mes si es un mes pasado).
+   * @param isCurrentMonth `true` si el período visualizado es el mes en curso.
+   *                       Cuando es `false`, ambas quincenas son 'completa' sin
+   *                       importar el día del refDate.
    */
-  buildQuincenaCards(data: ClientesQuincenalCards, today = new Date()): QuincenaCardVM[] {
+  buildQuincenaCards(
+    data: ClientesQuincenalCards,
+    today = new Date(),
+    isCurrentMonth = true
+  ): QuincenaCardVM[] {
     return [
-      this.makeQuincenaCard('q1', data.q1, today),
-      this.makeQuincenaCard('q2', data.q2, today)
+      this.makeQuincenaCard('q1', data.q1, today, isCurrentMonth),
+      this.makeQuincenaCard('q2', data.q2, today, isCurrentMonth)
     ];
   }
 
   private makeQuincenaCard(
     key: QuincenaKey,
     q: QuincenaBreakdown,
-    today: Date
+    today: Date,
+    isCurrentMonth: boolean
   ): QuincenaCardVM {
-    const estado     = this.deriveQuincenaEstado(key, q, today);
+    const estado     = this.deriveQuincenaEstado(key, q, today, isCurrentMonth);
     const rangeBadge = this.buildQuincenaRange(key, today);
 
     const total      = estado === 'no_iniciada' ? 0 : q.total;
@@ -278,8 +147,12 @@ export class EstadisticasClientesVmService {
   private deriveQuincenaEstado(
     key: QuincenaKey,
     q: QuincenaBreakdown,
-    today: Date
+    today: Date,
+    isCurrentMonth: boolean
   ): QuincenaEstado {
+    // Períodos pasados: ambas quincenas están cerradas.
+    if (!isCurrentMonth) return 'completa';
+
     const day = today.getDate();
     if (key === 'q1') return day >= 16 ? 'completa' : 'parcial';
     if (day <= 15 || q.delta === null) return 'no_iniciada';
@@ -588,9 +461,14 @@ export class EstadisticasClientesVmService {
   // SECCIÓN 06 — Clientes en riesgo
   // ═══════════════════════════════════════════════════════════════════════════
 
-  /** Construye los VMs de la tabla de clientes en riesgo. */
-  buildRiesgoVMs(entries: EnRiesgoEntry[]): RiesgoVM[] {
-    const today = new Date();
+  /**
+   * Construye los VMs de la tabla de clientes en riesgo.
+   *
+   * @param today Fecha de referencia usada para colorear la columna
+   *              "vence el" (vencido / próximo / ok). Debe coincidir con el
+   *              `fecha_referencia` enviado a la EF.
+   */
+  buildRiesgoVMs(entries: EnRiesgoEntry[], today = new Date()): RiesgoVM[] {
     return entries.map((e) => this.buildRiesgoVM(e, today));
   }
 
@@ -666,54 +544,6 @@ export class EstadisticasClientesVmService {
     if (diffDays < 0) return 'cv2-vence--vencido';
     if (diffDays <= 7) return 'cv2-vence--proximo';
     return 'cv2-vence--ok';
-  }
-
-  // ═══════════════════════════════════════════════════════════════════════════
-  // SECCIÓN 01 — Panel flotante: Nuevos por origen
-  // ═══════════════════════════════════════════════════════════════════════════
-
-  /**
-   * Filas del panel flotante "Nuevos por origen".
-   * Filtra value=0 salvo que todos sean 0.
-   * Ordena DESC por value.
-   */
-  buildNuevosOrigenes(ds: DetalleState | null): NuevosOrigenRow[] {
-    const data = ds?.status === 'loaded' ? ds.data : null;
-    const por  = data?.nuevos_por_origen;
-
-    const raw: NuevosOrigenRow[] = [
-      {
-        key:      'recomendacion',
-        label:    'Recomendación',
-        color:    COLOR_NUEVOS_REFERIDO,
-        value:    por?.referido?.total ?? 0,
-        widthPct: 0
-      },
-      {
-        key:      'publicidad',
-        label:    'Publicidad',
-        color:    COLOR_NUEVOS_PUBLICIDAD,
-        value:    por?.publicidad?.total ?? 0,
-        widthPct: 0
-      },
-      {
-        key:      'directo',
-        label:    'Directo',
-        color:    COLOR_NUEVOS_DIRECTOS,
-        value:    por?.llego_solo?.total ?? 0,
-        widthPct: 0
-      }
-    ];
-
-    const allZero = raw.every((r) => r.value === 0);
-    const visible = allZero ? raw : raw.filter((r) => r.value > 0);
-    visible.sort((a, b) => b.value - a.value);
-    const max = Math.max(...visible.map((r) => r.value), 1);
-
-    return visible.map((r) => ({
-      ...r,
-      widthPct: r.value === 0 ? 0 : (r.value / max) * 100
-    }));
   }
 
   // ═══════════════════════════════════════════════════════════════════════════

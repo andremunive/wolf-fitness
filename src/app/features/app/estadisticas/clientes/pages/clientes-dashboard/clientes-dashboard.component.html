@@ -14,11 +14,11 @@
         <span class="cv2-breadcrumb__sep">—</span>
         <span>CLIENTES</span>
         <span class="cv2-breadcrumb__sep">—</span>
-        <span class="cv2-breadcrumb__current">{{ breadcrumbCurrent }}</span>
+        <span class="cv2-breadcrumb__current">{{ breadcrumbCurrent$ | async }}</span>
 
         <span class="cv2-status-chip">
           <span class="cv2-status-chip__dot"></span>
-          corte al {{ cortePeriodLabel }}
+          corte al {{ cortePeriodLabel$ | async }}
         </span>
       </div>
 
@@ -59,7 +59,7 @@
                     ? -c.total_activos_hoy.delta
                     : c.total_activos_hoy.delta }}
               </ng-container>
-              <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+              <span class="cv2-pill__label">{{ deltaLabelMonth$ | async }}</span>
             </span>
           </div>
 
@@ -221,34 +221,62 @@
               <!-- Separador -->
               <div class="cv2-card__sep"></div>
 
-              <!-- Footer: badge período + filtro entrenador -->
-              <div class="cv2-card__footer">
+              <!-- Footer: nav de mes + filtro entrenador -->
+              <ng-container *ngIf="{
+                p: periodo$ | async,
+                atCurrent: isAtCurrentMonth$ | async,
+                atStart: isAtAppStartMonth$ | async,
+                lbl: periodoLabel$ | async
+              } as nav">
+                <div class="cv2-card__footer">
 
-                <!-- Badge de período (sin navegación: dashboard de clientes es siempre "hoy") -->
-                <span class="cv2-period-badge">
-                  <span class="cv2-period-badge__dot"></span>
-                  {{ periodoLabel }}
-                </span>
+                  <!-- Nav de mes compacto -->
+                  <div class="cv2-month-nav cv2-month-nav--compact">
+                    <button
+                      type="button"
+                      class="cv2-month-nav__btn"
+                      [disabled]="nav.atStart"
+                      (click)="onPrevMonth(nav.p!, !!nav.atStart)"
+                      aria-label="Mes anterior">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="15 18 9 12 15 6"></polyline>
+                      </svg>
+                    </button>
+                    <span class="cv2-month-nav__label">{{ nav.lbl }}</span>
+                    <button
+                      type="button"
+                      class="cv2-month-nav__btn"
+                      [disabled]="nav.atCurrent"
+                      (click)="onNextMonth(nav.p!, !!nav.atCurrent)"
+                      aria-label="Mes siguiente">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <polyline points="9 18 15 12 9 6"></polyline>
+                      </svg>
+                    </button>
+                  </div>
 
-                <!-- Filtro entrenador compacto sincronizado -->
-                <div class="cv2-trainer-select cv2-trainer-select--compact">
-                  <label for="cv2-entrenador-footer" class="cv2-trainer-select__label">
-                    ENTRENADOR
-                  </label>
-                  <select
-                    id="cv2-entrenador-footer"
-                    class="cv2-trainer-select__input"
-                    [value]="(selectedEntrenador$ | async) ?? 'todos'"
-                    (change)="onEntrenadorChange($any($event.target).value)">
-                    <option value="todos">Todos</option>
-                    <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById"
-                            [value]="t.id">
-                      {{ t.fullName }}
-                    </option>
-                  </select>
+                  <!-- Filtro entrenador compacto sincronizado -->
+                  <ng-container *ngIf="{ sel: (selectedEntrenador$ | async) ?? 'todos' } as ent">
+                    <div class="cv2-trainer-select cv2-trainer-select--compact">
+                      <label for="cv2-entrenador-footer" class="cv2-trainer-select__label">
+                        ENTRENADOR
+                      </label>
+                      <select
+                        id="cv2-entrenador-footer"
+                        class="cv2-trainer-select__input"
+                        (change)="onEntrenadorChange($any($event.target).value)">
+                        <option value="todos" [selected]="ent.sel === 'todos'">Todos</option>
+                        <option *ngFor="let t of (entrenadores$ | async) ?? []; trackBy: trackById"
+                                [value]="t.id"
+                                [selected]="ent.sel === t.id">
+                          {{ t.fullName }}
+                        </option>
+                      </select>
+                    </div>
+                  </ng-container>
+
                 </div>
-
-              </div>
+              </ng-container>
             </div>
           </ng-container>
         </ng-container>
@@ -259,7 +287,7 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 01 — Movimiento del mes
+       SECCIÓN 01 — Usuarios nuevos (origen)
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
@@ -267,157 +295,94 @@
       <div class="cv2-section__heading">
         <div class="cv2-section__title-row">
           <span class="cv2-section__num">01 /</span>
-          <h2 class="cv2-section__title">Movimiento del mes</h2>
+          <h2 class="cv2-section__title">Usuarios nuevos</h2>
         </div>
-        <p class="cv2-section__subtitle">{{ subtitleSeccion01 }}</p>
+        <p class="cv2-section__subtitle">
+          Desglose de origen de usuarios nuevos registrados en el mes actual
+        </p>
       </div>
     </header>
 
-    <!-- nuevosOrigenes$ se suscribe aquí para que el panel flotante lo use -->
-    <ng-container *ngIf="nuevosOrigenes$ | async as origenes">
-      <div class="cv2-cards-grid">
+    <div class="cv2-cards-grid cv2-cards-grid--3col">
 
-        <ng-container *ngFor="let card of (cardsVM$ | async) ?? []; trackBy: trackByCardKey">
-          <article
-            class="cv2-card cv2-card--metric"
-            [class.cv2-card--metric-open]="openCardKey === card.key"
-            [class.cv2-card--metric-clickable]="card.key === 'nuevos' && card.status === 'loaded'"
-            [attr.data-key]="card.key"
-            (click)="card.key === 'nuevos' && card.status === 'loaded' ? onToggleNuevosPanel($event) : null">
+      <article
+        *ngFor="let card of (origenCardsVM$ | async) ?? []; trackBy: trackByOrigenKey"
+        class="cv2-card cv2-card--metric"
+        [class.cv2-card--metric-clickable]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded'"
+        [attr.data-key]="card.key"
+        [attr.role]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? 'button' : null"
+        [attr.tabindex]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? 0 : null"
+        (click)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null"
+        (keydown.enter)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null"
+        (keydown.space)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null">
 
-            <!-- Loading skeleton -->
-            <ng-container *ngIf="card.status === 'loading'">
-              <div class="cv2-card-metric__skeleton">
-                <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
-                <div class="cv2-skeleton cv2-skeleton--card-value"></div>
-                <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
-              </div>
-            </ng-container>
-
-            <!-- Error -->
-            <ng-container *ngIf="card.status === 'error'">
-              <div class="cv2-card-metric__error">
-                <div class="cv2-card-metric__header">
-                  <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
-                  <span class="cv2-card-metric__label">{{ card.label }}</span>
-                </div>
-                <p class="cv2-muted">No se pudo cargar.</p>
-                <button
-                  type="button"
-                  class="cv2-link-btn"
-                  (click)="cardRetryFor(card.key)">
-                  Reintentar
-                </button>
-              </div>
-            </ng-container>
-
-            <!-- Loaded -->
-            <ng-container *ngIf="card.status === 'loaded'">
-
-              <!-- 1. HEADER: dot + label -->
-              <div class="cv2-card-metric__header">
-                <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
-                <span class="cv2-card-metric__label">{{ card.label }}</span>
-              </div>
-
-              <!-- 2. NÚMERO grande -->
-              <div class="cv2-card-metric__value">{{ card.value }}</div>
-
-              <!-- 3. CHIP delta — solo si delta !== null -->
-              <div class="cv2-card-metric__delta-row">
-                <ng-container *ngIf="card.delta !== null">
-                  <span [ngClass]="card.delta | deltaClass:'cv2-pill'">
-                    {{ card.delta | deltaArrow }}
-                    <ng-container *ngIf="card.delta !== 0">
-                      {{ card.delta < 0 ? -card.delta : card.delta }}
-                    </ng-container>
-                    <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
-                  </span>
-                </ng-container>
-              </div>
-
-              <!-- 4. SEPARADOR + 5. PLAN BREAKDOWN anclados al fondo -->
-              <div class="cv2-card-metric__divider"></div>
-              <div class="cv2-card-metric__plan">
-                <div class="cv2-card-metric__plan-col">
-                  <span class="cv2-card-metric__plan-label">6 días</span>
-                  <span class="cv2-card-metric__plan-value">{{ card.plan6d }}</span>
-                </div>
-                <div class="cv2-card-metric__plan-divider" aria-hidden="true"></div>
-                <div class="cv2-card-metric__plan-col">
-                  <span class="cv2-card-metric__plan-label">3 días</span>
-                  <span class="cv2-card-metric__plan-value">{{ card.plan3d }}</span>
-                </div>
-              </div>
-
-              <!-- Trigger "Ver desglose" solo en la card de nuevos -->
-              <ng-container *ngIf="card.key === 'nuevos'">
-                <button
-                  type="button"
-                  class="cv2-card-metric__trigger"
-                  [attr.aria-expanded]="openCardKey === 'nuevos'"
-                  (click)="onToggleNuevosPanel($event)"
-                  aria-label="Ver desglose de nuevos por origen">
-                  Ver desglose
-                  <span
-                    class="cv2-card-metric__chevron"
-                    [class.cv2-card-metric__chevron--open]="openCardKey === 'nuevos'"
-                    aria-hidden="true">&#9662;</span>
-                </button>
-              </ng-container>
-
-            </ng-container>
-
-            <!-- Panel flotante: solo en la card de nuevos -->
-            <ng-container *ngIf="card.key === 'nuevos' && openCardKey === 'nuevos'">
-              <div
-                class="cv2-nuevos-panel"
-                role="dialog"
-                aria-modal="false"
-                aria-label="Desglose de nuevos por origen"
-                (click)="$event.stopPropagation()">
-
-                <!-- Botón X de cierre — visible solo en mobile -->
-                <button
-                  type="button"
-                  class="cv2-nuevos-panel__close"
-                  (click)="onToggleNuevosPanel($event)"
-                  aria-label="Cerrar desglose">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                       stroke="currentColor" stroke-width="2"
-                       stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <line x1="18" y1="6" x2="6" y2="18"></line>
-                    <line x1="6" y1="6" x2="18" y2="18"></line>
-                  </svg>
-                </button>
-
-                <p class="cv2-nuevos-panel__title">Origen</p>
-
-                <ul class="cv2-nuevos-panel__list">
-                  <li class="cv2-nuevos-panel__item"
-                      *ngFor="let row of origenes; trackBy: trackByIndex">
-                    <div class="cv2-nuevos-panel__row">
-                      <span class="cv2-nuevos-panel__badge"
-                            [style.background]="row.color + '22'"
-                            [style.color]="row.color">{{ row.label }}</span>
-                      <span class="cv2-nuevos-panel__amount">{{ row.value }}</span>
-                    </div>
-                    <div class="cv2-nuevos-panel__bar-track">
-                      <div class="cv2-nuevos-panel__bar"
-                           [style.width.%]="row.widthPct"
-                           [style.background]="row.color"></div>
-                    </div>
-                  </li>
-                </ul>
-
-              </div>
-            </ng-container>
-
-          </article>
+        <!-- Loading skeleton -->
+        <ng-container *ngIf="card.status === 'loading'">
+          <div class="cv2-card-metric__skeleton">
+            <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+            <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+            <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+          </div>
         </ng-container>
 
-      </div>
-    </ng-container>
+        <!-- Error -->
+        <ng-container *ngIf="card.status === 'error'">
+          <div class="cv2-card-metric__error">
+            <div class="cv2-card-metric__header">
+              <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
+              <span class="cv2-card-metric__label">{{ card.label }}</span>
+            </div>
+            <p class="cv2-muted">No se pudo cargar.</p>
+            <button type="button" class="cv2-link-btn" (click)="retryDetalle()">
+              Reintentar
+            </button>
+          </div>
+        </ng-container>
+
+        <!-- Loaded -->
+        <ng-container *ngIf="card.status === 'loaded'">
+
+          <!-- 1. HEADER: dot + label -->
+          <div class="cv2-card-metric__header">
+            <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
+            <span class="cv2-card-metric__label">{{ card.label }}</span>
+          </div>
+
+          <!-- 2. NÚMERO grande -->
+          <div class="cv2-card-metric__value">{{ card.value }}</div>
+
+          <!-- 3. CHIP delta — solo si delta !== null -->
+          <div class="cv2-card-metric__delta-row">
+            <ng-container *ngIf="card.delta !== null">
+              <span [ngClass]="card.delta | deltaClass:'cv2-pill'">
+                {{ card.delta | deltaArrow }}
+                <ng-container *ngIf="card.delta !== 0">
+                  {{ card.delta < 0 ? -card.delta : card.delta }}
+                </ng-container>
+                <span class="cv2-pill__label">{{ deltaLabelFullPrevMonth$ | async }}</span>
+              </span>
+            </ng-container>
+          </div>
+
+          <!-- 4. SEPARADOR + 5. PLAN BREAKDOWN anclados al fondo -->
+          <div class="cv2-card-metric__divider"></div>
+          <div class="cv2-card-metric__plan">
+            <div class="cv2-card-metric__plan-col">
+              <span class="cv2-card-metric__plan-label">6 días</span>
+              <span class="cv2-card-metric__plan-value">{{ card.plan6d }}</span>
+            </div>
+            <div class="cv2-card-metric__plan-divider" aria-hidden="true"></div>
+            <div class="cv2-card-metric__plan-col">
+              <span class="cv2-card-metric__plan-label">3 días</span>
+              <span class="cv2-card-metric__plan-value">{{ card.plan3d }}</span>
+            </div>
+          </div>
+
+        </ng-container>
+
+      </article>
+
+    </div>
 
   </section>
 
@@ -519,7 +484,7 @@
                   <ng-container *ngIf="q.delta !== 0">
                     {{ q.delta < 0 ? -q.delta : q.delta }}
                   </ng-container>
-                  <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+                  <span class="cv2-pill__label">{{ deltaLabelMonth$ | async }}</span>
                 </span>
                 <span *ngIf="q.isParcial" class="cv2-quincena-parcial">
                   · corte parcial
@@ -677,7 +642,7 @@
                   <span [ngClass]="pe.pillClass">
                     {{ pe.pillArrow }}
                     <ng-container *ngIf="pe.delta !== 0">{{ pe.pillAbs }}</ng-container>
-                    <span class="cv2-pill__label">{{ deltaLabelMonth }}</span>
+                    <span class="cv2-pill__label">{{ deltaLabelMonth$ | async }}</span>
                   </span>
                 </div>
 
@@ -1163,3 +1128,14 @@
   </section>
 
 </div>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     Modal: Detalle por origen (sección 01 · Publicidad / Directos)
+══════════════════════════════════════════════════════════════════════ -->
+<app-origen-detalle-modal
+  *ngIf="origenModalOpen"
+  [origen]="origenModalOrigen"
+  [fechaReferencia]="origenModalFecha"
+  [entrenadorId]="origenModalEntrenadorId"
+  (closed)="closeOrigenModal()">
+</app-origen-detalle-modal>

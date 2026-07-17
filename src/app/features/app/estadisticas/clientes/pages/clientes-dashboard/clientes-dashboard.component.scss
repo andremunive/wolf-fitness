@@ -320,11 +320,11 @@
 
 .cv2-card__footer {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: space-between;
+  justify-content: center;
   padding: 12px 20px;
   gap: 12px;
-  flex-wrap: wrap;
 }
 
 // ─── Gauge column ───────────────────────────────────────────────────────────
@@ -433,25 +433,49 @@
   margin: 0;
 }
 
-// ─── Period badge (footer izquierda) ────────────────────────────────────────
-.cv2-period-badge {
+// ─── Month nav (compact, sin caja) ─────────────────────────────────────────
+.cv2-month-nav {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 12px;
-  border-radius: 999px;
-  background: var(--fv2-teal-light);
-  color: var(--fv2-brand);
-  font-size: 0.78rem;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  gap: 8px;
 
-  &__dot {
-    width: 6px;
-    height: 6px;
-    border-radius: 50%;
-    background: var(--fv2-brand);
+  &--compact {
+    gap: 6px;
   }
+}
+
+.cv2-month-nav__btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  border: none;
+  background: transparent;
+  color: var(--fv2-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+
+  &:hover:not(:disabled) {
+    background: rgba(34, 141, 159, 0.08);
+    color: var(--fv2-brand);
+  }
+
+  &:disabled {
+    color: var(--fv2-text-muted);
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.cv2-month-nav__label {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--fv2-text-primary);
+  letter-spacing: -0.01em;
+  min-width: 92px;
+  text-align: center;
 }
 
 // ─── Trainer select ─────────────────────────────────────────────────────────
@@ -572,9 +596,13 @@
   .cv2-gauge .cv2-gauge__pct { font-size: 1.3rem; }
 
   .cv2-hero__number-row { gap: 8px; }
-  .cv2-card__footer { justify-content: center; }
 
   .cv2-trainer-select__input { max-width: 160px; }
+
+  .cv2-month-nav__label {
+    min-width: 80px;
+    font-size: 0.82rem;
+  }
 
   .cv2-section { margin-top: 24px; }
 }
@@ -648,6 +676,13 @@
   @media (min-width: 1024px) {
     grid-template-columns: repeat(4, 1fr);
   }
+
+  // Variante de 3 columnas en desktop (usada por la sección "Usuarios nuevos").
+  &--3col {
+    @media (min-width: 1024px) {
+      grid-template-columns: repeat(3, 1fr);
+    }
+  }
 }
 
 // ─── Card metric ──────────────────────────────────────────────────────────
@@ -668,13 +703,6 @@
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08), 0 1px 3px rgba(0, 0, 0, 0.06);
     transform: translateY(-1px);
   }
-}
-
-// Cuando la card de nuevos está abierta: eleva z-index y libera overflow
-// para que el panel flotante no quede clipeado por el contenedor.
-.cv2-card--metric-open {
-  z-index: 31;
-  overflow: visible;
 }
 
 .cv2-card--metric-clickable {
@@ -767,149 +795,6 @@
   width: 1px;
   height: 32px;
   background: #e5e7eb;
-}
-
-// ─── Trigger "Ver desglose" ───────────────────────────────────────────────
-.cv2-card-metric__trigger {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 0 4px;
-  margin-top: 8px;
-  align-self: flex-end;
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: #6b7280;
-  transition: color 0.15s;
-
-  &:hover { color: #374151; }
-
-  &:focus-visible {
-    outline: 2px solid #228d9f;
-    outline-offset: 2px;
-    border-radius: 4px;
-  }
-}
-
-.cv2-card-metric__chevron {
-  display: inline-block;
-  transition: transform 150ms ease;
-
-  &--open { transform: rotate(180deg); }
-}
-
-// ─── Panel flotante de desglose por origen ───────────────────────────────
-.cv2-nuevos-panel {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  right: 0;
-  z-index: 30;
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
-  padding: 16px;
-  animation: cv2-panel-appear 150ms ease forwards;
-
-  @media (max-width: 640px) {
-    padding: 12px;
-    max-width: calc(100vw - 32px);
-  }
-}
-
-@keyframes cv2-panel-appear {
-  from { opacity: 0; transform: translateY(-4px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-.cv2-nuevos-panel__close {
-  display: none;
-
-  @media (max-width: 767px) {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    width: 32px;
-    height: 32px;
-    padding: 0;
-    border: none;
-    background: transparent;
-    color: #6b7280;
-    cursor: pointer;
-    border-radius: 6px;
-
-    &:hover {
-      background: #f3f4f6;
-      color: #374151;
-    }
-  }
-}
-
-.cv2-nuevos-panel__title {
-  margin: 0 0 12px 0;
-  font-size: 0.65rem;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: #6b7280;
-}
-
-.cv2-nuevos-panel__list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.cv2-nuevos-panel__item {
-  display: flex;
-  flex-direction: column;
-  gap: 5px;
-}
-
-.cv2-nuevos-panel__row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-}
-
-.cv2-nuevos-panel__badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 600;
-}
-
-.cv2-nuevos-panel__amount {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: #111827;
-  font-variant-numeric: tabular-nums;
-}
-
-.cv2-nuevos-panel__bar-track {
-  height: 3px;
-  background: #f3f4f6;
-  border-radius: 1.5px;
-  overflow: hidden;
-}
-
-.cv2-nuevos-panel__bar {
-  height: 100%;
-  border-radius: 1.5px;
-  transition: width 200ms ease;
 }
 
 // ─── Skeleton + error de card ────────────────────────────────────────────

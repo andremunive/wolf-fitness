@@ -2,7 +2,6 @@ import {
   ChangeDetectionStrategy,
   ChangeDetectorRef,
   Component,
-  HostListener,
   OnDestroy
 } from '@angular/core';
 import {
@@ -27,13 +26,14 @@ import {
   Plugin
 } from 'chart.js';
 
-import { EstadisticasService } from '../../../services/estadisticas.service';
+import { EstadisticasService, MesPeriodo } from '../../../services/estadisticas.service';
 import {
   ClientesActivosCards,
   ClientesQuincenalCards,
   DetalleResponse,
   EntrenadorFilter,
   EntrenadorOption,
+  OrigenDbKey,
   PlanFilter,
   QuincenaBreakdown,
   QuincenalTendenciaResponse,
@@ -45,9 +45,8 @@ import {
 import { EstadisticasClientesVmService } from '../../../services/estadisticas-clientes-vm.service';
 import { SparklineGeometryService, SparklineGeometry } from '../../../services/sparkline-geometry.service';
 import { GaugeGeometryService, GaugeGeometry } from '../../../services/gauge-geometry.service';
-import { NuevosOrigenRow } from '../../../services/estadisticas-clientes-vm.service';
 
-import { MESES_CORTOS, MESES_COMPLETOS } from '../../../models/estadisticas-constants';
+import { MESES_CORTOS } from '../../../models/estadisticas-constants';
 
 // ─── Estados ──────────────────────────────────────────────────────────────────
 
@@ -130,34 +129,17 @@ type QuincenalTendState =
   | QuincenalTendStateLoaded
   | QuincenalTendStateError;
 
-// ─── Card VM (Sección 01 — Movimiento del mes) ────────────────────────────────
-
-export type CardKey = 'tipo_a' | 'tipo_b' | 'nuevos' | 'recuperados';
+/** Estado de carga de una card individual (loading / loaded / error). */
 export type CardStatus = 'loading' | 'loaded' | 'error';
-/** Tendencia de la sparkline: arriba (verde), abajo (rojo) o plana (gris). */
-export type CardTrend = 'up' | 'down' | 'flat';
-
-export interface CardVM {
-  key: CardKey;
-  label: string;
-  /** Color del dot identificador de la card en el header (semántico). */
-  color: string;
-  /** Tendencia derivada de delta — usada para colorear el chip. */
-  trend: CardTrend;
-  status: CardStatus;
-  value: number;
-  /** null = no se muestra chip de delta. */
-  delta: number | null;
-  /** Clientes en plan 6 días (plan breakdown). */
-  plan6d: number;
-  /** Clientes en plan 3 días (plan breakdown). */
-  plan3d: number;
-}
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 
 const SPARKLINE_VB_WIDTH  = 320;
 const SPARKLINE_VB_HEIGHT = 60;
+
+/** Límite inferior del navegador de meses (fecha en que arrancó la app). */
+const APP_START_YEAR  = 2026;
+const APP_START_MONTH = 4;
 
 /** Ventanas disponibles en la sección 04. */
 const VENTANAS_TENDENCIA: VentanaTendencia[] = [1, 2, 6, 12];
@@ -288,7 +270,28 @@ export interface SeriesLegendRow {
   widthPct: number;
 }
 
-// ─── Sección 06 — Clientes en riesgo ──────────────────────────────────────────
+// ─── Sección 01 — Usuarios nuevos (origen) ────────────────────────────────────
+
+export type OrigenKey = 'publicidad' | 'directos' | 'recomendacion';
+
+/**
+ * VM de una card de la fila "Usuarios nuevos" (sección 01).
+ * Réplica visual de `CardVM` pero limitada a los datos que sí aplican al
+ * origen: total, delta y desglose por plan. `status` permite render por card
+ * (skeleton / error / loaded) cuando la data proviene de una EF.
+ */
+export interface OrigenCardVM {
+  key: OrigenKey;
+  label: string;
+  color: string;
+  status: CardStatus;
+  value: number;
+  delta: number | null;
+  plan6d: number;
+  plan3d: number;
+}
+
+// ─── Sección 07 — Clientes en riesgo ──────────────────────────────────────────
 
 export interface RiesgoVM {
   cliente_id: string;
@@ -386,44 +389,65 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   // ─── Estado de cards (cards EF) ─────────────────────────────────────────────
 
-  readonly cardsState$: Observable<CardsState> = this.svc
-    .getClientesActivosCards()
-    .pipe(
-      map((data): CardsState => ({ status: 'loaded', data })),
-      catchError((): Observable<CardsState> =>
-        of({ status: 'error', data: null })
-      ),
-      startWith<CardsState>({ status: 'loading', data: null }),
-      shareReplay(1)
-    );
+  private readonly retryCards$ = new BehaviorSubject<void>(undefined);
 
-  // ─── Estado del sparkline (tendencia EF — meses_atras=6) ────────────────────
+  readonly cardsState$: Observable<CardsState> = combineLatest([
+    this.svc.selectedEntrenador$,
+    this.svc.mesPeriodo$,
+    this.retryCards$
+  ]).pipe(
+    switchMap(([selected, periodo]) => {
+      const entrenadorId = selected === 'todos' ? null : selected;
+      const fechaRef = this.svc.buildFechaReferencia(periodo);
+      return this.svc.getClientesActivosCards(entrenadorId, fechaRef).pipe(
+        map((data): CardsState => ({ status: 'loaded', data })),
+        catchError((): Observable<CardsState> => of({ status: 'error', data: null })),
+        startWith<CardsState>({ status: 'loading', data: null })
+      );
+    }),
+    shareReplay(1)
+  );
 
-  readonly sparklineState$: Observable<SparklineState> = this.svc
-    .getTendencia()
-    .pipe(
-      map((data): SparklineState => ({ status: 'loaded', data })),
-      catchError((): Observable<SparklineState> =>
-        of({ status: 'error', data: null })
-      ),
-      startWith<SparklineState>({ status: 'loading', data: null }),
-      shareReplay(1)
-    );
+  // ─── Estado del sparkline (tendencia EF — sección 04) ──────────────────────
+
+  private readonly retryTendencia$ = new BehaviorSubject<void>(undefined);
+
+  readonly sparklineState$: Observable<SparklineState> = combineLatest([
+    this.svc.selectedEntrenador$,
+    this.svc.mesPeriodo$,
+    this.svc.ventanaTendencia$,
+    this.retryTendencia$
+  ]).pipe(
+    switchMap(([selected, periodo, ventana]) => {
+      const entrenadorId = selected === 'todos' ? null : selected;
+      const fechaRef = this.svc.buildFechaReferencia(periodo);
+      return this.svc.getTendencia(entrenadorId, fechaRef, ventana).pipe(
+        map((data): SparklineState => ({ status: 'loaded', data })),
+        catchError((): Observable<SparklineState> => of({ status: 'error', data: null })),
+        startWith<SparklineState>({ status: 'loading', data: null })
+      );
+    }),
+    shareReplay(1)
+  );
 
   // ─── Estado del detalle (nuevos / recuperados — sección 01) ─────────────────
 
   private readonly retryDetalle$ = new BehaviorSubject<void>(undefined);
 
-  readonly detalleState$: Observable<DetalleState> = this.retryDetalle$.pipe(
-    switchMap(() =>
-      this.svc.getDetalle().pipe(
+  readonly detalleState$: Observable<DetalleState> = combineLatest([
+    this.svc.selectedEntrenador$,
+    this.svc.mesPeriodo$,
+    this.retryDetalle$
+  ]).pipe(
+    switchMap(([selected, periodo]) => {
+      const entrenadorId = selected === 'todos' ? null : selected;
+      const fechaRef = this.svc.buildFechaReferencia(periodo);
+      return this.svc.getDetalle(entrenadorId, fechaRef).pipe(
         map((data): DetalleState => ({ status: 'loaded', data })),
-        catchError((): Observable<DetalleState> =>
-          of({ status: 'error', data: null })
-        ),
+        catchError((): Observable<DetalleState> => of({ status: 'error', data: null })),
         startWith<DetalleState>({ status: 'loading', data: null })
-      )
-    ),
+      );
+    }),
     shareReplay(1)
   );
 
@@ -431,16 +455,20 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   private readonly retryQuincenal$ = new BehaviorSubject<void>(undefined);
 
-  readonly quincenalState$: Observable<QuincenalState> = this.retryQuincenal$.pipe(
-    switchMap(() =>
-      this.svc.getQuincenalCards().pipe(
+  readonly quincenalState$: Observable<QuincenalState> = combineLatest([
+    this.svc.selectedEntrenador$,
+    this.svc.mesPeriodo$,
+    this.retryQuincenal$
+  ]).pipe(
+    switchMap(([selected, periodo]) => {
+      const entrenadorId = selected === 'todos' ? null : selected;
+      const fechaRef = this.svc.buildFechaReferencia(periodo);
+      return this.svc.getQuincenalCards(entrenadorId, fechaRef).pipe(
         map((data): QuincenalState => ({ status: 'loaded', data })),
-        catchError((): Observable<QuincenalState> =>
-          of({ status: 'error', data: null })
-        ),
+        catchError((): Observable<QuincenalState> => of({ status: 'error', data: null })),
         startWith<QuincenalState>({ status: 'loading', data: null })
-      )
-    ),
+      );
+    }),
     shareReplay(1)
   );
 
@@ -448,17 +476,21 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   private readonly retryQuincenalTend$ = new BehaviorSubject<void>(undefined);
 
-  readonly quincenalTendenciaState$: Observable<QuincenalTendState> =
-    this.retryQuincenalTend$.pipe(
-      switchMap(() =>
-        this.svc.getQuincenalTendencia().pipe(
-          map((data): QuincenalTendState => ({ status: 'loaded', data })),
-          catchError((): Observable<QuincenalTendState> =>
-            of({ status: 'error', data: null })
-          ),
-          startWith<QuincenalTendState>({ status: 'loading', data: null })
-        )
-      ),
+  readonly quincenalTendenciaState$: Observable<QuincenalTendState> = combineLatest([
+    this.svc.selectedEntrenador$,
+    this.svc.mesPeriodo$,
+    this.svc.ventanaQuincenal$,
+    this.retryQuincenalTend$
+  ]).pipe(
+    switchMap(([selected, periodo, ventana]) => {
+      const entrenadorId = selected === 'todos' ? null : selected;
+      const fechaRef = this.svc.buildFechaReferencia(periodo);
+      return this.svc.getQuincenalTendencia(entrenadorId, fechaRef, ventana).pipe(
+        map((data): QuincenalTendState => ({ status: 'loaded', data })),
+        catchError((): Observable<QuincenalTendState> => of({ status: 'error', data: null })),
+        startWith<QuincenalTendState>({ status: 'loading', data: null })
+      );
+    }),
       shareReplay(1)
     );
 
@@ -499,32 +531,17 @@ export class ClientesDashboardComponent implements OnDestroy {
       )
     );
 
-  /** Array de CardVM para la fila de movimiento del mes. */
-  readonly cardsVM$: Observable<CardVM[]> = combineLatest([
-    this.cardsState$,
-    this.detalleState$
-  ]).pipe(
-    map(([cs, ds]) => {
-      // vmSvc acepta los estados completos y deriva el status por card
-      return this.vmSvc.buildCards(cs, ds);
-    })
-  );
-
   /** VMs de las dos cards de quincena (Q1 + Q2). */
-  readonly quincenaCardsVM$: Observable<QuincenaCardVM[] | null> =
-    this.quincenalState$.pipe(
-      map((qs) =>
-        qs.status === 'loaded'
-          ? this.vmSvc.buildQuincenaCards(qs.data)
-          : null
-      )
-    );
-
-  /** Filas del panel flotante "Nuevos por origen". */
-  readonly nuevosOrigenes$: Observable<NuevosOrigenRow[]> =
-    this.detalleState$.pipe(
-      map((ds) => this.vmSvc.buildNuevosOrigenes(ds))
-    );
+  readonly quincenaCardsVM$: Observable<QuincenaCardVM[] | null> = combineLatest([
+    this.quincenalState$,
+    this.svc.mesPeriodo$
+  ]).pipe(
+    map(([qs, p]) =>
+      qs.status === 'loaded'
+        ? this.vmSvc.buildQuincenaCards(qs.data, this.buildRefDate(p), this.isCurrentPeriod(p))
+        : null
+    )
+  );
 
   /** VM de "Pendientes de pago" (sección 03). */
   readonly pendientesVM$: Observable<PendientesVM | null> =
@@ -547,24 +564,28 @@ export class ClientesDashboardComponent implements OnDestroy {
     );
 
   /** VM de la card oscura de retención (sección 03). */
-  readonly retencionVM$: Observable<RetencionVM | null> =
-    this.detalleState$.pipe(
-      map((ds) =>
-        ds.status === 'loaded'
-          ? this.vmSvc.buildRetencionVM(ds.data, new Date())
-          : null
-      )
-    );
+  readonly retencionVM$: Observable<RetencionVM | null> = combineLatest([
+    this.detalleState$,
+    this.svc.mesPeriodo$
+  ]).pipe(
+    map(([ds, p]) =>
+      ds.status === 'loaded'
+        ? this.vmSvc.buildRetencionVM(ds.data, this.buildRefDate(p))
+        : null
+    )
+  );
 
   /** VMs de la tabla de clientes en riesgo (sección 06). */
-  readonly riesgoVMs$: Observable<RiesgoVM[]> =
-    this.detalleState$.pipe(
-      map((ds) =>
-        ds.status === 'loaded'
-          ? this.vmSvc.buildRiesgoVMs(ds.data.en_riesgo)
-          : []
-      )
-    );
+  readonly riesgoVMs$: Observable<RiesgoVM[]> = combineLatest([
+    this.detalleState$,
+    this.svc.mesPeriodo$
+  ]).pipe(
+    map(([ds, p]) =>
+      ds.status === 'loaded'
+        ? this.vmSvc.buildRiesgoVMs(ds.data.en_riesgo, this.buildRefDate(p))
+        : []
+    )
+  );
 
   /**
    * VM de variación entre el primer y último punto de la serie Total.
@@ -630,21 +651,70 @@ export class ClientesDashboardComponent implements OnDestroy {
       })
     );
 
-  // ─── Labels precomputados ──────────────────────────────────────────────────
+  // ─── Período mes/año ────────────────────────────────────────────────────────
 
-  /** "vs 1-X mmm" para el delta pill del hero. */
-  readonly deltaLabelMonth: string;
-  /** "Mayo 2026" — periodo en curso. */
-  readonly periodoLabel: string;
-  /** "DD/MM/YYYY" — fecha de hoy para el corte. */
-  readonly cortePeriodLabel: string;
+  private readonly currentYear  = new Date().getFullYear();
+  private readonly currentMonth = new Date().getMonth() + 1;
+
+  readonly periodo$: Observable<MesPeriodo> = this.svc.mesPeriodo$;
+
+  readonly periodoLabel$: Observable<string> = this.svc.mesPeriodo$.pipe(
+    map((p) => this.svc.getPeriodoLabel(p.year, p.month))
+  );
+
+  readonly isAtCurrentMonth$: Observable<boolean> = this.svc.mesPeriodo$.pipe(
+    map((p) => p.year === this.currentYear && p.month === this.currentMonth)
+  );
+
+  readonly isAtAppStartMonth$: Observable<boolean> = this.svc.mesPeriodo$.pipe(
+    map((p) => p.year === APP_START_YEAR && p.month === APP_START_MONTH)
+  );
+
+  // ─── Labels reactivos derivados del período ────────────────────────────────
+
+  /** "vs 1-X mmm" para el delta pill del hero (según refDate del período). */
+  readonly deltaLabelMonth$: Observable<string> = this.svc.mesPeriodo$.pipe(
+    map((p) => this.buildDeltaLabelMonth(this.buildRefDate(p)))
+  );
+
+  /** "DD/MM/YYYY" — fecha del corte del período visualizado. */
+  readonly cortePeriodLabel$: Observable<string> = this.svc.mesPeriodo$.pipe(
+    map((p) => this.buildCortePeriodLabel(this.buildRefDate(p)))
+  );
+
   /** "ESTADÍSTICAS — CLIENTES — MAYO 2026" */
-  readonly breadcrumbCurrent: string;
-  /** Subtítulo de la sección 01 — "Quiénes están aportando ... vs 1-X abr". */
-  readonly subtitleSeccion01: string;
+  readonly breadcrumbCurrent$: Observable<string> = this.periodoLabel$.pipe(
+    map((s) => s.toUpperCase())
+  );
 
-  /** Clave de la card cuyo panel flotante está abierto. null = ninguno. */
-  openCardKey: CardKey | null = null;
+  /** True si el modal de detalle por origen está visible. */
+  origenModalOpen = false;
+
+  /**
+   * Snapshot de los parámetros de la EF en el momento de abrir el modal.
+   * Congelamos `fecha_referencia`, `entrenador_id` y `origen` para que el
+   * contenido del modal no cambie si el usuario navega meses después.
+   */
+  origenModalFecha = '';
+  origenModalEntrenadorId: string | null = null;
+  origenModalOrigen: OrigenDbKey = 'publicidad';
+
+  // ─── Sección 01 — Usuarios nuevos ─────────────────────────────────────────
+  //
+  // Publicidad → datos reales de detalleState$ (delta vs mes anterior COMPLETO).
+  // Directos / Recomendación → dummy pendiente de spec.
+  readonly origenCardsVM$: Observable<OrigenCardVM[]> = this.detalleState$.pipe(
+    map((ds) => this.buildOrigenCards(ds))
+  );
+
+  /** "vs jun" — label del delta para las cards de origen (mes anterior completo). */
+  readonly deltaLabelFullPrevMonth$: Observable<string> = this.svc.mesPeriodo$.pipe(
+    map((p) => {
+      const refDate = this.buildRefDate(p);
+      const prevMonthIndex = refDate.getMonth() === 0 ? 11 : refDate.getMonth() - 1;
+      return `vs ${MESES_CORTOS[prevMonthIndex]}`;
+    })
+  );
 
   constructor(
     private readonly svc: EstadisticasService,
@@ -652,15 +722,7 @@ export class ClientesDashboardComponent implements OnDestroy {
     private readonly sparklineSvc: SparklineGeometryService,
     private readonly gaugeSvc: GaugeGeometryService,
     private readonly cdr: ChangeDetectorRef
-  ) {
-    const today = new Date();
-    this.deltaLabelMonth = this.buildDeltaLabelMonth(today);
-    this.periodoLabel = this.buildPeriodoLabel(today);
-    this.cortePeriodLabel = this.buildCortePeriodLabel(today);
-    this.breadcrumbCurrent = this.periodoLabel.toUpperCase();
-    this.subtitleSeccion01 =
-      `Quiénes están aportando al activo del período · datos comparados ${this.deltaLabelMonth}`;
-  }
+  ) {}
 
   ngOnDestroy(): void {
     // El servicio mantiene el filtro de entrenador a propósito (estado global).
@@ -669,73 +731,64 @@ export class ClientesDashboardComponent implements OnDestroy {
     this.destroy$.complete();
   }
 
-  // ─── Panel flotante (Nuevos por origen) ────────────────────────────────────
-
-  @HostListener('document:keydown.escape')
-  onEscKey(): void {
-    if (this.openCardKey !== null) {
-      this.openCardKey = null;
-      this.cdr.markForCheck();
-    }
-  }
-
-  /**
-   * Alterna la apertura del panel de la card "nuevos".
-   * Llama stopPropagation para evitar que el HostListener de document:click
-   * cierre el panel inmediatamente tras abrirlo.
-   */
-  onToggleNuevosPanel(event: MouseEvent): void {
-    event.stopPropagation();
-    this.openCardKey = this.openCardKey === 'nuevos' ? null : 'nuevos';
-    this.cdr.markForCheck();
-  }
-
-  /** Cierra cualquier panel abierto al hacer click fuera. */
-  @HostListener('document:click')
-  onDocumentClick(): void {
-    if (this.openCardKey !== null) {
-      this.openCardKey = null;
-      this.cdr.markForCheck();
-    }
-  }
-
   // ─── Filtro de entrenador ───────────────────────────────────────────────────
 
   onEntrenadorChange(value: string): void {
     this.svc.setEntrenador((value || 'todos') as EntrenadorFilter);
   }
 
-  // ─── Retry ──────────────────────────────────────────────────────────────────
+  // ─── Navegación de período ─────────────────────────────────────────────────
 
-  retryHero(): void {
-    // Re-asignar el mismo entrenador re-dispara los streams.
-    // Usa el getter sincrónico del servicio en lugar de suscribirse.
-    const current = this.svc.currentEntrenador;
-    this.svc.setEntrenador('todos');
-    if (current !== 'todos') {
-      this.svc.setEntrenador(current);
-    }
+  onPrevMonth(periodo: MesPeriodo, isAtAppStartMonth: boolean): void {
+    if (isAtAppStartMonth) return;
+    const { year, month } = periodo;
+    this.svc.setPeriodo(
+      month === 1 ? year - 1 : year,
+      month === 1 ? 12 : month - 1
+    );
   }
 
-  retryDetalle(): void {
-    this.retryDetalle$.next();
+  onNextMonth(periodo: MesPeriodo, isAtCurrentMonth: boolean): void {
+    if (isAtCurrentMonth) return;
+    const { year, month } = periodo;
+    this.svc.setPeriodo(
+      month === 12 ? year + 1 : year,
+      month === 12 ? 1 : month + 1
+    );
   }
 
-  retryQuincenal(): void {
-    this.retryQuincenal$.next();
+  /** True si el período seleccionado es el mes en curso local. */
+  isCurrentPeriod(p: MesPeriodo): boolean {
+    return p.year === this.currentYear && p.month === this.currentMonth;
   }
 
   /**
-   * Decide qué stream re-intentar según el `key` de la card.
-   * Las cards alimentadas por `detalleState$` (nuevos / recuperados / nuevos
-   * por origen) reintentan el detalle; el resto reintenta el hero.
+   * Fecha de referencia como `Date` para labels/VMs:
+   * - Mes en curso → hoy.
+   * - Mes pasado   → último día de ese mes.
+   * - Mes futuro   → primer día (no debería ocurrir; UI lo bloquea).
    */
-  cardRetryFor(key: CardKey): void {
-    if (key === 'recuperados' || key.startsWith('nuevos')) {
-      this.retryDetalle();
-    } else {
-      this.retryHero();
-    }
+  buildRefDate(p: MesPeriodo): Date {
+    if (this.isCurrentPeriod(p)) return new Date();
+    const isPast =
+      p.year < this.currentYear ||
+      (p.year === this.currentYear && p.month < this.currentMonth);
+    const day = isPast ? new Date(p.year, p.month, 0).getDate() : 1;
+    return new Date(p.year, p.month - 1, day);
+  }
+
+  // ─── Retry ──────────────────────────────────────────────────────────────────
+
+  retryCards(): void       { this.retryCards$.next(); }
+  retryTendencia(): void   { this.retryTendencia$.next(); }
+  retryDetalle(): void     { this.retryDetalle$.next(); }
+  retryQuincenal(): void   { this.retryQuincenal$.next(); }
+  retryQuincenalTendencia(): void { this.retryQuincenalTend$.next(); }
+
+  /** Retry combinado del hero (cards + sparkline). */
+  retryHero(): void {
+    this.retryCards$.next();
+    this.retryTendencia$.next();
   }
 
   // ─── Ventana de tendencia (sección 04) ──────────────────────────────────────
@@ -756,10 +809,6 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   onPlanFilterChange(p: PlanFilter): void {
     this.planFilter$.next(p);
-  }
-
-  retryQuincenalTendencia(): void {
-    this.retryQuincenalTend$.next();
   }
 
   trackByVentanaQ(_i: number, v: VentanaQuincenal): VentanaQuincenal {
@@ -906,27 +955,22 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   // ─── Labels precomputados (privados) ────────────────────────────────────────
 
-  private buildDeltaLabelMonth(today: Date): string {
-    const day = today.getDate();
-    const prevMonthIndex = today.getMonth() === 0 ? 11 : today.getMonth() - 1;
+  private buildDeltaLabelMonth(refDate: Date): string {
+    const day = refDate.getDate();
+    const prevMonthIndex = refDate.getMonth() === 0 ? 11 : refDate.getMonth() - 1;
     const prevMonthDays = new Date(
-      today.getFullYear(),
-      today.getMonth(),
+      refDate.getFullYear(),
+      refDate.getMonth(),
       0
     ).getDate();
     const dayClamped = Math.min(day, prevMonthDays);
     return `vs 1-${dayClamped} ${MESES_CORTOS[prevMonthIndex]}`;
   }
 
-  private buildPeriodoLabel(today: Date): string {
-    const m = MESES_COMPLETOS[today.getMonth()];
-    return `${m.charAt(0).toUpperCase()}${m.slice(1)} ${today.getFullYear()}`;
-  }
-
-  private buildCortePeriodLabel(today: Date): string {
-    const dd = String(today.getDate()).padStart(2, '0');
-    const mm = String(today.getMonth() + 1).padStart(2, '0');
-    return `${dd}/${mm}/${today.getFullYear()}`;
+  private buildCortePeriodLabel(refDate: Date): string {
+    const dd = String(refDate.getDate()).padStart(2, '0');
+    const mm = String(refDate.getMonth() + 1).padStart(2, '0');
+    return `${dd}/${mm}/${refDate.getFullYear()}`;
   }
 
   // ─── trackBy ────────────────────────────────────────────────────────────────
@@ -939,8 +983,85 @@ export class ClientesDashboardComponent implements OnDestroy {
     return t.id;
   }
 
-  trackByCardKey(_i: number, c: CardVM): CardKey {
+  trackByOrigenKey(_i: number, c: OrigenCardVM): OrigenKey {
     return c.key;
+  }
+
+  // ─── Modal Origen (Publicidad / Directos / Recomendación) ─────────────────
+
+  /** Mapa UI-key → DB-key para consultar la EF de detalle por origen. */
+  private readonly ORIGEN_UI_TO_DB: Record<OrigenKey, OrigenDbKey> = {
+    publicidad:    'publicidad',
+    directos:      'llego_solo',
+    recomendacion: 'referido'
+  };
+
+  /**
+   * Abre el modal de detalle para el origen indicado.
+   * Congela `fecha_referencia`, `entrenador_id` y `origen` al momento del
+   * click para que el modal siga mostrando el mismo período aunque el usuario
+   * navegue en el dashboard mientras el modal esté abierto.
+   */
+  openOrigenModal(uiKey: OrigenKey): void {
+    this.origenModalOrigen = this.ORIGEN_UI_TO_DB[uiKey];
+    this.origenModalFecha  = this.svc.buildFechaReferencia(this.svc.currentMesPeriodo);
+    const sel = this.svc.currentEntrenador;
+    this.origenModalEntrenadorId = sel === 'todos' ? null : sel;
+    this.origenModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeOrigenModal(): void {
+    this.origenModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  /**
+   * Construye las 3 cards de la sección 01 (Usuarios nuevos).
+   * - Publicidad / Directos: reales, alimentadas por
+   *   `detalleState$.nuevos_por_origen.{publicidad,llego_solo}`.
+   * - Recomendación: dummy (pendiente de definir lógica).
+   */
+  private buildOrigenCards(ds: DetalleState): OrigenCardVM[] {
+    const status: CardStatus =
+      ds.status === 'loading' ? 'loading' :
+      ds.status === 'error'   ? 'error'   : 'loaded';
+    const pub = ds.status === 'loaded' ? ds.data.nuevos_por_origen.publicidad : null;
+    const dir = ds.status === 'loaded' ? ds.data.nuevos_por_origen.llego_solo : null;
+
+    return [
+      {
+        key:    'publicidad',
+        label:  'Publicidad',
+        color:  '#06b6d4',
+        status,
+        value:  pub?.total ?? 0,
+        delta:  pub?.delta ?? null,
+        plan6d: pub?.plan_6d ?? 0,
+        plan3d: pub?.plan_3d ?? 0
+      },
+      {
+        key:    'directos',
+        label:  'Directos',
+        color:  '#8b5cf6',
+        status,
+        value:  dir?.total ?? 0,
+        delta:  dir?.delta ?? null,
+        plan6d: dir?.plan_6d ?? 0,
+        plan3d: dir?.plan_3d ?? 0
+      },
+      // TODO(recomendacion): reemplazar por datos reales cuando definamos la lógica.
+      {
+        key:    'recomendacion',
+        label:  'Recomendación',
+        color:  '#ec4899',
+        status: 'loaded',
+        value:  15,
+        delta:  6,
+        plan6d: 10,
+        plan3d: 5
+      }
+    ];
   }
 
   trackByQuincenaKey(_i: number, q: QuincenaCardVM): QuincenaKey {
