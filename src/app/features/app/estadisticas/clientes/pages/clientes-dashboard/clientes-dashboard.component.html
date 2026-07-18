@@ -387,7 +387,7 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 02 — Quincenas en curso (Q1 + Q2)
+       SECCIÓN 02 — Seguimiento de cartera (dummy)
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
@@ -395,6 +395,106 @@
       <div class="cv2-section__heading">
         <div class="cv2-section__title-row">
           <span class="cv2-section__num">02 /</span>
+          <h2 class="cv2-section__title">Seguimiento de cartera</h2>
+        </div>
+        <p class="cv2-section__subtitle">
+          Clientes pendientes, próximos a vencer y no renovados este mes
+        </p>
+      </div>
+    </header>
+
+    <div class="cv2-cards-grid cv2-cards-grid--3col">
+
+      <article
+        *ngFor="let card of (carteraCardsVM$ | async) ?? []; trackBy: trackByCarteraKey"
+        class="cv2-card cv2-card--metric"
+        [class.cv2-card--metric-clickable]="card.status === 'loaded'"
+        [attr.data-key]="card.key"
+        [attr.role]="card.status === 'loaded' ? 'button' : null"
+        [attr.tabindex]="card.status === 'loaded' ? 0 : null"
+        (click)="card.status === 'loaded' ? openCarteraModal(card.key) : null"
+        (keydown.enter)="card.status === 'loaded' ? openCarteraModal(card.key) : null"
+        (keydown.space)="card.status === 'loaded' ? openCarteraModal(card.key) : null">
+
+        <!-- Loading skeleton -->
+        <ng-container *ngIf="card.status === 'loading'">
+          <div class="cv2-card-metric__skeleton">
+            <div class="cv2-skeleton cv2-skeleton--label-sm"></div>
+            <div class="cv2-skeleton cv2-skeleton--card-value"></div>
+            <div class="cv2-skeleton cv2-skeleton--line cv2-skeleton--short"></div>
+          </div>
+        </ng-container>
+
+        <!-- Error -->
+        <ng-container *ngIf="card.status === 'error'">
+          <div class="cv2-card-metric__error">
+            <div class="cv2-card-metric__header">
+              <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
+              <span class="cv2-card-metric__label">{{ card.label }}</span>
+            </div>
+            <p class="cv2-muted">No se pudo cargar.</p>
+            <button type="button" class="cv2-link-btn" (click)="retryQuincenal()">
+              Reintentar
+            </button>
+          </div>
+        </ng-container>
+
+        <!-- Loaded -->
+        <ng-container *ngIf="card.status === 'loaded'">
+
+          <!-- 1. HEADER: dot + label -->
+          <div class="cv2-card-metric__header">
+            <span class="cv2-card-metric__dot" [style.background]="card.color"></span>
+            <span class="cv2-card-metric__label">{{ card.label }}</span>
+          </div>
+
+          <!-- 2. NÚMERO grande -->
+          <div class="cv2-card-metric__value">{{ card.value }}</div>
+
+          <!-- 3. CHIP delta invertido — oculto para Pendientes y Por vencer -->
+          <div
+            *ngIf="card.key !== 'pendientes' && card.key !== 'por_vencer'"
+            class="cv2-card-metric__delta-row">
+            <ng-container *ngIf="card.delta !== null">
+              <span [ngClass]="card.pillClass">
+                {{ card.pillArrow }}
+                <ng-container *ngIf="card.delta !== 0">{{ card.pillAbs }}</ng-container>
+                <span class="cv2-pill__label">{{ deltaLabelFullPrevMonth$ | async }}</span>
+              </span>
+            </ng-container>
+          </div>
+
+          <!-- 4. SEPARADOR + 5. PLAN BREAKDOWN anclados al fondo -->
+          <div class="cv2-card-metric__divider"></div>
+          <div class="cv2-card-metric__plan">
+            <div class="cv2-card-metric__plan-col">
+              <span class="cv2-card-metric__plan-label">6 días</span>
+              <span class="cv2-card-metric__plan-value">{{ card.plan6d }}</span>
+            </div>
+            <div class="cv2-card-metric__plan-divider" aria-hidden="true"></div>
+            <div class="cv2-card-metric__plan-col">
+              <span class="cv2-card-metric__plan-label">3 días</span>
+              <span class="cv2-card-metric__plan-value">{{ card.plan3d }}</span>
+            </div>
+          </div>
+
+        </ng-container>
+
+      </article>
+
+    </div>
+
+  </section>
+
+  <!-- ════════════════════════════════════════════════════════════════
+       SECCIÓN 03 — Quincenas en curso (Q1 + Q2)
+  ════════════════════════════════════════════════════════════════ -->
+  <section class="cv2-section">
+
+    <header class="cv2-section__header">
+      <div class="cv2-section__heading">
+        <div class="cv2-section__title-row">
+          <span class="cv2-section__num">03 /</span>
           <h2 class="cv2-section__title">Quincenas en curso</h2>
         </div>
         <p class="cv2-section__subtitle">
@@ -542,14 +642,14 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 03 — Estado de cartera (pendientes / perdidos / retención)
+       SECCIÓN 04 — Estado de cartera (pendientes / perdidos / retención)
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
     <header class="cv2-section__header">
       <div class="cv2-section__heading">
         <div class="cv2-section__title-row">
-          <span class="cv2-section__num">03 /</span>
+          <span class="cv2-section__num">04 /</span>
           <h2 class="cv2-section__title">Estado de cartera</h2>
         </div>
         <p class="cv2-section__subtitle">
@@ -740,14 +840,14 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 04 — Tendencia (variación + gráfica de barras)
+       SECCIÓN 05 — Tendencia (variación + gráfica de barras)
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
     <header class="cv2-section__header cv2-section__header--with-actions">
       <div class="cv2-section__heading">
         <div class="cv2-section__title-row">
-          <span class="cv2-section__num">04 /</span>
+          <span class="cv2-section__num">05 /</span>
           <h2 class="cv2-section__title">Tendencia</h2>
         </div>
         <p class="cv2-section__subtitle">
@@ -889,14 +989,14 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 05 — Distribución por quincena
+       SECCIÓN 06 — Distribución por quincena
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
     <header class="cv2-section__header cv2-section__header--with-actions">
       <div class="cv2-section__heading">
         <div class="cv2-section__title-row">
-          <span class="cv2-section__num">05 /</span>
+          <span class="cv2-section__num">06 /</span>
           <h2 class="cv2-section__title">Distribución por quincena</h2>
         </div>
         <p class="cv2-section__subtitle">
@@ -991,7 +1091,7 @@
   </section>
 
   <!-- ════════════════════════════════════════════════════════════════
-       SECCIÓN 06 — Clientes en riesgo
+       SECCIÓN 07 — Clientes en riesgo
   ════════════════════════════════════════════════════════════════ -->
   <section class="cv2-section">
 
@@ -1000,7 +1100,7 @@
       <header class="cv2-section__header cv2-section__header--with-actions">
         <div class="cv2-section__heading">
           <div class="cv2-section__title-row">
-            <span class="cv2-section__num">06 /</span>
+            <span class="cv2-section__num">07 /</span>
             <h2 class="cv2-section__title">Clientes en riesgo</h2>
           </div>
           <p class="cv2-section__subtitle">
@@ -1139,3 +1239,14 @@
   [entrenadorId]="origenModalEntrenadorId"
   (closed)="closeOrigenModal()">
 </app-origen-detalle-modal>
+
+<!-- ══════════════════════════════════════════════════════════════════════
+     Modal: Detalle de cartera (sección 02 · Pendientes)
+══════════════════════════════════════════════════════════════════════ -->
+<app-cartera-detalle-modal
+  *ngIf="carteraModalOpen"
+  [cohort]="carteraModalCohort"
+  [fechaReferencia]="carteraModalFecha"
+  [entrenadorId]="carteraModalEntrenadorId"
+  (closed)="closeCarteraModal()">
+</app-cartera-detalle-modal>

@@ -5,6 +5,8 @@ import { catchError, distinctUntilChanged, map, switchMap } from 'rxjs/operators
 import { SupabaseService } from 'src/app/core/services/supabase.service';
 import { MONTH_NAMES_ES } from 'src/app/features/app/closures/models/closure.model';
 import {
+  CarteraCohortKey,
+  CarteraDetalleResponse,
   ClientesActivosCards,
   ClientesQuincenalCards,
   DetalleResponse,
@@ -366,6 +368,41 @@ export class EstadisticasService {
       catchError((err) => {
         if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
         return from(extractEfErrorAsync(err)).pipe(switchMap((efErr) => throwError(() => efErr)));
+      })
+    );
+  }
+
+  /**
+   * Invoca `stats-clients-cartera-detalle` one-shot. Sirve al modal de detalle
+   * por cohorte de cartera (pendientes / por_vencer / no_renovaron). Misma
+   * forma que origen + `debe_cop` por cliente. No reactivo: el modal la llama
+   * al abrirse.
+   */
+  getCarteraDetalle(
+    cohort: CarteraCohortKey,
+    entrenadorId: string | null,
+    fechaReferencia: string
+  ): Observable<CarteraDetalleResponse> {
+    return from(
+      this.supabase.client.functions.invoke<CarteraDetalleResponse>(
+        'stats-clients-cartera-detalle',
+        {
+          body: {
+            entrenador_id:    entrenadorId,
+            fecha_referencia: fechaReferencia,
+            cohort
+          }
+        }
+      )
+    ).pipe(
+      switchMap(({ data, error }) => {
+        if (error) return from(extractEfErrorAsync(error)).pipe(switchMap(efErr => throwError(() => efErr)));
+        if (!data) return throwError(() => ({ code: 'INTERNAL_ERROR', message: 'Respuesta vacía de stats-clients-cartera-detalle', details: {} }));
+        return [data];
+      }),
+      catchError((err) => {
+        if (err && typeof err === 'object' && 'code' in err) return throwError(() => err);
+        return from(extractEfErrorAsync(err)).pipe(switchMap(efErr => throwError(() => efErr)));
       })
     );
   }

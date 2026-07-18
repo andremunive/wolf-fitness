@@ -28,6 +28,7 @@ import {
 
 import { EstadisticasService, MesPeriodo } from '../../../services/estadisticas.service';
 import {
+  CarteraCohortKey,
   ClientesActivosCards,
   ClientesQuincenalCards,
   DetalleResponse,
@@ -268,6 +269,34 @@ export interface SeriesLegendRow {
   maxLabel: string;
   /** ancho relativo de la barra 0-100 sobre el max global. */
   widthPct: number;
+}
+
+// ─── Sección 02 — Seguimiento de cartera ──────────────────────────────────────
+
+export type CarteraKey = 'pendientes' | 'por_vencer' | 'no_renovaron';
+
+/**
+ * VM de una card de la fila "Seguimiento de cartera" (sección 02).
+ * Misma estructura visual que `OrigenCardVM` con la diferencia clave de que el
+ * chip de delta usa **semántica invertida**: más pendientes/vencidos/perdidos
+ * = peor (chip rojo). Por eso `pillClass`/`pillArrow`/`pillAbs` vienen
+ * precomputados desde el componente en lugar de derivarse por pipe.
+ */
+export interface CarteraCardVM {
+  key: CarteraKey;
+  label: string;
+  color: string;
+  status: CardStatus;
+  value: number;
+  delta: number | null;
+  plan6d: number;
+  plan3d: number;
+  /** Clase del chip invertido (down si sube, up si baja). */
+  pillClass: string;
+  /** Flecha del chip (↑ / ↓ / →). */
+  pillArrow: string;
+  /** Magnitud absoluta del delta para mostrar en el chip. */
+  pillAbs: number;
 }
 
 // ─── Sección 01 — Usuarios nuevos (origen) ────────────────────────────────────
@@ -699,12 +728,26 @@ export class ClientesDashboardComponent implements OnDestroy {
   origenModalEntrenadorId: string | null = null;
   origenModalOrigen: OrigenDbKey = 'publicidad';
 
+  /** True si el modal de detalle de cartera está visible. */
+  carteraModalOpen = false;
+  carteraModalFecha = '';
+  carteraModalEntrenadorId: string | null = null;
+  carteraModalCohort: CarteraCohortKey = 'pendientes';
+
   // ─── Sección 01 — Usuarios nuevos ─────────────────────────────────────────
   //
   // Publicidad → datos reales de detalleState$ (delta vs mes anterior COMPLETO).
   // Directos / Recomendación → dummy pendiente de spec.
   readonly origenCardsVM$: Observable<OrigenCardVM[]> = this.detalleState$.pipe(
     map((ds) => this.buildOrigenCards(ds))
+  );
+
+  // ─── Sección 02 — Seguimiento de cartera ─────────────────────────────────
+  //
+  // Pendientes → datos reales de quincenalState$ (delta vs cierre del mes ant.).
+  // Por vencer / No renovaron → dummy pendiente de spec.
+  readonly carteraCardsVM$: Observable<CarteraCardVM[]> = this.quincenalState$.pipe(
+    map((qs) => this.buildCarteraCards(qs))
   );
 
   /** "vs jun" — label del delta para las cards de origen (mes anterior completo). */
@@ -987,6 +1030,86 @@ export class ClientesDashboardComponent implements OnDestroy {
     return c.key;
   }
 
+  trackByCarteraKey(_i: number, c: CarteraCardVM): CarteraKey {
+    return c.key;
+  }
+
+  /**
+   * Construye las 3 cards de la sección 02 (Seguimiento de cartera).
+   * Todas alimentadas desde `quincenalState$` con delta invertido.
+   */
+  private buildCarteraCards(qs: QuincenalState): CarteraCardVM[] {
+    const status: CardStatus =
+      qs.status === 'loading' ? 'loading' :
+      qs.status === 'error'   ? 'error'   : 'loaded';
+    const pen = qs.status === 'loaded' ? qs.data.pendientes   : null;
+    const pv  = qs.status === 'loaded' ? qs.data.por_vencer   : null;
+    const nr  = qs.status === 'loaded' ? qs.data.no_renovaron : null;
+    const penPill = this.makeInvertedPill(pen?.delta ?? null);
+    const pvPill  = this.makeInvertedPill(pv?.delta ?? null);
+    const nrPill  = this.makeInvertedPill(nr?.delta ?? null);
+
+    return [
+      {
+        key:    'pendientes',
+        label:  'Pendientes',
+        color:  '#f59e0b',
+        status,
+        value:  pen?.total ?? 0,
+        delta:  pen?.delta ?? null,
+        plan6d: pen?.plan_6d ?? 0,
+        plan3d: pen?.plan_3d ?? 0,
+        pillClass: penPill.pillClass,
+        pillArrow: penPill.pillArrow,
+        pillAbs:   penPill.pillAbs
+      },
+      {
+        key:    'por_vencer',
+        label:  'Por vencer',
+        color:  '#f97316',
+        status,
+        value:  pv?.total ?? 0,
+        delta:  pv?.delta ?? null,
+        plan6d: pv?.plan_6d ?? 0,
+        plan3d: pv?.plan_3d ?? 0,
+        pillClass: pvPill.pillClass,
+        pillArrow: pvPill.pillArrow,
+        pillAbs:   pvPill.pillAbs
+      },
+      {
+        key:    'no_renovaron',
+        label:  'No renovaron',
+        color:  '#dc2626',
+        status,
+        value:  nr?.total ?? 0,
+        delta:  nr?.delta ?? null,
+        plan6d: nr?.plan_6d ?? 0,
+        plan3d: nr?.plan_3d ?? 0,
+        pillClass: nrPill.pillClass,
+        pillArrow: nrPill.pillArrow,
+        pillAbs:   nrPill.pillAbs
+      }
+    ];
+  }
+
+  /**
+   * Precomputa el chip de delta con **semántica invertida**:
+   * delta > 0 (peor) → chip down (rojo, ↑).
+   * delta < 0 (mejor) → chip up (verde, ↓).
+   * delta === 0 / null → flat (gris, →).
+   */
+  private makeInvertedPill(delta: number | null): {
+    pillClass: string; pillArrow: string; pillAbs: number;
+  } {
+    if (delta === null || delta === 0) {
+      return { pillClass: 'cv2-pill cv2-pill--flat', pillArrow: '→', pillAbs: 0 };
+    }
+    if (delta > 0) {
+      return { pillClass: 'cv2-pill cv2-pill--down', pillArrow: '↑', pillAbs: delta };
+    }
+    return { pillClass: 'cv2-pill cv2-pill--up', pillArrow: '↓', pillAbs: -delta };
+  }
+
   // ─── Modal Origen (Publicidad / Directos / Recomendación) ─────────────────
 
   /** Mapa UI-key → DB-key para consultar la EF de detalle por origen. */
@@ -1013,6 +1136,33 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   closeOrigenModal(): void {
     this.origenModalOpen = false;
+    this.cdr.markForCheck();
+  }
+
+  // ─── Modal Cartera (Pendientes / Por vencer / No renovaron) ──────────────
+
+  /** Mapa UI-key → cohort DB para la EF de detalle de cartera. */
+  private readonly CARTERA_UI_TO_COHORT: Record<CarteraKey, CarteraCohortKey> = {
+    pendientes:    'pendientes',
+    por_vencer:    'por_vencer',
+    no_renovaron:  'no_renovaron'
+  };
+
+  /**
+   * Abre el modal de detalle para la cohorte indicada. Congela los parámetros
+   * al momento del click (mismo patrón que el modal de origen).
+   */
+  openCarteraModal(uiKey: CarteraKey): void {
+    this.carteraModalCohort = this.CARTERA_UI_TO_COHORT[uiKey];
+    this.carteraModalFecha  = this.svc.buildFechaReferencia(this.svc.currentMesPeriodo);
+    const sel = this.svc.currentEntrenador;
+    this.carteraModalEntrenadorId = sel === 'todos' ? null : sel;
+    this.carteraModalOpen = true;
+    this.cdr.markForCheck();
+  }
+
+  closeCarteraModal(): void {
+    this.carteraModalOpen = false;
     this.cdr.markForCheck();
   }
 

@@ -60,12 +60,40 @@ export interface QuincenaBreakdown {
 
 /**
  * Breakdown de clientes pendientes de pago al día de hoy.
- * No incluye delta (no hay período de comparación aplicable).
+ * - delta = pendientes_hoy - pendientes_al_cierre_del_mes_anterior.
+ *   Semántica invertida en UI (más pendientes = peor / chip rojo).
  */
 export interface PendientesBreakdown {
   total: number;
   plan_6d: number;
   plan_3d: number;
+  delta: number;
+}
+
+/**
+ * Breakdown de clientes con mensualidad por vencer en ≤ 5 días.
+ * Solo clientes con status='paid' cuyo period_end cae en [ref, ref + 5 días].
+ * delta comparado contra el snapshot al cierre del mes anterior (semántica
+ * invertida: más por vencer = peor).
+ */
+export interface PorVencerBreakdown {
+  total: number;
+  plan_6d: number;
+  plan_3d: number;
+  delta: number;
+}
+
+/**
+ * Breakdown de clientes que no renovaron su mensualidad este mes.
+ * Solo clientes con status='paid' cuyo period_end vencio en [som, ref - 1].
+ * Delta comparado contra snapshot al cierre del mes anterior (mismo criterio
+ * aplicado a la ventana del mes previo). Semántica invertida.
+ */
+export interface NoRenovaronBreakdown {
+  total: number;
+  plan_6d: number;
+  plan_3d: number;
+  delta: number;
 }
 
 /**
@@ -85,13 +113,17 @@ export interface PerdidosBreakdown {
  * - q1: primera quincena del mes (días 1-15).
  * - q2: segunda quincena del mes (días 16-fin).
  * - pendientes: clientes con pago esperado pero aún no registrado.
+ * - por_vencer: clientes con mensualidad por vencer en ≤ 5 días.
+ * - no_renovaron: clientes cuya mensualidad venció este mes y no renovaron.
  * - perdidos: clientes activos el mes anterior sin pago en el mes actual.
  */
 export interface ClientesQuincenalCards {
   q1: QuincenaBreakdown;
   q2: QuincenaBreakdown;
-  pendientes: PendientesBreakdown;
-  perdidos: PerdidosBreakdown;
+  pendientes:   PendientesBreakdown;
+  por_vencer:   PorVencerBreakdown;
+  no_renovaron: NoRenovaronBreakdown;
+  perdidos:     PerdidosBreakdown;
 }
 
 // ─── Stats Tendencia ──────────────────────────────────────────────────────────
@@ -263,6 +295,50 @@ export interface OrigenDetalleResponse {
   resumen:        OrigenResumen;
   por_entrenador: OrigenEntrenadorRow[];
   clientes:       OrigenClienteRow[];
+}
+
+// ─── Stats Cartera Detalle (modal Seguimiento de cartera) ─────────────────────
+
+/** Cohorte de la sección "Seguimiento de cartera". */
+export type CarteraCohortKey = 'pendientes' | 'por_vencer' | 'no_renovaron';
+
+/** Resumen del modal de detalle de cartera (misma forma que origen). */
+export interface CarteraResumen {
+  total:   number;
+  plan_6d: number;
+  plan_3d: number;
+  delta:   number;
+}
+
+/** Fila del breakdown por entrenador (misma forma que origen). */
+export interface CarteraEntrenadorRow {
+  entrenador_id: string | null;
+  nombre:        string;
+  total_actual:  number;
+  total_prev:    number;
+  delta:         number;
+}
+
+/**
+ * Fila individual de cliente en la cohorte de cartera.
+ * Extiende la forma de origen con `debe_cop` (saldo pendiente) y `vence_el`
+ * (period_end del último pago; usado en la cohorte 'por_vencer').
+ */
+export interface CarteraClienteRow {
+  cliente_id:   string;
+  nombre:       string;
+  plan:         EnRiesgoPlan;
+  entrenador:   string;
+  fecha_inicio: string;         // YYYY-MM-DD (primer pago del cliente)
+  debe_cop:     number;         // balance_cop del último pago no anulado
+  vence_el:     string | null;  // YYYY-MM-DD (period_end del último pago)
+}
+
+/** Respuesta de la Edge Function `stats-clients-cartera-detalle`. */
+export interface CarteraDetalleResponse {
+  resumen:        CarteraResumen;
+  por_entrenador: CarteraEntrenadorRow[];
+  clientes:       CarteraClienteRow[];
 }
 
 // Tipos del dashboard de estadísticas

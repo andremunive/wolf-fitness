@@ -1,0 +1,252 @@
+<!-- Backdrop -->
+<div class="pdm-backdrop" (click)="onBackdropClick()" aria-hidden="true"></div>
+
+<!-- Dialog -->
+<div
+  class="pdm-dialog"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="pdm-title">
+
+  <!-- ═══ Header sticky ═══ -->
+  <div class="pdm-header">
+    <div class="pdm-header__info">
+      <span class="pdm-header__eyebrow">DETALLE · CARTERA</span>
+      <h2 id="pdm-title" class="pdm-header__title">{{ title }}</h2>
+    </div>
+    <button
+      type="button"
+      class="pdm-close-btn"
+      (click)="onClose()"
+      aria-label="Cerrar modal">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2.5"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"></line>
+        <line x1="6" y1="6" x2="18" y2="18"></line>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ═══ Body scrollable ═══ -->
+  <div class="pdm-body">
+
+    <!-- Loading -->
+    <div *ngIf="state.status === 'loading'" class="pdm-loading">
+      <div class="pdm-skeleton pdm-skeleton--big"></div>
+      <div class="pdm-skeleton pdm-skeleton--line"></div>
+      <div class="pdm-skeleton pdm-skeleton--line pdm-skeleton--short"></div>
+      <div class="pdm-skeleton pdm-skeleton--block"></div>
+    </div>
+
+    <!-- Error -->
+    <div *ngIf="state.status === 'error'" class="pdm-error">
+      <p class="pdm-muted">{{ state.message }}</p>
+      <button type="button" class="pdm-link-btn" (click)="load()">
+        Reintentar
+      </button>
+    </div>
+
+    <!-- Loaded -->
+    <ng-container *ngIf="state.status === 'loaded' && state.data as data">
+
+      <!-- ─── Sección 1: Resumen ─── -->
+      <section class="pdm-section">
+        <h3 class="pdm-section__title">Resumen</h3>
+
+        <div class="pdm-resumen">
+          <div class="pdm-resumen__row">
+            <span class="pdm-resumen__number">{{ data.resumen.total }}</span>
+            <!-- Chip de delta oculto para Pendientes y Por vencer -->
+            <ng-container *ngIf="cohort !== 'pendientes' && cohort !== 'por_vencer'">
+              <ng-container *ngIf="invertedPill(data.resumen.delta) as pill">
+                <span [ngClass]="pill.class">
+                  {{ pill.arrow }}
+                  <ng-container *ngIf="data.resumen.delta !== 0">{{ pill.abs }}</ng-container>
+                  <span class="pdm-pill__label">{{ prevMonthLabel }}</span>
+                </span>
+              </ng-container>
+            </ng-container>
+          </div>
+
+          <p class="pdm-resumen__caption">{{ caption }}</p>
+
+          <div class="pdm-plan-grid">
+            <div class="pdm-plan-col">
+              <span class="pdm-plan-dot pdm-plan-dot--6d"></span>
+              <span class="pdm-plan-col__label">Plan 6 días</span>
+              <span class="pdm-plan-col__value">{{ data.resumen.plan_6d }}</span>
+            </div>
+            <div class="pdm-plan-col__sep" aria-hidden="true"></div>
+            <div class="pdm-plan-col">
+              <span class="pdm-plan-dot pdm-plan-dot--3d"></span>
+              <span class="pdm-plan-col__label">Plan 3 días</span>
+              <span class="pdm-plan-col__value">{{ data.resumen.plan_3d }}</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ─── Sección 2: Por entrenador ─── -->
+      <section class="pdm-section">
+        <h3 class="pdm-section__title">Por entrenador</h3>
+
+        <p *ngIf="data.por_entrenador.length === 0" class="pdm-empty">
+          Sin datos de entrenadores en este período.
+        </p>
+
+        <ul *ngIf="data.por_entrenador.length > 0" class="pdm-trainers">
+          <li
+            *ngFor="let t of data.por_entrenador; trackBy: trackByEntrenador"
+            class="pdm-trainer-row">
+            <div class="pdm-trainer-row__name-wrap">
+              <span class="pdm-trainer-row__name">{{ t.nombre }}</span>
+              <span class="pdm-trainer-row__sub">
+                Actual {{ t.total_actual }} · anterior {{ t.total_prev }}
+              </span>
+            </div>
+            <div class="pdm-trainer-row__stats">
+              <span class="pdm-trainer-row__count">{{ t.total_actual }}</span>
+              <!-- Chip de delta oculto para Pendientes y Por vencer -->
+              <ng-container *ngIf="cohort !== 'pendientes' && cohort !== 'por_vencer'">
+                <ng-container *ngIf="invertedPill(t.delta) as pill">
+                  <span [ngClass]="pill.class">
+                    {{ pill.arrow }}
+                    <ng-container *ngIf="t.delta !== 0">{{ pill.abs }}</ng-container>
+                    <span class="pdm-pill__label">{{ prevMonthLabel }}</span>
+                  </span>
+                </ng-container>
+              </ng-container>
+            </div>
+          </li>
+        </ul>
+      </section>
+
+      <!-- ─── Sección 3: Clientes ─── -->
+      <section class="pdm-section">
+        <h3 class="pdm-section__title">
+          Clientes ({{ data.clientes.length }})
+        </h3>
+
+        <p *ngIf="data.clientes.length === 0" class="pdm-empty">
+          Sin clientes en esta cohorte para este período.
+        </p>
+
+        <ng-container *ngIf="data.clientes.length > 0">
+
+          <!-- Desktop / tablet: tabla -->
+          <div class="pdm-clients-table-wrap">
+            <table class="pdm-clients-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Plan</th>
+                  <th>Entrenador</th>
+                  <th>Fecha de inicio</th>
+                  <th
+                    *ngIf="cohort === 'pendientes'"
+                    class="pdm-clients-table__debt-col">Debe</th>
+                  <th
+                    *ngIf="cohort === 'por_vencer'"
+                    class="pdm-clients-table__vence-col">Vence el</th>
+                  <th
+                    *ngIf="cohort === 'no_renovaron'"
+                    class="pdm-clients-table__vencio-col">Venció el</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr *ngFor="let c of data.clientes; trackBy: trackByCliente">
+                  <td class="pdm-clients-table__name">{{ c.nombre }}</td>
+                  <td>
+                    <span
+                      class="pdm-plan-badge"
+                      [class.pdm-plan-badge--6d]="c.plan === '6d'"
+                      [class.pdm-plan-badge--3d]="c.plan === '3d'">
+                      {{ c.plan === '6d' ? '6 días' : '3 días' }}
+                    </span>
+                  </td>
+                  <td class="pdm-clients-table__trainer">
+                    {{ c.entrenador || '—' }}
+                  </td>
+                  <td class="pdm-clients-table__date">
+                    {{ formatDmy(c.fecha_inicio) }}
+                  </td>
+                  <td
+                    *ngIf="cohort === 'pendientes'"
+                    class="pdm-clients-table__debt">
+                    {{ formatCop(c.debe_cop) }}
+                  </td>
+                  <td
+                    *ngIf="cohort === 'por_vencer'"
+                    class="pdm-clients-table__vence">
+                    {{ c.vence_el ? formatDmy(c.vence_el) : '—' }}
+                  </td>
+                  <td
+                    *ngIf="cohort === 'no_renovaron'"
+                    class="pdm-clients-table__vencio">
+                    {{ c.vence_el ? formatDmy(c.vence_el) : '—' }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <!-- Mobile: lista de cards -->
+          <ul class="pdm-clients-cards">
+            <li
+              *ngFor="let c of data.clientes; trackBy: trackByCliente"
+              class="pdm-client-card">
+              <div class="pdm-client-card__head">
+                <span class="pdm-client-card__name">{{ c.nombre }}</span>
+                <span
+                  class="pdm-plan-badge"
+                  [class.pdm-plan-badge--6d]="c.plan === '6d'"
+                  [class.pdm-plan-badge--3d]="c.plan === '3d'">
+                  {{ c.plan === '6d' ? '6 días' : '3 días' }}
+                </span>
+              </div>
+              <div class="pdm-client-card__meta">
+                <span class="pdm-client-card__meta-item">
+                  {{ c.entrenador || 'Sin entrenador' }}
+                </span>
+                <span class="pdm-client-card__dot">·</span>
+                <span class="pdm-client-card__meta-item">
+                  {{ formatDmy(c.fecha_inicio) }}
+                </span>
+              </div>
+              <div
+                *ngIf="cohort === 'pendientes'"
+                class="pdm-client-card__debt-row">
+                <span class="pdm-client-card__debt-label">Debe</span>
+                <span class="pdm-client-card__debt-value">{{ formatCop(c.debe_cop) }}</span>
+              </div>
+              <div
+                *ngIf="cohort === 'por_vencer'"
+                class="pdm-client-card__debt-row">
+                <span class="pdm-client-card__debt-label">Vence el</span>
+                <span class="pdm-client-card__vence-value">{{ c.vence_el ? formatDmy(c.vence_el) : '—' }}</span>
+              </div>
+              <div
+                *ngIf="cohort === 'no_renovaron'"
+                class="pdm-client-card__debt-row">
+                <span class="pdm-client-card__debt-label">Venció el</span>
+                <span class="pdm-client-card__vencio-value">{{ c.vence_el ? formatDmy(c.vence_el) : '—' }}</span>
+              </div>
+            </li>
+          </ul>
+
+        </ng-container>
+      </section>
+
+    </ng-container>
+
+  </div>
+
+  <!-- ═══ Footer sticky ═══ -->
+  <div class="pdm-footer">
+    <button type="button" class="pdm-btn pdm-btn--secondary" (click)="onClose()">
+      Cerrar
+    </button>
+  </div>
+
+</div>

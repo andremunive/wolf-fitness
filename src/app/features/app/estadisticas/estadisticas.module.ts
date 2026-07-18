@@ -6,12 +6,14 @@ import { SharedModule } from 'src/app/shared/shared.module';
 import { EstadisticasRoutingModule } from './estadisticas-routing.module';
 import { ClientesDashboardComponent } from './clientes/pages/clientes-dashboard/clientes-dashboard.component';
 import { OrigenDetalleModalComponent } from './clientes/components/origen-detalle-modal/origen-detalle-modal.component';
+import { CarteraDetalleModalComponent } from './clientes/components/cartera-detalle-modal/cartera-detalle-modal.component';
 import { FinanzasDashboardComponent } from './finanzas/pages/finanzas-dashboard/finanzas-dashboard.component';
 
 @NgModule({
   declarations: [
     ClientesDashboardComponent,
     OrigenDetalleModalComponent,
+    CarteraDetalleModalComponent,
     FinanzasDashboardComponent,
   ],
   imports: [SharedModule, EstadisticasRoutingModule, NgChartsModule]

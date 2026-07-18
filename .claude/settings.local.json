@@ -38,7 +38,10 @@
       "Bash(Select-String -Pattern \"cafeteria|ventas|view.models|date.utils\")",
       "Bash(ng build *)",
       "Bash(Remove-Item \"c:\\\\Users\\\\USUARIO\\\\Documents\\\\Projects\\\\WF\\\\wolf-fitness-gym\\\\src\\\\app\\\\features\\\\app\\\\cafeteria\\\\services\\\\cafeteria.service.ts\")",
-      "Bash(grep -v \"^$\")"
+      "Bash(grep -v \"^$\")",
+      "Bash(node -e \"const fs = require\\('fs'\\); const c = fs.readFileSync\\('supabase/functions/stats-clients-quincenal/index.ts', 'utf8'\\); process.stdout.write\\(JSON.stringify\\([{name: 'index.ts', content: c}]\\)\\);\")",
+      "Read(//tmp/**)",
+      "Bash(node -e \"const fs = require\\('fs'\\); const c = fs.readFileSync\\('supabase/functions/stats-clients-cartera-detalle/index.ts', 'utf8'\\); process.stdout.write\\(JSON.stringify\\([{name: 'index.ts', content: c}]\\)\\);\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\USUARIO\\Documents\\Projects\\WF\\wolf-fitness-gym\\audit"

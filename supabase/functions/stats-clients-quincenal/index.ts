@@ -20,6 +20,24 @@ interface PendientesBreakdown {
   total: number;
   plan_6d: number;
   plan_3d: number;
+  /** current - snapshot_at_end_of_prev_month. Semantica invertida en UI: mayor = peor. */
+  delta: number;
+}
+
+interface PorVencerBreakdown {
+  total: number;
+  plan_6d: number;
+  plan_3d: number;
+  /** Delta vs snapshot al cierre del mes anterior. Semantica invertida. */
+  delta: number;
+}
+
+interface NoRenovaronBreakdown {
+  total: number;
+  plan_6d: number;
+  plan_3d: number;
+  /** Delta vs snapshot al cierre del mes anterior. Semantica invertida. */
+  delta: number;
 }
 
 interface PerdidosBreakdown {
@@ -32,15 +50,19 @@ interface PerdidosBreakdown {
 interface QuincenalResponse {
   q1: QuincenaBreakdown;
   q2: QuincenaBreakdown;
-  pendientes: PendientesBreakdown;
-  perdidos: PerdidosBreakdown;
+  pendientes:    PendientesBreakdown;
+  por_vencer:    PorVencerBreakdown;
+  no_renovaron:  NoRenovaronBreakdown;
+  perdidos:      PerdidosBreakdown;
 }
 
 /** Raw row returned by fn_stats_clients_quincenal SQL function. */
 interface QuincenalRawRow {
   q1_total: number;  q1_6d: number;  q1_3d: number;  q1_prev_total: number;
   q2_total: number;  q2_6d: number;  q2_3d: number;  q2_prev_total: number;
-  pen_total: number; pen_6d: number; pen_3d: number;
+  pen_total: number; pen_6d: number; pen_3d: number; pen_prev_total: number;
+  pv_total:  number; pv_6d:  number; pv_3d:  number; pv_prev_total:  number;
+  nr_total:  number; nr_6d:  number; nr_3d:  number; nr_prev_total:  number;
   per_total: number; per_6d: number; per_3d: number; per_prev_total: number;
 }
 
@@ -186,7 +208,9 @@ Deno.serve(async (req: Request) => {
   const r: QuincenalRawRow = rows?.[0] ?? {
     q1_total: 0, q1_6d: 0, q1_3d: 0, q1_prev_total: 0,
     q2_total: 0, q2_6d: 0, q2_3d: 0, q2_prev_total: 0,
-    pen_total: 0, pen_6d: 0, pen_3d: 0,
+    pen_total: 0, pen_6d: 0, pen_3d: 0, pen_prev_total: 0,
+    pv_total:  0, pv_6d:  0, pv_3d:  0, pv_prev_total:  0,
+    nr_total:  0, nr_6d:  0, nr_3d:  0, nr_prev_total:  0,
     per_total: 0, per_6d: 0, per_3d: 0, per_prev_total: 0,
   };
 
@@ -219,6 +243,19 @@ Deno.serve(async (req: Request) => {
       total: Number(r.pen_total),
       plan_6d: Number(r.pen_6d),
       plan_3d: Number(r.pen_3d),
+      delta: Number(r.pen_total) - Number(r.pen_prev_total),
+    },
+    por_vencer: {
+      total: Number(r.pv_total),
+      plan_6d: Number(r.pv_6d),
+      plan_3d: Number(r.pv_3d),
+      delta: Number(r.pv_total) - Number(r.pv_prev_total),
+    },
+    no_renovaron: {
+      total: Number(r.nr_total),
+      plan_6d: Number(r.nr_6d),
+      plan_3d: Number(r.nr_3d),
+      delta: Number(r.nr_total) - Number(r.nr_prev_total),
     },
     perdidos: {
       total: Number(r.per_total),
