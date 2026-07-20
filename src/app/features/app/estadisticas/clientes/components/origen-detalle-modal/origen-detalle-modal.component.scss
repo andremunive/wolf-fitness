@@ -424,6 +424,16 @@
   color: var(--pdm-text-secondary);
 }
 
+// Referrer column (Recomendado por): mismo tono suave que entrenador
+.pdm-clients-table__referrer-col {
+  text-align: left !important;
+}
+
+.pdm-clients-table__referrer {
+  color: var(--pdm-text-secondary);
+  font-weight: 500;
+}
+
 .pdm-clients-cards {
   list-style: none;
   margin: 0;
@@ -473,6 +483,31 @@
 }
 
 .pdm-client-card__dot { color: var(--pdm-text-muted); }
+
+// Referrer row (mobile, solo para origen 'referido')
+.pdm-client-card__referrer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--pdm-border);
+}
+
+.pdm-client-card__referrer-label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--pdm-text-muted);
+}
+
+.pdm-client-card__referrer-value {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--pdm-text-primary);
+}
 
 // ─── Plan badge (compartido con dashboard cv2- pero prefijo pdm-) ────────────
 .pdm-plan-badge {

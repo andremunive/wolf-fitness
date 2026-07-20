@@ -283,11 +283,17 @@ export interface OrigenEntrenadorRow {
 
 /** Fila individual de cliente captado por el origen en el mes seleccionado. */
 export interface OrigenClienteRow {
-  cliente_id:   string;
-  nombre:       string;
-  plan:         EnRiesgoPlan;   // reutiliza el union '6d' | '3d'
-  entrenador:   string;         // '' si sin asignar
-  fecha_inicio: string;         // YYYY-MM-DD (fecha del primer pago)
+  cliente_id:      string;
+  nombre:          string;
+  plan:            EnRiesgoPlan;    // reutiliza el union '6d' | '3d'
+  entrenador:      string;          // '' si sin asignar
+  fecha_inicio:    string;          // YYYY-MM-DD (fecha del primer pago)
+  /**
+   * Nombre completo de la persona que recomendó al cliente
+   * (`clients.referred_by → profiles.full_name`). Solo relevante para
+   * origen 'referido'; para los demás origenes viene `null`.
+   */
+  recomendado_por: string | null;
 }
 
 /** Respuesta completa de la Edge Function `stats-clients-origen-detalle`. */

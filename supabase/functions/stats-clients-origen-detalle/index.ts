@@ -28,11 +28,12 @@ interface EntrenadorRaw {
 }
 
 interface ClienteRaw {
-  cliente_id:   string;
-  nombre:       string;
-  plan:         string; // "6d" | "3d"
-  entrenador:   string;
-  fecha_inicio: string; // "YYYY-MM-DD"
+  cliente_id:      string;
+  nombre:          string;
+  plan:            string; // "6d" | "3d"
+  entrenador:      string;
+  fecha_inicio:    string; // "YYYY-MM-DD"
+  recomendado_por: string | null;
 }
 
 interface RpcRow {
@@ -211,11 +212,12 @@ Deno.serve(async (req: Request) => {
   }));
 
   const clientes = (row.clientes ?? []).map((c) => ({
-    cliente_id:   c.cliente_id,
-    nombre:       c.nombre,
-    plan:         c.plan,
-    entrenador:   c.entrenador,
-    fecha_inicio: c.fecha_inicio,
+    cliente_id:      c.cliente_id,
+    nombre:          c.nombre,
+    plan:            c.plan,
+    entrenador:      c.entrenador,
+    fecha_inicio:    c.fecha_inicio,
+    recomendado_por: c.recomendado_por ?? null,
   }));
 
   const response = { resumen, por_entrenador, clientes };

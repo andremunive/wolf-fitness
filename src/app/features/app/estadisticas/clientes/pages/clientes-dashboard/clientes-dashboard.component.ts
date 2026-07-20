@@ -1168,9 +1168,10 @@ export class ClientesDashboardComponent implements OnDestroy {
 
   /**
    * Construye las 3 cards de la sección 01 (Usuarios nuevos).
-   * - Publicidad / Directos: reales, alimentadas por
-   *   `detalleState$.nuevos_por_origen.{publicidad,llego_solo}`.
-   * - Recomendación: dummy (pendiente de definir lógica).
+   * Todas alimentadas desde `detalleState$.nuevos_por_origen`:
+   *   Publicidad  → publicidad
+   *   Directos    → llego_solo
+   *   Recomendación → referido
    */
   private buildOrigenCards(ds: DetalleState): OrigenCardVM[] {
     const status: CardStatus =
@@ -1178,6 +1179,7 @@ export class ClientesDashboardComponent implements OnDestroy {
       ds.status === 'error'   ? 'error'   : 'loaded';
     const pub = ds.status === 'loaded' ? ds.data.nuevos_por_origen.publicidad : null;
     const dir = ds.status === 'loaded' ? ds.data.nuevos_por_origen.llego_solo : null;
+    const rec = ds.status === 'loaded' ? ds.data.nuevos_por_origen.referido   : null;
 
     return [
       {
@@ -1200,16 +1202,15 @@ export class ClientesDashboardComponent implements OnDestroy {
         plan6d: dir?.plan_6d ?? 0,
         plan3d: dir?.plan_3d ?? 0
       },
-      // TODO(recomendacion): reemplazar por datos reales cuando definamos la lógica.
       {
         key:    'recomendacion',
         label:  'Recomendación',
         color:  '#ec4899',
-        status: 'loaded',
-        value:  15,
-        delta:  6,
-        plan6d: 10,
-        plan3d: 5
+        status,
+        value:  rec?.total ?? 0,
+        delta:  rec?.delta ?? null,
+        plan6d: rec?.plan_6d ?? 0,
+        plan3d: rec?.plan_3d ?? 0
       }
     ];
   }

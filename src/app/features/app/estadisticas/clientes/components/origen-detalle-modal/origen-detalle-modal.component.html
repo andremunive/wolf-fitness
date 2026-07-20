@@ -139,6 +139,9 @@
                   <th>Plan</th>
                   <th>Entrenador</th>
                   <th>Fecha de inicio</th>
+                  <th
+                    *ngIf="origen === 'referido'"
+                    class="pdm-clients-table__referrer-col">Recomendado por</th>
                 </tr>
               </thead>
               <tbody>
@@ -157,6 +160,11 @@
                   </td>
                   <td class="pdm-clients-table__date">
                     {{ formatDmy(c.fecha_inicio) }}
+                  </td>
+                  <td
+                    *ngIf="origen === 'referido'"
+                    class="pdm-clients-table__referrer">
+                    {{ c.recomendado_por || '—' }}
                   </td>
                 </tr>
               </tbody>
@@ -185,6 +193,12 @@
                 <span class="pdm-client-card__meta-item">
                   {{ formatDmy(c.fecha_inicio) }}
                 </span>
+              </div>
+              <div
+                *ngIf="origen === 'referido'"
+                class="pdm-client-card__referrer-row">
+                <span class="pdm-client-card__referrer-label">Recomendado por</span>
+                <span class="pdm-client-card__referrer-value">{{ c.recomendado_por || '—' }}</span>
               </div>
             </li>
           </ul>

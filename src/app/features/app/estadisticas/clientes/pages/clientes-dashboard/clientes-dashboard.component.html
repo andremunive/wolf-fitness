@@ -308,13 +308,13 @@
       <article
         *ngFor="let card of (origenCardsVM$ | async) ?? []; trackBy: trackByOrigenKey"
         class="cv2-card cv2-card--metric"
-        [class.cv2-card--metric-clickable]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded'"
+        [class.cv2-card--metric-clickable]="card.status === 'loaded'"
         [attr.data-key]="card.key"
-        [attr.role]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? 'button' : null"
-        [attr.tabindex]="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? 0 : null"
-        (click)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null"
-        (keydown.enter)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null"
-        (keydown.space)="(card.key === 'publicidad' || card.key === 'directos') && card.status === 'loaded' ? openOrigenModal(card.key) : null">
+        [attr.role]="card.status === 'loaded' ? 'button' : null"
+        [attr.tabindex]="card.status === 'loaded' ? 0 : null"
+        (click)="card.status === 'loaded' ? openOrigenModal(card.key) : null"
+        (keydown.enter)="card.status === 'loaded' ? openOrigenModal(card.key) : null"
+        (keydown.space)="card.status === 'loaded' ? openOrigenModal(card.key) : null">
 
         <!-- Loading skeleton -->
         <ng-container *ngIf="card.status === 'loading'">
