@@ -60,37 +60,37 @@
       </div>
 
       <!-- Entry list -->
-      <ng-container *ngIf="!loading && !error && entries.length > 0">
-        <div class="wh-list">
-          <div
-            *ngFor="let entry of entries; trackBy: trackById"
-            class="wh-row"
-          >
-            <span class="wh-row__date">{{ formatDate(entry.measured_at) }}</span>
-            <span class="wh-row__weight">{{ formatWeight(entry.weight_kg) }} kg</span>
-          </div>
-        </div>
-
-        <!-- Load more / exhausted -->
-        <button
-          type="button"
-          class="wh-load-more"
-          [disabled]="!hasMore || loadingMore"
-          (click)="loadMore()"
+      <div *ngIf="!loading && !error && entries.length > 0" class="wh-list">
+        <div
+          *ngFor="let entry of entries; trackBy: trackById"
+          class="wh-row"
         >
-          <ng-container *ngIf="loadingMore">
-            <span class="wh-spinner" aria-hidden="true"></span>
-            Cargando…
-          </ng-container>
-          <ng-container *ngIf="!loadingMore && hasMore">
-            Cargar más
-          </ng-container>
-          <ng-container *ngIf="!loadingMore && !hasMore">
-            Sin más registros
-          </ng-container>
-        </button>
-      </ng-container>
+          <span class="wh-row__date">{{ formatDate(entry.measured_at) }}</span>
+          <span class="wh-row__weight">{{ formatWeight(entry.weight_kg) }} kg</span>
+        </div>
+      </div>
 
+    </div>
+
+    <!-- ── Footer (fixed) ── -->
+    <div class="wh-footer" *ngIf="!loading && !error && entries.length > 0">
+      <button
+        type="button"
+        class="wh-load-more"
+        [disabled]="!hasMore || loadingMore"
+        (click)="loadMore()"
+      >
+        <ng-container *ngIf="loadingMore">
+          <span class="wh-spinner" aria-hidden="true"></span>
+          Cargando…
+        </ng-container>
+        <ng-container *ngIf="!loadingMore && hasMore">
+          Cargar más
+        </ng-container>
+        <ng-container *ngIf="!loadingMore && !hasMore">
+          Sin más registros
+        </ng-container>
+      </button>
     </div>
 
   </div>
