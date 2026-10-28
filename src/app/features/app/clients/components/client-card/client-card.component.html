@@ -9,7 +9,10 @@
       <p class="client-card__plan">{{ planLabel }}</p>
     </div>
 
-    <span class="status" [ngClass]="statusClass">{{ statusLabel }}</span>
+    <span class="membership-badge" [ngClass]="membershipStatusClass">
+      <span class="membership-badge__dot" aria-hidden="true"></span>
+      {{ membershipStatusLabel }}
+    </span>
 
     <app-client-actions-menu
       [client]="client"

@@ -6,7 +6,7 @@ import {
   Output
 } from '@angular/core';
 
-import { Client, ClientPaymentStatusDisplay } from '../../models/client.model';
+import { Client, ClientPaymentStatusDisplay, MembershipStatus } from '../../models/client.model';
 import { formatDateOnly } from 'src/app/shared/utils/date.utils';
 
 @Component({
@@ -33,24 +33,12 @@ export class ClientCardComponent {
       .join('');
   }
 
-  get statusLabel(): string {
-    switch (this.client.status) {
-      case 'active':    return 'Activo';
-      case 'inactive':  return 'Inactivo';
-      case 'suspended': return 'Suspendido';
-      case 'overdue':   return 'Moroso';
-      default:          return this.client.status;
-    }
+  get membershipStatusLabel(): string {
+    return this.resolveMembershipStatusLabel(this.client.membershipStatus);
   }
 
-  get statusClass(): string {
-    switch (this.client.status) {
-      case 'active':    return 'status--active';
-      case 'inactive':  return 'status--inactive';
-      case 'suspended': return 'status--suspended';
-      case 'overdue':   return 'status--overdue';
-      default:          return 'status--inactive';
-    }
+  get membershipStatusClass(): string {
+    return this.resolveMembershipStatusClass(this.client.membershipStatus);
   }
 
   get paymentStatusLabel(): string {
@@ -111,6 +99,26 @@ export class ClientCardComponent {
       case 'pending':     return 'payment-badge--pending';
       case 'voided':      return 'payment-badge--voided';
       case 'no_payments': return 'payment-badge--no-payments';
+    }
+  }
+
+  private resolveMembershipStatusLabel(status: MembershipStatus): string {
+    switch (status) {
+      case 'active':     return 'Al día';
+      case 'partial':    return 'Parcial';
+      case 'pending':    return 'Pendiente';
+      case 'expired':    return 'Vencido';
+      case 'no_payment': return 'Sin pago';
+    }
+  }
+
+  private resolveMembershipStatusClass(status: MembershipStatus): string {
+    switch (status) {
+      case 'active':     return 'membership-badge--active';
+      case 'partial':    return 'membership-badge--partial';
+      case 'pending':    return 'membership-badge--pending';
+      case 'expired':    return 'membership-badge--expired';
+      case 'no_payment': return 'membership-badge--no-payment';
     }
   }
 
