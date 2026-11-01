@@ -136,7 +136,13 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
     return Math.max(0, this.totalToPayCop - received);
   }
 
+  /** El descuento cubre el 100% del plan: el gym absorbe el costo. */
+  get isFullyCovered(): boolean {
+    return !!this.selectedDiscount && this.totalToPayCop === 0 && this.planTotalCop > 0;
+  }
+
   get projectedStatus(): string {
+    if (this.isFullyCovered) return 'Al día';
     const received = Number(this.form.get('amount_received_cop')!.value) || 0;
     if (received === 0) return 'Pendiente';
     if (received >= this.totalToPayCop) return 'Al día';
@@ -144,6 +150,7 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
   }
 
   get projectedStatusClass(): string {
+    if (this.isFullyCovered) return 'status--paid';
     const received = Number(this.form.get('amount_received_cop')!.value) || 0;
     if (received === 0) return 'status--pending';
     if (received >= this.totalToPayCop) return 'status--paid';
@@ -182,6 +189,7 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
   onDiscountSelected(discount: Discount | null): void {
     this.selectedDiscount = discount;
     this.form.get('discount_code')!.setValue(discount?.code ?? '', { emitEvent: false });
+    this.applyFullyCoveredSideEffects();
     this.cdr.markForCheck();
   }
 
@@ -189,7 +197,23 @@ export class RegisterPaymentModalComponent implements OnInit, OnDestroy {
   onDiscountCodeChange(discounts: Discount[]): void {
     const code = this.form.get('discount_code')!.value as string;
     this.selectedDiscount = discounts.find((d) => d.code === code) ?? null;
+    this.applyFullyCoveredSideEffects();
     this.cdr.markForCheck();
+  }
+
+  /**
+   * Cuando el descuento cubre el 100% del plan, los campos "valor recibido"
+   * y "método de pago" se ocultan: forzamos amount=0 y limpiamos el display
+   * y el método para que el formulario quede válido sin intervención del admin.
+   */
+  private applyFullyCoveredSideEffects(): void {
+    if (!this.isFullyCovered) return;
+    const amountCtrl = this.form.get('amount_received_cop')!;
+    amountCtrl.setValue(0, { emitEvent: false });
+    this.amountDisplay = '';
+    const methodCtrl = this.form.get('payment_method')!;
+    methodCtrl.setValue('', { emitEvent: false });
+    methodCtrl.disable({ emitEvent: false });
   }
 
   /**

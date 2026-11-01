@@ -104,8 +104,8 @@
           </p>
         </div>
 
-        <!-- amount_received_cop -->
-        <div class="form-field">
+        <!-- amount_received_cop (oculto cuando el descuento cubre el 100% del plan) -->
+        <div class="form-field" *ngIf="!isFullyCovered">
           <label class="form-field__label" for="pay-amount">
             Valor recibido (COP) <span class="form-field__required" aria-hidden="true">*</span>
           </label>
@@ -134,8 +134,8 @@
           </p>
         </div>
 
-        <!-- payment_method -->
-        <div class="form-field">
+        <!-- payment_method (oculto cuando el descuento cubre el 100% del plan) -->
+        <div class="form-field" *ngIf="!isFullyCovered">
           <label class="form-field__label" for="pay-method">
             Método de pago
             <span class="form-field__required" *ngIf="!isPaymentMethodDisabled" aria-hidden="true">*</span>
